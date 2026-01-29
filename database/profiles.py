@@ -1,0 +1,79 @@
+"""
+Database operations for profiles (querent and reader information).
+"""
+
+
+class ProfilesMixin:
+    """Mixin providing profile operations."""
+
+    def get_profiles(self):
+        """Get all profiles"""
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT * FROM profiles ORDER BY name')
+        return cursor.fetchall()
+
+    def get_profile(self, profile_id: int):
+        """Get a single profile by ID"""
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT * FROM profiles WHERE id = ?', (profile_id,))
+        return cursor.fetchone()
+
+    def add_profile(self, name: str, gender: str = None, birth_date: str = None,
+                    birth_time: str = None, birth_place_name: str = None,
+                    birth_place_lat: float = None, birth_place_lon: float = None):
+        """Add a new profile"""
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO profiles (name, gender, birth_date, birth_time,
+                                  birth_place_name, birth_place_lat, birth_place_lon)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (name, gender, birth_date, birth_time, birth_place_name,
+              birth_place_lat, birth_place_lon))
+        self._commit()
+        return cursor.lastrowid
+
+    def update_profile(self, profile_id: int, name: str = None, gender: str = None,
+                       birth_date: str = None, birth_time: str = None,
+                       birth_place_name: str = None, birth_place_lat: float = None,
+                       birth_place_lon: float = None):
+        """Update an existing profile"""
+        cursor = self.conn.cursor()
+        updates = []
+        params = []
+
+        if name is not None:
+            updates.append('name = ?')
+            params.append(name)
+        if gender is not None:
+            updates.append('gender = ?')
+            params.append(gender)
+        if birth_date is not None:
+            updates.append('birth_date = ?')
+            params.append(birth_date)
+        if birth_time is not None:
+            updates.append('birth_time = ?')
+            params.append(birth_time)
+        if birth_place_name is not None:
+            updates.append('birth_place_name = ?')
+            params.append(birth_place_name)
+        if birth_place_lat is not None:
+            updates.append('birth_place_lat = ?')
+            params.append(birth_place_lat)
+        if birth_place_lon is not None:
+            updates.append('birth_place_lon = ?')
+            params.append(birth_place_lon)
+
+        if updates:
+            params.append(profile_id)
+            cursor.execute(f'UPDATE profiles SET {", ".join(updates)} WHERE id = ?', params)
+            self._commit()
+
+    def delete_profile(self, profile_id: int):
+        """Delete a profile (will set querent_id/reader_id to NULL in journal entries)"""
+        cursor = self.conn.cursor()
+        # Clear references in journal entries
+        cursor.execute('UPDATE journal_entries SET querent_id = NULL WHERE querent_id = ?', (profile_id,))
+        cursor.execute('UPDATE journal_entries SET reader_id = NULL WHERE reader_id = ?', (profile_id,))
+        # Delete the profile
+        cursor.execute('DELETE FROM profiles WHERE id = ?', (profile_id,))
+        self._commit()
