@@ -27,7 +27,8 @@ export default function Modal({ open, onClose, title, width = 700, children }: M
     <div
       className="modal-overlay"
       ref={overlayRef}
-      onClick={(e) => {
+      onMouseDown={(e) => {
+        // Only close if mousedown directly on overlay (not dragged from content)
         if (e.target === overlayRef.current) onClose();
       }}
     >

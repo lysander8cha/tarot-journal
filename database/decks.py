@@ -23,6 +23,12 @@ class DecksMixin:
 
     # === Decks ===
     def get_decks(self, cartomancy_type_id: Optional[int] = None):
+        """Get all decks, optionally filtered by cartomancy type.
+
+        Returns basic deck info. For card counts, tags, and multi-type info,
+        use the bulk methods (get_deck_card_counts, get_tags_for_decks,
+        get_types_for_decks) to avoid N+1 query problems.
+        """
         cursor = self.conn.cursor()
         if cartomancy_type_id:
             # Filter by type using junction table - find decks with ANY matching type
@@ -41,20 +47,7 @@ class DecksMixin:
                 JOIN cartomancy_types ct ON d.cartomancy_type_id = ct.id
                 ORDER BY ct.name, d.name
             ''')
-        rows = cursor.fetchall()
-        # Add multiple type names to each deck
-        result = []
-        for row in rows:
-            deck = dict(row)
-            types = self.get_types_for_deck(deck['id'])
-            if types:
-                deck['cartomancy_type_names'] = ', '.join(t['name'] for t in types)
-                deck['cartomancy_types'] = types
-            else:
-                deck['cartomancy_type_names'] = deck['cartomancy_type_name']
-                deck['cartomancy_types'] = [{'id': deck['cartomancy_type_id'], 'name': deck['cartomancy_type_name']}]
-            result.append(deck)
-        return result
+        return [dict(row) for row in cursor.fetchall()]
 
     def get_deck(self, deck_id: int):
         cursor = self.conn.cursor()
@@ -226,3 +219,38 @@ class DecksMixin:
         cursor = self.conn.cursor()
         cursor.execute('DELETE FROM decks WHERE id = ?', (deck_id,))
         self._commit()
+
+    def get_deck_card_counts(self) -> dict:
+        """Get card counts for all decks in a single query.
+
+        Returns a dictionary mapping deck_id to card count.
+        Much more efficient than calling get_cards() for each deck.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT deck_id, COUNT(*) as card_count
+            FROM cards
+            GROUP BY deck_id
+        ''')
+        return {row['deck_id']: row['card_count'] for row in cursor.fetchall()}
+
+    def get_types_for_decks(self) -> dict:
+        """Get all cartomancy types for all decks in a single query.
+
+        Returns a dictionary mapping deck_id to a list of type dicts.
+        Much more efficient than calling get_types_for_deck() for each deck.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT dta.deck_id, ct.id, ct.name
+            FROM deck_type_assignments dta
+            JOIN cartomancy_types ct ON dta.type_id = ct.id
+            ORDER BY ct.name
+        ''')
+        result = {}
+        for row in cursor.fetchall():
+            deck_id = row['deck_id']
+            if deck_id not in result:
+                result[deck_id] = []
+            result[deck_id].append({'id': row['id'], 'name': row['name']})
+        return result

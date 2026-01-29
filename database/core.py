@@ -4,6 +4,7 @@ Database core: initialization, migrations, and transaction management.
 
 import atexit
 import sqlite3
+import threading
 from contextlib import contextmanager
 
 from logger_config import get_logger
@@ -24,6 +25,10 @@ class CoreMixin:
         self.conn.row_factory = sqlite3.Row
         self._in_transaction = False
 
+        # Thread safety: RLock allows the same thread to acquire multiple times
+        # (important because DB methods call other DB methods)
+        self._lock = threading.RLock()
+
         # WAL mode: allows reads during writes and protects against
         # data corruption if the app crashes mid-write
         self.conn.execute('PRAGMA journal_mode=WAL')
@@ -34,9 +39,13 @@ class CoreMixin:
         atexit.register(self.close)
 
     def _commit(self):
-        """Commit unless inside a managed transaction (which commits at the end)."""
+        """Commit unless inside a managed transaction (which commits at the end).
+
+        Thread-safe: acquires lock before committing.
+        """
         if not self._in_transaction:
-            self.conn.commit()
+            with self._lock:
+                self.conn.commit()
 
     @contextmanager
     def transaction(self):
@@ -44,16 +53,19 @@ class CoreMixin:
 
         If anything fails, all changes since the start are rolled back
         so the database never ends up in a half-finished state.
+
+        Thread-safe: holds lock for entire transaction duration.
         """
-        self._in_transaction = True
-        try:
-            yield
-            self.conn.commit()
-        except Exception:
-            self.conn.rollback()
-            raise
-        finally:
-            self._in_transaction = False
+        with self._lock:
+            self._in_transaction = True
+            try:
+                yield
+                self.conn.commit()
+            except Exception:
+                self.conn.rollback()
+                raise
+            finally:
+                self._in_transaction = False
 
     def _create_tables(self):
         cursor = self.conn.cursor()

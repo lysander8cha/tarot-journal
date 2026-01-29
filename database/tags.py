@@ -119,6 +119,31 @@ class TagsMixin:
         ''', (deck_id,))
         return cursor.fetchall()
 
+    def get_tags_for_decks(self) -> dict:
+        """Get all deck-tag assignments in a single query.
+
+        Returns a dictionary mapping deck_id to a list of tag dicts.
+        Much more efficient than calling get_tags_for_deck() for each deck.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT dta.deck_id, t.id, t.name, t.color
+            FROM deck_tag_assignments dta
+            JOIN deck_tags t ON dta.tag_id = t.id
+            ORDER BY t.name
+        ''')
+        result = {}
+        for row in cursor.fetchall():
+            deck_id = row['deck_id']
+            if deck_id not in result:
+                result[deck_id] = []
+            result[deck_id].append({
+                'id': row['id'],
+                'name': row['name'],
+                'color': row['color']
+            })
+        return result
+
     def add_tag_to_deck(self, deck_id: int, tag_id: int):
         """Assign a tag to a deck"""
         cursor = self.conn.cursor()

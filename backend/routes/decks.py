@@ -30,21 +30,39 @@ def _sort_types(types):
 def get_decks():
     db = current_app.config['DB']
     type_id = request.args.get('type_id', type=int)
+
+    # Fetch all data with bulk queries (4 queries total instead of N+1)
     decks = db.get_decks(cartomancy_type_id=type_id)
-    # get_decks already returns dicts; add card_count and normalize field names
+    card_counts = db.get_deck_card_counts()
+    all_tags = db.get_tags_for_decks()
+    all_types = db.get_types_for_decks()
+
+    # Assemble results using fast dictionary lookups (no additional queries)
     result = []
-    for d in decks:
-        deck = dict(d) if not isinstance(d, dict) else d
-        cards = db.get_cards(deck['id'])
-        deck['card_count'] = len(cards)
-        deck['cartomancy_type'] = deck.get('cartomancy_type_names') or deck.get('cartomancy_type_name', '')
-        # Include deck tags
-        tags = db.get_tags_for_deck(deck['id'])
-        deck['tags'] = [_row_to_dict(t) for t in tags]
-        # Include all cartomancy types for multi-type support (sorted)
-        types = db.get_types_for_deck(deck['id'])
-        deck['cartomancy_types'] = _sort_types([_row_to_dict(t) for t in types])
+    for deck in decks:
+        deck_id = deck['id']
+
+        # Card count from bulk query
+        deck['card_count'] = card_counts.get(deck_id, 0)
+
+        # Tags from bulk query
+        deck['tags'] = all_tags.get(deck_id, [])
+
+        # Cartomancy types from bulk query
+        types = all_types.get(deck_id, [])
+        if types:
+            deck['cartomancy_types'] = _sort_types(types)
+            deck['cartomancy_type_names'] = ', '.join(t['name'] for t in types)
+        else:
+            # Fall back to primary type if no assignments exist
+            deck['cartomancy_types'] = [{'id': deck['cartomancy_type_id'], 'name': deck['cartomancy_type_name']}]
+            deck['cartomancy_type_names'] = deck['cartomancy_type_name']
+
+        # Normalize field name for frontend compatibility
+        deck['cartomancy_type'] = deck['cartomancy_type_names']
+
         result.append(deck)
+
     return jsonify(result)
 
 

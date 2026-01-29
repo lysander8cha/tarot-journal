@@ -21,6 +21,24 @@ def _row_to_dict(row):
     return dict(row) if row else None
 
 
+@import_export_bp.route('/api/import/preset-info')
+def get_preset_info():
+    """Get info about a specific import preset (type, suit names, etc.)."""
+    preset_name = request.args.get('preset_name', '')
+
+    from import_presets import ImportPresets
+    presets = ImportPresets()
+
+    preset = presets.get_preset(preset_name)
+    if not preset:
+        return jsonify(None)
+
+    return jsonify({
+        'type': preset.get('type', 'Oracle'),
+        'suit_names': preset.get('suit_names'),
+    })
+
+
 @import_export_bp.route('/api/import/scan-folder', methods=['POST'])
 def scan_folder():
     """Scan a folder and preview what cards would be imported."""
@@ -28,6 +46,8 @@ def scan_folder():
     folder = data.get('folder', '').strip()
     preset_name = data.get('preset_name', '')
     custom_suit_names = data.get('custom_suit_names')
+    custom_court_names = data.get('custom_court_names')
+    archetype_mapping = data.get('archetype_mapping')
 
     # Security: Validate the folder path
     if not folder or not is_valid_directory(folder):
@@ -42,8 +62,8 @@ def scan_folder():
             folder,
             preset_name,
             custom_suit_names=custom_suit_names,
-            custom_court_names=None,
-            archetype_mapping=None,
+            custom_court_names=custom_court_names,
+            archetype_mapping=archetype_mapping,
         )
         card_back = presets.find_card_back_image(folder, preset_name)
         return jsonify({
@@ -66,6 +86,8 @@ def import_from_folder():
     cartomancy_type_id = data.get('cartomancy_type_id')
     preset_name = data.get('preset_name', '')
     custom_suit_names = data.get('custom_suit_names')
+    custom_court_names = data.get('custom_court_names')
+    archetype_mapping = data.get('archetype_mapping')
 
     # Security: Validate the folder path
     if not folder or not is_valid_directory(folder):
@@ -85,8 +107,8 @@ def import_from_folder():
             folder,
             preset_name,
             custom_suit_names=custom_suit_names,
-            custom_court_names=None,
-            archetype_mapping=None,
+            custom_court_names=custom_court_names,
+            archetype_mapping=archetype_mapping,
         )
 
         # Create deck

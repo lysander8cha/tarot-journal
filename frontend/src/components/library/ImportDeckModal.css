@@ -36,6 +36,78 @@
   gap: 12px;
 }
 
+/* Folder path with browse button */
+.import-deck__folder-row {
+  display: flex;
+  gap: 8px;
+}
+
+.import-deck__folder-input {
+  flex: 1;
+}
+
+.import-deck__browse-btn {
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.import-deck__browse-btn:hover {
+  background: var(--bg-secondary);
+}
+
+/* Section styling (for Suit Names, Court Cards) */
+.import-deck__section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 4px;
+}
+
+.import-deck__section-title {
+  color: var(--accent);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* Suit name grid */
+.import-deck__suit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.import-deck__suit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.import-deck__suit-label {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.import-deck__suit-input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: var(--font-size-small);
+}
+
+/* Court cards row (dropdowns) */
+.import-deck__court-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+/* Preview section */
 .import-deck__preview {
   max-height: 350px;
   overflow-y: auto;
