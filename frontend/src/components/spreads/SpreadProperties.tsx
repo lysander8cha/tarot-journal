@@ -36,10 +36,9 @@ export default function SpreadProperties({
   };
 
   const addDeckSlot = () => {
-    const defaultType = types[0]?.name || 'Tarot';
     onDeckSlotsChange([
       ...deckSlots,
-      { key: getNextSlotKey(), cartomancy_type: defaultType },
+      { key: getNextSlotKey(), cartomancy_type: 'Any' },
     ]);
   };
 
@@ -102,6 +101,7 @@ export default function SpreadProperties({
                 value={slot.cartomancy_type}
                 onChange={(e) => updateSlotType(idx, e.target.value)}
               >
+                <option value="Any">Any</option>
                 {types.map((t) => (
                   <option key={t.id} value={t.name}>{t.name}</option>
                 ))}

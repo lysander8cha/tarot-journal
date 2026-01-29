@@ -1,4 +1,6 @@
-"""Settings panel mixin for MainFrame."""
+"""DEPRECATED: Legacy wxPython UI - see frontend/ for active Electron/React code.
+
+Settings panel mixin for MainFrame."""
 
 import wx
 import wx.adv

@@ -10,7 +10,22 @@
 
 - **Always confirm with the user before pushing to GitHub** - commit changes when asked, but wait for explicit approval before running `git push`
 
-## wxPython Styling Rules (Dark Theme)
+## IMPORTANT: Frontend Architecture
+
+**The PRIMARY frontend is Electron/React** located in `frontend/`:
+- `frontend/src/` - React components, pages, and API calls
+- This is the actively developed UI that the user interacts with
+
+**The wxPython code is DEPRECATED** - do NOT modify unless the user explicitly mentions "wxPython" or "Python frontend":
+- `main.py`, `main_tk.py` - Legacy Python app entry points
+- `mixin_*.py` - Legacy wxPython UI mixins
+- `ui_library/`, `ui_journal/`, `card_dialogs/` - Legacy wxPython UI packages
+
+When the user asks for UI changes, **always modify the Electron/React code in `frontend/`** unless they specifically request changes to the Python version.
+
+---
+
+## DEPRECATED: wxPython Styling Rules (Dark Theme)
 
 This app uses a custom dark theme. When creating UI elements:
 

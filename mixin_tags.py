@@ -1,4 +1,6 @@
-"""Tags panel mixin for MainFrame."""
+"""DEPRECATED: Legacy wxPython UI - see frontend/ for active Electron/React code.
+
+Tags panel mixin for MainFrame."""
 
 import wx
 from ui_helpers import logger, get_wx_color

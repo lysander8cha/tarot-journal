@@ -1,4 +1,6 @@
-"""Card dialog windows for the tarot journal application.
+"""DEPRECATED: Legacy wxPython UI - see frontend/ for active Electron/React code.
+
+Card dialog windows for the tarot journal application.
 
 This package contains dialog classes for viewing and editing cards:
 - view_dialog.py: CardViewDialog for viewing card details

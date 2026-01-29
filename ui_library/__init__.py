@@ -1,4 +1,5 @@
-"""
+"""DEPRECATED: Legacy wxPython UI - see frontend/ for active Electron/React code.
+
 UI Library package for the Tarot Journal App.
 
 Combines all library panel mixins into the main LibraryMixin class.

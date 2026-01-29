@@ -1,4 +1,6 @@
-"""Spreads panel mixin for MainFrame."""
+"""DEPRECATED: Legacy wxPython UI - see frontend/ for active Electron/React code.
+
+Spreads panel mixin for MainFrame."""
 
 import wx
 import wx.lib.scrolledpanel as scrolled
@@ -98,27 +100,23 @@ class SpreadsMixin:
 
         # Deck types selection
         deck_types_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        deck_types_label = wx.StaticText(right, label="Allowed Deck Types:")
+        deck_types_label = wx.StaticText(right, label="Allowed Deck Type:")
         deck_types_label.SetForegroundColour(get_wx_color('text_primary'))
         deck_types_sizer.Add(deck_types_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 10)
 
-        # Create checkboxes for each cartomancy type (empty label + StaticText for macOS)
-        self.spread_deck_type_checks = {}
+        # Create dropdown with "Any" as first option, then cartomancy types
+        self.spread_deck_type_names = ["Any"]  # Store names for lookup
         cart_types = self.db.get_cartomancy_types()
         for ct in cart_types:
-            cb_sizer = wx.BoxSizer(wx.HORIZONTAL)
-            cb = wx.CheckBox(right, label="")
-            cb_sizer.Add(cb, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 3)
-            cb_label = wx.StaticText(right, label=ct['name'])
-            cb_label.SetForegroundColour(get_wx_color('text_primary'))
-            cb_sizer.Add(cb_label, 0, wx.ALIGN_CENTER_VERTICAL)
-            self.spread_deck_type_checks[ct['name']] = cb
-            deck_types_sizer.Add(cb_sizer, 0, wx.RIGHT, 15)
+            self.spread_deck_type_names.append(ct['name'])
 
-        # "Any deck" label when none selected
-        any_deck_note = wx.StaticText(right, label="(none checked = any deck allowed)")
-        any_deck_note.SetForegroundColour(get_wx_color('text_dim'))
-        deck_types_sizer.Add(any_deck_note, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.spread_deck_type_choice = wx.Choice(right, choices=self.spread_deck_type_names)
+        self.spread_deck_type_choice.SetSelection(0)  # Default to "Any"
+        deck_types_sizer.Add(self.spread_deck_type_choice, 0, wx.RIGHT, 10)
+
+        deck_type_note = wx.StaticText(right, label="(restricts which decks can be used with this spread)")
+        deck_type_note.SetForegroundColour(get_wx_color('text_dim'))
+        deck_types_sizer.Add(deck_type_note, 0, wx.ALIGN_CENTER_VERTICAL)
 
         right_sizer.Add(deck_types_sizer, 0, wx.LEFT | wx.BOTTOM, 10)
 
@@ -266,15 +264,17 @@ class SpreadsMixin:
                 self.spread_desc_ctrl.SetValue(spread['description'] or '')
                 self.designer_positions = json.loads(spread['positions'])
 
-                # Load allowed deck types
-                for cb in self.spread_deck_type_checks.values():
-                    cb.SetValue(False)
+                # Load allowed deck type
+                self.spread_deck_type_choice.SetSelection(0)  # Default to "Any"
                 allowed_types_json = spread['allowed_deck_types'] if 'allowed_deck_types' in spread.keys() else None
                 if allowed_types_json:
                     allowed_types = json.loads(allowed_types_json)
-                    for deck_type in allowed_types:
-                        if deck_type in self.spread_deck_type_checks:
-                            self.spread_deck_type_checks[deck_type].SetValue(True)
+                    if allowed_types and len(allowed_types) > 0:
+                        # Use the first allowed type (now single-select)
+                        deck_type = allowed_types[0]
+                        if deck_type in self.spread_deck_type_names:
+                            idx = self.spread_deck_type_names.index(deck_type)
+                            self.spread_deck_type_choice.SetSelection(idx)
 
                 # Load default deck
                 self._refresh_spread_default_deck_choices()
@@ -294,9 +294,8 @@ class SpreadsMixin:
         self.spread_name_ctrl.SetValue('')
         self.spread_desc_ctrl.SetValue('')
         self.designer_positions = []
-        # Clear deck type checkboxes
-        for cb in self.spread_deck_type_checks.values():
-            cb.SetValue(False)
+        # Reset deck type to "Any"
+        self.spread_deck_type_choice.SetSelection(0)
         # Reset default deck to global default
         self._refresh_spread_default_deck_choices()
         self._update_designer_legend()
@@ -334,15 +333,15 @@ class SpreadsMixin:
             positions = json.loads(source_spread['positions']) if isinstance(source_spread['positions'], str) else source_spread['positions']
             self.designer_positions = [dict(p) for p in positions]
 
-            # Copy deck type restrictions
-            for cb in self.spread_deck_type_checks.values():
-                cb.SetValue(False)
+            # Copy deck type restriction
+            self.spread_deck_type_choice.SetSelection(0)  # Default to "Any"
             if 'allowed_deck_types' in source_spread.keys() and source_spread['allowed_deck_types']:
                 allowed_types = json.loads(source_spread['allowed_deck_types']) if isinstance(source_spread['allowed_deck_types'], str) else source_spread['allowed_deck_types']
-                if allowed_types:
-                    for deck_type in allowed_types:
-                        if deck_type in self.spread_deck_type_checks:
-                            self.spread_deck_type_checks[deck_type].SetValue(True)
+                if allowed_types and len(allowed_types) > 0:
+                    deck_type = allowed_types[0]
+                    if deck_type in self.spread_deck_type_names:
+                        idx = self.spread_deck_type_names.index(deck_type)
+                        self.spread_deck_type_choice.SetSelection(idx)
 
             # Copy default deck
             self._refresh_spread_default_deck_choices()
@@ -386,11 +385,12 @@ class SpreadsMixin:
 
         desc = self.spread_desc_ctrl.GetValue().strip()
 
-        # Collect allowed deck types
-        allowed_deck_types = [
-            deck_type for deck_type, cb in self.spread_deck_type_checks.items()
-            if cb.GetValue()
-        ]
+        # Get allowed deck type from dropdown
+        deck_type_idx = self.spread_deck_type_choice.GetSelection()
+        if deck_type_idx > 0:  # Not "Any"
+            allowed_deck_types = [self.spread_deck_type_names[deck_type_idx]]
+        else:
+            allowed_deck_types = []  # "Any" means no restriction
 
         # Get default deck selection
         default_deck_sel = self.spread_default_deck_choice.GetSelection()

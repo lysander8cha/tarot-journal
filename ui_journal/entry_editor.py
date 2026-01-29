@@ -382,6 +382,16 @@ class EntryEditorMixin:
                 idx = deck_choice.FindString(current_selection)
                 if idx != wx.NOT_FOUND:
                     deck_choice.SetSelection(idx)
+                    # SetSelection doesn't trigger EVT_CHOICE, so update manually
+                    if current_selection in dlg._all_decks:
+                        dlg._selected_deck_id = dlg._all_decks[current_selection]['id']
+
+            # If nothing selected but decks are available, select the first one
+            if deck_choice.GetSelection() == wx.NOT_FOUND and deck_choice.GetCount() > 0:
+                deck_choice.SetSelection(0)
+                name = deck_choice.GetStringSelection()
+                if name in dlg._all_decks:
+                    dlg._selected_deck_id = dlg._all_decks[name]['id']
 
         def on_spread_change(event):
             dlg._spread_cards = {}

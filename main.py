@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
+DEPRECATED: This is the legacy wxPython GUI version.
+The primary frontend is now Electron/React in the frontend/ directory.
+Do not modify this file unless explicitly working on the Python version.
+
 Tarot Journal - A journaling app for cartomancy
-wxPython GUI version
 """
 
 import wx

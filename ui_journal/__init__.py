@@ -1,4 +1,6 @@
-"""Journal panel UI components for the tarot journal application.
+"""DEPRECATED: Legacy wxPython UI - see frontend/ for active Electron/React code.
+
+Journal panel UI components for the tarot journal application.
 
 This package contains the journal panel functionality, split into focused modules:
 - panel.py: Main panel creation
