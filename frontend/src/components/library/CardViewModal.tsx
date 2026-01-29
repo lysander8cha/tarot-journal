@@ -3,6 +3,7 @@ import { getCard } from '../../api/cards';
 import { cardPreviewUrl } from '../../api/images';
 import type { Card, Tag, CardGroup } from '../../types';
 import Modal from '../common/Modal';
+import RichTextViewer from '../common/RichTextViewer';
 import './CardViewModal.css';
 
 interface CardViewModalProps {
@@ -52,14 +53,22 @@ export default function CardViewModal({ cardId, cardIds, onClose, onNavigate, on
   // Fields shown elsewhere (I Ching fields displayed in Classification section)
   const iChingFieldKeys = ['traditional_chinese', 'simplified_chinese'];
 
-  // Convert old JSON entries to display format, excluding I Ching fields
+  // Check if a field value has actual content (not empty or just empty HTML tags)
+  const hasContent = (value: string | null | undefined): boolean => {
+    if (!value) return false;
+    // Strip HTML tags and check if anything remains
+    const textContent = value.replace(/<[^>]*>/g, '').trim();
+    return textContent.length > 0;
+  };
+
+  // Convert old JSON entries to display format, excluding I Ching fields and empty values
   const legacyFields = Object.entries(customFields)
-    .filter(([key]) => !iChingFieldKeys.includes(key))
+    .filter(([key, value]) => !iChingFieldKeys.includes(key) && hasContent(value))
     .map(([key, value]) => ({ field_name: key, field_value: value }));
 
-  // Combine with new table-based custom fields
+  // Combine with new table-based custom fields, excluding empty values
   const tableFields = (card?.card_custom_fields || [])
-    .filter(f => !iChingFieldKeys.includes(f.field_name))
+    .filter(f => !iChingFieldKeys.includes(f.field_name) && hasContent(f.field_value))
     .map(f => ({ field_name: f.field_name, field_value: f.field_value || '' }));
 
   const displayCustomFields = [...legacyFields, ...tableFields];
@@ -123,7 +132,13 @@ export default function CardViewModal({ cardId, cardIds, onClose, onNavigate, on
               <div className="card-view__section">
                 <h3 className="card-view__section-title">Custom Fields</h3>
                 {displayCustomFields.map((f, i) => (
-                  <InfoRow key={i} label={f.field_name} value={f.field_value || ''} />
+                  <div key={i} className="card-view__custom-field">
+                    <span className="card-view__cf-label">{f.field_name}</span>
+                    <RichTextViewer
+                      content={f.field_value || ''}
+                      className="card-view__cf-content"
+                    />
+                  </div>
                 ))}
               </div>
             )}

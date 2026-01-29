@@ -12,6 +12,10 @@ import './ReadingEditor.css';
  * Supports both multi-type decks (cartomancy_types array) and legacy single-type (cartomancy_type string).
  */
 function deckMatchesType(deck: Deck, requiredType: string): boolean {
+  // "Any" matches all decks
+  if (requiredType === 'Any') {
+    return true;
+  }
   // Check multi-type array first
   if (deck.cartomancy_types && deck.cartomancy_types.length > 0) {
     return deck.cartomancy_types.some(t => t.name === requiredType);

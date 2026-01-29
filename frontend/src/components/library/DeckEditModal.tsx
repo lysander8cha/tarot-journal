@@ -361,7 +361,6 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
                         onChange={e => handleUpdateCustomField(field.id, { field_type: e.target.value })}
                       >
                         <option value="text">Text</option>
-                        <option value="textarea">Text Area</option>
                         <option value="number">Number</option>
                         <option value="select">Dropdown</option>
                       </select>

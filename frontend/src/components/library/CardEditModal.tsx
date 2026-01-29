@@ -10,6 +10,7 @@ import { getDeckGroups } from '../../api/decks';
 import { cardPreviewUrl } from '../../api/images';
 import type { Tag, CardGroup } from '../../types';
 import Modal from '../common/Modal';
+import RichTextEditor from '../common/RichTextEditor';
 import './CardEditModal.css';
 
 interface CardEditModalProps {
@@ -337,27 +338,30 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
                   const realIndex = customFields.indexOf(field);
                   return (
                     <div key={field.id ?? `new-${vi}`} className="card-edit__custom-field">
-                      <input
-                        type="text"
-                        className="card-edit__cf-name"
-                        value={field.field_name}
-                        onChange={e => updateField(realIndex, 'field_name', e.target.value)}
-                        placeholder="Field name"
-                      />
-                      <input
-                        type="text"
-                        className="card-edit__cf-value"
-                        value={field.field_value}
-                        onChange={e => updateField(realIndex, 'field_value', e.target.value)}
-                        placeholder="Value"
-                      />
-                      <button
-                        className="card-edit__cf-delete"
-                        onClick={() => removeField(realIndex)}
-                        title="Remove field"
-                      >
-                        &times;
-                      </button>
+                      <div className="card-edit__cf-header">
+                        <input
+                          type="text"
+                          className="card-edit__cf-name"
+                          value={field.field_name}
+                          onChange={e => updateField(realIndex, 'field_name', e.target.value)}
+                          placeholder="Field name"
+                        />
+                        <button
+                          className="card-edit__cf-delete"
+                          onClick={() => removeField(realIndex)}
+                          title="Remove field"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      <div className="card-edit__cf-editor">
+                        <RichTextEditor
+                          content={field.field_value}
+                          onChange={(html) => updateField(realIndex, 'field_value', html)}
+                          placeholder="Enter text..."
+                          minHeight={100}
+                        />
+                      </div>
                     </div>
                   );
                 })

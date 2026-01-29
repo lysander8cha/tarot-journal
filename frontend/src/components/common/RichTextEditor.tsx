@@ -125,6 +125,7 @@ export default function RichTextEditor({
         className="rte__content"
         style={{ minHeight }}
         data-placeholder={placeholder}
+        onClick={() => editor.chain().focus().run()}
       >
         <EditorContent editor={editor} />
       </div>

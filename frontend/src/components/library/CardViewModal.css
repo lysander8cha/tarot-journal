@@ -123,3 +123,25 @@
   min-height: 300px;
   color: var(--text-dim);
 }
+
+/* Custom field display with rich text */
+.card-view__custom-field {
+  margin-bottom: 12px;
+  padding: 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.card-view__cf-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.card-view__cf-content {
+  color: var(--text-primary);
+  line-height: 1.6;
+}

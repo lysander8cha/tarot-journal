@@ -38,7 +38,7 @@
 }
 
 .card-edit__form {
-  max-height: 420px;
+  max-height: 520px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -172,17 +172,28 @@
 
 .card-edit__custom-field {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.card-edit__cf-header {
+  display: flex;
   gap: 8px;
   align-items: center;
-  margin-bottom: 6px;
 }
 
 .card-edit__cf-name {
-  flex: 0 0 35%;
+  flex: 1;
+  font-weight: 500;
 }
 
-.card-edit__cf-value {
-  flex: 1;
+.card-edit__cf-editor {
+  width: 100%;
 }
 
 .card-edit__cf-delete {
