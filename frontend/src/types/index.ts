@@ -153,6 +153,7 @@ export interface Profile {
   birth_place_name: string | null;
   birth_place_lat: number | null;
   birth_place_lon: number | null;
+  querent_only: boolean;
   created_at: string;
 }
 

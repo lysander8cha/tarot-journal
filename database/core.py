@@ -341,6 +341,12 @@ class CoreMixin:
             )
         ''')
 
+        # Migration: add querent_only column to profiles
+        cursor.execute('PRAGMA table_info(profiles)')
+        profile_columns = [col[1] for col in cursor.fetchall()]
+        if 'querent_only' not in profile_columns:
+            cursor.execute('ALTER TABLE profiles ADD COLUMN querent_only INTEGER DEFAULT 0')
+
         # Migration: add querent_id and reader_id to journal_entries
         cursor.execute('PRAGMA table_info(journal_entries)')
         columns = [col[1] for col in cursor.fetchall()]

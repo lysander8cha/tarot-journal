@@ -251,24 +251,26 @@ export default function SettingsTab() {
 
           <div className="settings-tab__defaults-grid">
             <div className="settings-tab__field">
-              <label className="settings-tab__label">Default Querent</label>
-              <select
-                value={defaults?.default_querent ?? ''}
-                onChange={(e) => handleDefaultChange('default_querent', e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">None</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="settings-tab__field">
               <label className="settings-tab__label">Default Reader</label>
               <select
                 value={defaults?.default_reader ?? ''}
                 onChange={(e) => handleDefaultChange('default_reader', e.target.value ? Number(e.target.value) : null)}
-                disabled={defaults?.default_reader_same_as_querent}
+              >
+                <option value="">None</option>
+                {profiles
+                  .filter((p) => !p.querent_only)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="settings-tab__field">
+              <label className="settings-tab__label">Default Querent</label>
+              <select
+                value={defaults?.default_querent ?? ''}
+                onChange={(e) => handleDefaultChange('default_querent', e.target.value ? Number(e.target.value) : null)}
+                disabled={defaults?.default_querent_same_as_reader}
               >
                 <option value="">None</option>
                 {profiles.map((p) => (
@@ -281,10 +283,10 @@ export default function SettingsTab() {
               <label>
                 <input
                   type="checkbox"
-                  checked={defaults?.default_reader_same_as_querent ?? false}
-                  onChange={(e) => handleDefaultChange('default_reader_same_as_querent', e.target.checked)}
+                  checked={defaults?.default_querent_same_as_reader ?? false}
+                  onChange={(e) => handleDefaultChange('default_querent_same_as_reader', e.target.checked)}
                 />
-                Reader same as querent
+                Querent same as reader
               </label>
             </div>
           </div>

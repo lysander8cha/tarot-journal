@@ -20,22 +20,23 @@ class ProfilesMixin:
 
     def add_profile(self, name: str, gender: str = None, birth_date: str = None,
                     birth_time: str = None, birth_place_name: str = None,
-                    birth_place_lat: float = None, birth_place_lon: float = None):
+                    birth_place_lat: float = None, birth_place_lon: float = None,
+                    querent_only: bool = False):
         """Add a new profile"""
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO profiles (name, gender, birth_date, birth_time,
-                                  birth_place_name, birth_place_lat, birth_place_lon)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                                  birth_place_name, birth_place_lat, birth_place_lon, querent_only)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (name, gender, birth_date, birth_time, birth_place_name,
-              birth_place_lat, birth_place_lon))
+              birth_place_lat, birth_place_lon, 1 if querent_only else 0))
         self._commit()
         return cursor.lastrowid
 
     def update_profile(self, profile_id: int, name: str = None, gender: str = None,
                        birth_date: str = None, birth_time: str = None,
                        birth_place_name: str = None, birth_place_lat: float = None,
-                       birth_place_lon: float = None):
+                       birth_place_lon: float = None, querent_only: bool = None):
         """Update an existing profile"""
         cursor = self.conn.cursor()
         updates = []
@@ -62,6 +63,9 @@ class ProfilesMixin:
         if birth_place_lon is not None:
             updates.append('birth_place_lon = ?')
             params.append(birth_place_lon)
+        if querent_only is not None:
+            updates.append('querent_only = ?')
+            params.append(1 if querent_only else 0)
 
         if updates:
             params.append(profile_id)

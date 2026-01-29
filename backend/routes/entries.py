@@ -297,6 +297,7 @@ def add_profile():
         birth_place_name=data.get('birth_place_name'),
         birth_place_lat=data.get('birth_place_lat'),
         birth_place_lon=data.get('birth_place_lon'),
+        querent_only=data.get('querent_only', False),
     )
     return jsonify({'id': profile_id}), 201
 
@@ -314,6 +315,7 @@ def update_profile(profile_id):
         birth_place_name=data.get('birth_place_name'),
         birth_place_lat=data.get('birth_place_lat'),
         birth_place_lon=data.get('birth_place_lon'),
+        querent_only=data.get('querent_only'),
     )
     return jsonify({'ok': True})
 

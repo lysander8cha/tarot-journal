@@ -28,7 +28,7 @@ export async function applyThemePreset(presetName: string): Promise<Theme> {
 export interface AppDefaults {
   default_querent: number | null;
   default_reader: number | null;
-  default_reader_same_as_querent: boolean;
+  default_querent_same_as_reader: boolean;
   default_decks: Record<string, number | null>;
   last_backup_time: string | null;
 }

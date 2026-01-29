@@ -78,7 +78,7 @@ def get_defaults():
     return jsonify({
         'default_querent': db.get_default_querent(),
         'default_reader': db.get_default_reader(),
-        'default_reader_same_as_querent': db.get_default_reader_same_as_querent(),
+        'default_querent_same_as_reader': db.get_default_querent_same_as_reader(),
         'default_decks': default_decks,
         'last_backup_time': db.get_setting('last_backup_time'),
     })
@@ -93,8 +93,8 @@ def update_defaults():
         db.set_default_querent(data['default_querent'])
     if 'default_reader' in data:
         db.set_default_reader(data['default_reader'])
-    if 'default_reader_same_as_querent' in data:
-        db.set_default_reader_same_as_querent(data['default_reader_same_as_querent'])
+    if 'default_querent_same_as_reader' in data:
+        db.set_default_querent_same_as_reader(data['default_querent_same_as_reader'])
     if 'default_decks' in data:
         for type_name, deck_id in data['default_decks'].items():
             if deck_id is not None:

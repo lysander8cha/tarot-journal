@@ -10,6 +10,7 @@ import {
   getProfiles,
 } from '../../api/entries';
 import { getEntryTags as getAllEntryTags } from '../../api/tags';
+import { getDefaults, type AppDefaults } from '../../api/settings';
 import Modal from '../common/Modal';
 import RichTextEditor from '../common/RichTextEditor';
 import ReadingEditor, { type ReadingData } from './ReadingEditor';
@@ -60,6 +61,12 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
   const { data: profiles = [] } = useQuery<Profile[]>({
     queryKey: ['profiles'],
     queryFn: getProfiles,
+    enabled: open,
+  });
+
+  const { data: defaults } = useQuery<AppDefaults>({
+    queryKey: ['defaults'],
+    queryFn: getDefaults,
     enabled: open,
   });
 
@@ -119,8 +126,13 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
       setDateMode('now');
       setReadingDatetime(nowLocalISO());
       setLocationName('');
-      setQuerentId(null);
-      setReaderId(null);
+      // Apply defaults for reader and querent
+      const defaultReader = defaults?.default_reader ?? null;
+      const defaultQuerent = defaults?.default_querent_same_as_reader
+        ? defaultReader
+        : (defaults?.default_querent ?? null);
+      setReaderId(defaultReader);
+      setQuerentId(defaultQuerent);
       setContent('');
       setReadings([]);
       setSelectedTagIds([]);
@@ -129,7 +141,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
     if (open && isEditing) {
       setInitialized(false);
     }
-  }, [open, entryId]);
+  }, [open, entryId, defaults]);
 
   const toggleTag = (tagId: number) => {
     setSelectedTagIds(prev =>
@@ -304,9 +316,11 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
                   onChange={(e) => setReaderId(e.target.value ? Number(e.target.value) : null)}
                 >
                   <option value="">None</option>
-                  {profiles.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
+                  {profiles
+                    .filter((p) => !p.querent_only)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
                 </select>
               </div>
             </div>

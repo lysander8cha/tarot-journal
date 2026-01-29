@@ -50,14 +50,14 @@ class SettingsMixin:
         """Set the default reader profile ID"""
         self.set_setting('default_reader', str(profile_id) if profile_id else '')
 
-    def get_default_reader_same_as_querent(self):
-        """Get whether default reader should be same as querent"""
-        val = self.get_setting('default_reader_same_as_querent')
+    def get_default_querent_same_as_reader(self):
+        """Get whether default querent should be same as reader"""
+        val = self.get_setting('default_querent_same_as_reader')
         return val == '1' if val else False
 
-    def set_default_reader_same_as_querent(self, same: bool):
-        """Set whether default reader should be same as querent"""
-        self.set_setting('default_reader_same_as_querent', '1' if same else '0')
+    def set_default_querent_same_as_reader(self, same: bool):
+        """Set whether default querent should be same as reader"""
+        self.set_setting('default_querent_same_as_reader', '1' if same else '0')
 
     # === Statistics ===
     def get_stats(self):

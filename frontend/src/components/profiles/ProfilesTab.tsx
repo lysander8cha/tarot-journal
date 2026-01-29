@@ -22,6 +22,7 @@ export default function ProfilesTab() {
   const [birthDate, setBirthDate] = useState('');
   const [birthTime, setBirthTime] = useState('');
   const [birthPlaceName, setBirthPlaceName] = useState('');
+  const [querentOnly, setQuerentOnly] = useState(false);
 
   const { data: profiles = [], isLoading } = useQuery<Profile[]>({
     queryKey: ['profiles'],
@@ -38,6 +39,7 @@ export default function ProfilesTab() {
       setBirthDate(selectedProfile.birth_date || '');
       setBirthTime(selectedProfile.birth_time || '');
       setBirthPlaceName(selectedProfile.birth_place_name || '');
+      setQuerentOnly(selectedProfile.querent_only || false);
     }
   }, [selectedProfile, isNew]);
 
@@ -54,6 +56,7 @@ export default function ProfilesTab() {
     setBirthDate('');
     setBirthTime('');
     setBirthPlaceName('');
+    setQuerentOnly(false);
   };
 
   const handleSave = async () => {
@@ -66,6 +69,7 @@ export default function ProfilesTab() {
         birth_date: birthDate || null,
         birth_time: birthTime || null,
         birth_place_name: birthPlaceName.trim() || null,
+        querent_only: querentOnly,
       };
 
       if (isNew) {
@@ -184,6 +188,17 @@ export default function ProfilesTab() {
                     onChange={(e) => setBirthPlaceName(e.target.value)}
                     placeholder="City, Country"
                   />
+                </div>
+
+                <div className="profiles-tab__field profiles-tab__checkbox-field">
+                  <label className="profiles-tab__checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={querentOnly}
+                      onChange={(e) => setQuerentOnly(e.target.checked)}
+                    />
+                    <span>Querent Only</span>
+                  </label>
                 </div>
               </div>
 
