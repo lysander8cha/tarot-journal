@@ -14,8 +14,8 @@ from mixin_profiles import ProfilesMixin
 from mixin_tags import TagsMixin
 from mixin_settings import SettingsMixin
 from mixin_spreads import SpreadsMixin
-from mixin_journal import JournalMixin
-from mixin_library import LibraryMixin
+from ui_journal import JournalMixin
+from ui_library import LibraryMixin
 
 
 class TarotJournalApp(wx.App):
