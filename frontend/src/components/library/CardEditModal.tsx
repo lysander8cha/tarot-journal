@@ -174,16 +174,6 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
           };
         });
 
-      // DEBUG: Log field counts to diagnose missing fields
-      console.log('[CardEdit] Custom fields debug:', {
-        legacyFields: legacyFields.map(f => f.field_name),
-        tableFields: tableFields.map(f => ({ name: f.field_name, type: f.field_type, options: f.field_options })),
-        deckCustomFields: deckCustomFields.map(f => ({ name: f.field_name, type: f.field_type, options: f.field_options })),
-        existingFieldNames: Array.from(existingFieldNames),
-        deckDefinedFields: deckDefinedFields.map(f => ({ name: f.field_name, type: f.field_type, options: f.field_options })),
-        totalFields: legacyFields.length + tableFields.length + deckDefinedFields.length,
-      });
-
       setCustomFields([...legacyFields, ...tableFields, ...deckDefinedFields]);
     }
   }, [card, deckCustomFields]);
