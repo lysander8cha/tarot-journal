@@ -36,6 +36,8 @@ export interface ReadingData {
     deck_id?: number;
     deck_name?: string;
     position_index?: number;
+    /** Client-side unique key for React rendering (not persisted to backend) */
+    _key?: string;
   }>;
 }
 
@@ -247,6 +249,7 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
           position_index: value.cards.length,
           deck_id: value.deck_id || undefined,
           deck_name: value.deck_name || undefined,
+          _key: crypto.randomUUID(),
         },
       ],
     });
@@ -373,7 +376,7 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
           // No spread: free-form card list
           <>
             {value.cards.map((card, idx) => (
-              <div key={idx} className="reading-editor__card-slot">
+              <div key={card._key ?? `card-${idx}`} className="reading-editor__card-slot">
                 {deckCards.length > 0 ? (
                   <select
                     className="reading-editor__card-select"
@@ -500,6 +503,7 @@ function VisualSpreadEditor({
           position: 'relative',
         }}
       >
+        {/* key={idx} is safe here: positions come from the spread definition and don't change during editing */}
         {positions.map((pos, idx) => {
           const card = cards[idx];
           const posDeckId = getDeckIdForPosition(pos);
@@ -541,6 +545,7 @@ function VisualSpreadEditor({
       </div>
 
       {/* Card selection list below canvas */}
+      {/* key={idx} is safe here: positions come from the spread definition and don't change during editing */}
       <div className="reading-editor__position-list">
         {positions.map((pos, idx) => {
           const card = cards[idx];
