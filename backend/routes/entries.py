@@ -9,6 +9,10 @@ from backend.services.richtext import convert_content_to_html
 
 entries_bp = Blueprint('entries', __name__)
 
+# Pagination limits to prevent memory exhaustion
+MAX_LIMIT = 500
+DEFAULT_LIMIT = 50
+
 
 def _row_to_dict(row):
     return dict(row) if row else None
@@ -54,8 +58,11 @@ def _enrich_cards_with_ids(db, cards):
 @entries_bp.route('/api/entries')
 def list_entries():
     db = current_app.config['DB']
-    limit = request.args.get('limit', 50, type=int)
+    limit = request.args.get('limit', DEFAULT_LIMIT, type=int)
     offset = request.args.get('offset', 0, type=int)
+    # Clamp values to prevent memory exhaustion
+    limit = max(1, min(limit, MAX_LIMIT))
+    offset = max(0, offset)
     rows = db.get_entries(limit=limit, offset=offset)
     return jsonify([_row_to_dict(r) for r in rows])
 

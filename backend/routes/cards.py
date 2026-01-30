@@ -7,6 +7,9 @@ from flask import Blueprint, jsonify, request, current_app
 
 cards_bp = Blueprint('cards', __name__)
 
+# Pagination limits to prevent memory exhaustion
+MAX_LIMIT = 500
+
 
 def _row_to_dict(row):
     return dict(row) if row else None
@@ -27,6 +30,10 @@ def get_cards():
 def search_cards():
     """Search cards with flexible filters."""
     db = current_app.config['DB']
+    # Validate limit to prevent memory exhaustion
+    limit = request.args.get('limit', type=int)
+    if limit is not None:
+        limit = max(1, min(limit, MAX_LIMIT))
     results = db.search_cards(
         query=request.args.get('query'),
         deck_id=request.args.get('deck_id', type=int),
@@ -39,7 +46,7 @@ def search_cards():
         has_image=request.args.get('has_image', type=lambda v: v.lower() == 'true') if request.args.get('has_image') else None,
         sort_by=request.args.get('sort_by', 'name'),
         sort_asc=request.args.get('sort_asc', 'true').lower() == 'true',
-        limit=request.args.get('limit', type=int),
+        limit=limit,
     )
     return jsonify([_row_to_dict(r) for r in results])
 
