@@ -163,6 +163,16 @@ def get_court_names(deck_id):
     return jsonify(names or {})
 
 
+@decks_bp.route('/api/decks/<int:deck_id>/court-names', methods=['PUT'])
+def update_court_names(deck_id):
+    db = current_app.config['DB']
+    data = request.get_json()
+    court_names = data.get('court_names')
+    old_court_names = data.get('old_court_names')
+    db.update_deck_court_names(deck_id, court_names, old_court_names)
+    return jsonify({'ok': True})
+
+
 @decks_bp.route('/api/decks/<int:deck_id>/tags')
 def get_deck_tags(deck_id):
     db = current_app.config['DB']

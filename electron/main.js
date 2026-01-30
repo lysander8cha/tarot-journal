@@ -110,6 +110,13 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   }
 
+  // Allow toggling DevTools with Cmd+Option+I (Mac) or Ctrl+Shift+I (Windows/Linux)
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if ((input.meta || input.control) && input.alt && input.key.toLowerCase() === 'i') {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });

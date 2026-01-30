@@ -225,3 +225,34 @@
   font-size: var(--font-size-small);
   font-style: italic;
 }
+
+/* ── Suit/Court Init Section ── */
+
+.deck-edit__init-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.deck-edit__init-hint {
+  color: var(--text-secondary);
+  font-size: var(--font-size-small);
+  margin: 0;
+}
+
+.deck-edit__init-btn {
+  padding: 4px 12px;
+  font-size: var(--font-size-small);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.deck-edit__init-btn:hover {
+  background: var(--bg-input);
+  border-color: var(--accent-dim);
+}

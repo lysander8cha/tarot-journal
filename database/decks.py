@@ -3,6 +3,7 @@ Database operations for decks and cartomancy types.
 """
 
 import json
+import re
 from typing import Optional, List
 
 
@@ -193,27 +194,101 @@ class DecksMixin:
         }
 
     def update_deck_suit_names(self, deck_id: int, suit_names: dict, old_suit_names: dict = None):
-        """Update suit names and rename all cards accordingly"""
+        """Update suit names and rename all cards accordingly."""
         cursor = self.conn.cursor()
 
-        # Update deck
+        # Update deck's suit_names field
         suit_names_json = json.dumps(suit_names)
         cursor.execute('UPDATE decks SET suit_names = ? WHERE id = ?', (suit_names_json, deck_id))
 
-        # Update cards if old names provided
+        # Update card names if old names provided
+        cards_updated = 0
         if old_suit_names:
-            for suit_key in ['wands', 'cups', 'swords', 'pentacles']:
-                old_name = old_suit_names.get(suit_key)
+            for suit_key, old_name in old_suit_names.items():
                 new_name = suit_names.get(suit_key)
                 if old_name and new_name and old_name != new_name:
-                    # Replace "of OldSuit" with "of NewSuit"
-                    cursor.execute('''
-                        UPDATE cards
-                        SET name = REPLACE(name, ?, ?)
-                        WHERE deck_id = ? AND name LIKE ?
-                    ''', (f'of {old_name}', f'of {new_name}', deck_id, f'%of {old_name}'))
+                    # Get all cards for this deck that END with "of {suit_name}"
+                    cursor.execute(
+                        'SELECT id, name FROM cards WHERE deck_id = ? AND name LIKE ?',
+                        (deck_id, f'% of {old_name}')
+                    )
+                    cards = cursor.fetchall()
+
+                    # If no cards found with display name, try canonical key (capitalized)
+                    # This handles cases where suit_names was set but cards weren't renamed
+                    canonical_name = suit_key.capitalize()
+                    if not cards and canonical_name != old_name:
+                        cursor.execute(
+                            'SELECT id, name FROM cards WHERE deck_id = ? AND name LIKE ?',
+                            (deck_id, f'% of {canonical_name}')
+                        )
+                        cards = cursor.fetchall()
+                        old_name = canonical_name
+
+                    for card in cards:
+                        card_id, card_name = card['id'], card['name']
+                        # Case-insensitive replacement of "of OldSuit" with "of NewSuit"
+                        # Match "of {suit}" at end of string to avoid partial matches
+                        pattern = re.compile(r'\bof\s+' + re.escape(old_name) + r'$', re.IGNORECASE)
+                        new_card_name = pattern.sub(f'of {new_name}', card_name)
+
+                        if new_card_name != card_name:
+                            cursor.execute(
+                                'UPDATE cards SET name = ? WHERE id = ?',
+                                (new_card_name, card_id)
+                            )
+                            cards_updated += 1
 
         self._commit()
+        return cards_updated
+
+    def update_deck_court_names(self, deck_id: int, court_names: dict, old_court_names: dict = None):
+        """Update court card names and rename all cards accordingly."""
+        cursor = self.conn.cursor()
+
+        # Update deck's court_names field
+        court_names_json = json.dumps(court_names)
+        cursor.execute('UPDATE decks SET court_names = ? WHERE id = ?', (court_names_json, deck_id))
+
+        # Update card names if old names provided
+        cards_updated = 0
+        if old_court_names:
+            for court_key, old_name in old_court_names.items():
+                new_name = court_names.get(court_key)
+                if old_name and new_name and old_name != new_name:
+                    # Get all cards for this deck that start with the old court name
+                    cursor.execute(
+                        'SELECT id, name FROM cards WHERE deck_id = ? AND name LIKE ?',
+                        (deck_id, f'{old_name} %')
+                    )
+                    cards = cursor.fetchall()
+
+                    # If no cards found with display name, try canonical key (capitalized)
+                    # This handles cases where court_names was set but cards weren't renamed
+                    canonical_name = court_key.capitalize()
+                    if not cards and canonical_name != old_name:
+                        cursor.execute(
+                            'SELECT id, name FROM cards WHERE deck_id = ? AND name LIKE ?',
+                            (deck_id, f'{canonical_name} %')
+                        )
+                        cards = cursor.fetchall()
+                        old_name = canonical_name
+
+                    for card in cards:
+                        card_id, card_name = card['id'], card['name']
+                        # Case-insensitive replacement of "OldCourt of" with "NewCourt of"
+                        pattern = re.compile(re.escape(f'{old_name} of'), re.IGNORECASE)
+                        new_card_name = pattern.sub(f'{new_name} of', card_name)
+
+                        if new_card_name != card_name:
+                            cursor.execute(
+                                'UPDATE cards SET name = ? WHERE id = ?',
+                                (new_card_name, card_id)
+                            )
+                            cards_updated += 1
+
+        self._commit()
+        return cards_updated
 
     def delete_deck(self, deck_id: int):
         cursor = self.conn.cursor()

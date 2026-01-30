@@ -65,6 +65,30 @@ export async function deleteDeckCustomField(fieldId: number) {
   await api.delete(`/api/decks/custom-fields/${fieldId}`);
 }
 
+// ── Suit/Court Name Updates (with card renaming) ──
+
+export async function updateDeckSuitNames(
+  deckId: number,
+  suitNames: Record<string, string>,
+  oldSuitNames?: Record<string, string>,
+) {
+  await api.put(`/api/decks/${deckId}/suit-names`, {
+    suit_names: suitNames,
+    old_suit_names: oldSuitNames,
+  });
+}
+
+export async function updateDeckCourtNames(
+  deckId: number,
+  courtNames: Record<string, string>,
+  oldCourtNames?: Record<string, string>,
+) {
+  await api.put(`/api/decks/${deckId}/court-names`, {
+    court_names: courtNames,
+    old_court_names: oldCourtNames,
+  });
+}
+
 // ── Deck Type Assignments (multi-type support) ──
 
 export async function getDeckTypes(deckId: number): Promise<{ id: number; name: string }[]> {

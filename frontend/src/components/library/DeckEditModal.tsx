@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getDeck, updateDeck, getDeckTagAssignments, setDeckTags, getCartomancyTypes,
   getDeckCustomFields, addDeckCustomField, updateDeckCustomField, deleteDeckCustomField,
-  getDeckTypes, setDeckTypes,
+  getDeckTypes, setDeckTypes, updateDeckSuitNames, updateDeckCourtNames,
 } from '../../api/decks';
 import { getDeckTags } from '../../api/tags';
 import { deckBackUrl } from '../../api/images';
@@ -57,6 +57,17 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
     enabled: deckId !== null,
   });
 
+  // Standard suit/court keys (lowercase for database) with default display names
+  const TAROT_SUIT_DEFAULTS: Record<string, string> = {
+    wands: 'Wands', cups: 'Cups', swords: 'Swords', pentacles: 'Pentacles'
+  };
+  const PLAYING_SUIT_DEFAULTS: Record<string, string> = {
+    hearts: 'Hearts', diamonds: 'Diamonds', clubs: 'Clubs', spades: 'Spades'
+  };
+  const COURT_CARD_DEFAULTS: Record<string, string> = {
+    page: 'Page', knight: 'Knight', queen: 'Queen', king: 'King'
+  };
+
   // Form state
   const [name, setName] = useState('');
   const [selectedTypeIds, setSelectedTypeIds] = useState<number[]>([]);
@@ -68,7 +79,30 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [suitNames, setSuitNames] = useState<Record<string, string>>({});
   const [courtNames, setCourtNames] = useState<Record<string, string>>({});
+  const [originalSuitNames, setOriginalSuitNames] = useState<Record<string, string>>({});
+  const [originalCourtNames, setOriginalCourtNames] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  // Determine which suit/court options to show based on selected types
+  const selectedTypeNames = types
+    .filter(t => selectedTypeIds.includes(t.id))
+    .map(t => t.name.toLowerCase());
+
+  const hasTarot = selectedTypeNames.some(n => n.includes('tarot'));
+  const hasPlayingCards = selectedTypeNames.some(n =>
+    n.includes('playing') || n.includes('poker') || n.includes('bridge')
+  );
+  const hasSuitedDeck = hasTarot || hasPlayingCards;
+
+  // Get the appropriate default suits for current deck type
+  const getDefaultSuits = (): Record<string, string> => {
+    if (hasTarot) return TAROT_SUIT_DEFAULTS;
+    if (hasPlayingCards) return PLAYING_SUIT_DEFAULTS;
+    return TAROT_SUIT_DEFAULTS; // fallback
+  };
+
+  // Capitalize key for display label
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   useEffect(() => {
     if (deck) {
@@ -79,13 +113,23 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
       setNotes(deck.notes || '');
       setBookletInfo(deck.booklet_info || '');
 
-      // Parse suit and court names JSON
+      // Parse suit and court names JSON, and save originals for card renaming
       try {
-        setSuitNames(deck.suit_names ? JSON.parse(deck.suit_names) : {});
-      } catch { setSuitNames({}); }
+        const parsed = deck.suit_names ? JSON.parse(deck.suit_names) : {};
+        setSuitNames(parsed);
+        setOriginalSuitNames(parsed);
+      } catch {
+        setSuitNames({});
+        setOriginalSuitNames({});
+      }
       try {
-        setCourtNames(deck.court_names ? JSON.parse(deck.court_names) : {});
-      } catch { setCourtNames({}); }
+        const parsed = deck.court_names ? JSON.parse(deck.court_names) : {};
+        setCourtNames(parsed);
+        setOriginalCourtNames(parsed);
+      } catch {
+        setCourtNames({});
+        setOriginalCourtNames({});
+      }
     }
   }, [deck]);
 
@@ -152,9 +196,19 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
         credits: credits || null,
         notes: notes || null,
         booklet_info: bookletInfo || null,
-        suit_names: Object.keys(suitNames).length > 0 ? suitNames : null,
-        court_names: Object.keys(courtNames).length > 0 ? courtNames : null,
       });
+
+      // Update suit names using dedicated endpoint (also renames cards)
+      const suitNamesChanged = JSON.stringify(suitNames) !== JSON.stringify(originalSuitNames);
+      if (suitNamesChanged && Object.keys(suitNames).length > 0) {
+        await updateDeckSuitNames(deck.id, suitNames, originalSuitNames);
+      }
+
+      // Update court names using dedicated endpoint (also renames cards)
+      const courtNamesChanged = JSON.stringify(courtNames) !== JSON.stringify(originalCourtNames);
+      if (courtNamesChanged && Object.keys(courtNames).length > 0) {
+        await updateDeckCourtNames(deck.id, courtNames, originalCourtNames);
+      }
 
       await setDeckTags(deck.id, selectedTagIds);
       await setDeckTypes(deck.id, selectedTypeIds);
@@ -163,6 +217,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
       queryClient.invalidateQueries({ queryKey: ['decks'] });
       queryClient.invalidateQueries({ queryKey: ['deck-tag-assignments', deckId] });
       queryClient.invalidateQueries({ queryKey: ['deck-types', deckId] });
+      queryClient.invalidateQueries({ queryKey: ['cards', deckId] }); // Refresh cards list
 
       onSaved();
       onClose();
@@ -267,39 +322,77 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
               />
             </div>
 
-            {Object.keys(suitNames).length > 0 && (
+            {hasSuitedDeck && (
               <div className="deck-edit__section">
                 <h3 className="deck-edit__section-title">Suit Names</h3>
-                <div className="deck-edit__row deck-edit__row--wrap">
-                  {Object.entries(suitNames).map(([key, value]) => (
-                    <div key={key} className="deck-edit__field deck-edit__field--quarter">
-                      <label className="deck-edit__label">{key}</label>
-                      <input
-                        type="text"
-                        value={value}
-                        onChange={e => setSuitNames(prev => ({ ...prev, [key]: e.target.value }))}
-                      />
-                    </div>
-                  ))}
-                </div>
+                {Object.keys(suitNames).length > 0 ? (
+                  <div className="deck-edit__row deck-edit__row--wrap">
+                    {Object.entries(suitNames).map(([key, value]) => (
+                      <div key={key} className="deck-edit__field deck-edit__field--quarter">
+                        <label className="deck-edit__label">{capitalize(key)}</label>
+                        <input
+                          type="text"
+                          value={value}
+                          onChange={e => setSuitNames(prev => ({ ...prev, [key]: e.target.value }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="deck-edit__init-section">
+                    <p className="deck-edit__init-hint">
+                      No custom suit names set. Use defaults or customize below.
+                    </p>
+                    <button
+                      type="button"
+                      className="deck-edit__init-btn"
+                      onClick={() => {
+                        const defaults = { ...getDefaultSuits() };
+                        setSuitNames(defaults);
+                        setOriginalSuitNames(defaults);
+                      }}
+                    >
+                      Set Custom Suit Names
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
-            {Object.keys(courtNames).length > 0 && (
+            {hasTarot && (
               <div className="deck-edit__section">
-                <h3 className="deck-edit__section-title">Court Names</h3>
-                <div className="deck-edit__row deck-edit__row--wrap">
-                  {Object.entries(courtNames).map(([key, value]) => (
-                    <div key={key} className="deck-edit__field deck-edit__field--quarter">
-                      <label className="deck-edit__label">{key}</label>
-                      <input
-                        type="text"
-                        value={value}
-                        onChange={e => setCourtNames(prev => ({ ...prev, [key]: e.target.value }))}
-                      />
-                    </div>
-                  ))}
-                </div>
+                <h3 className="deck-edit__section-title">Court Card Names</h3>
+                {Object.keys(courtNames).length > 0 ? (
+                  <div className="deck-edit__row deck-edit__row--wrap">
+                    {Object.entries(courtNames).map(([key, value]) => (
+                      <div key={key} className="deck-edit__field deck-edit__field--quarter">
+                        <label className="deck-edit__label">{capitalize(key)}</label>
+                        <input
+                          type="text"
+                          value={value}
+                          onChange={e => setCourtNames(prev => ({ ...prev, [key]: e.target.value }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="deck-edit__init-section">
+                    <p className="deck-edit__init-hint">
+                      No custom court card names set. Use defaults or customize below.
+                    </p>
+                    <button
+                      type="button"
+                      className="deck-edit__init-btn"
+                      onClick={() => {
+                        const defaults = { ...COURT_CARD_DEFAULTS };
+                        setCourtNames(defaults);
+                        setOriginalCourtNames(defaults);
+                      }}
+                    >
+                      Set Custom Court Names
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
