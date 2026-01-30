@@ -93,6 +93,19 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
   const [customFields, setCustomFields] = useState<EditableField[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Reset form state when switching to a different card
+  useEffect(() => {
+    setName('');
+    setCardOrder(0);
+    setArchetype('');
+    setRank('');
+    setSuit('');
+    setNotes('');
+    setSelectedTagIds([]);
+    setSelectedGroupIds([]);
+    setCustomFields([]);
+  }, [cardId]);
+
   // Populate form when card data loads
   useEffect(() => {
     if (card) {
