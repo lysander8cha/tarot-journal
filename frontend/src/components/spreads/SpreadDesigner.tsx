@@ -28,6 +28,7 @@ export default function SpreadDesigner({
 }: SpreadDesignerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [gridEnabled, setGridEnabled] = useState(true);
+  const [showLabelsOnPositions, setShowLabelsOnPositions] = useState(false);
   const [dragging, setDragging] = useState<{
     index: number;
     startMouseX: number;
@@ -48,6 +49,9 @@ export default function SpreadDesigner({
     index: number;
   } | null>(null);
   const [showSlotMenu, setShowSlotMenu] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editLabel, setEditLabel] = useState('');
+  const [editKey, setEditKey] = useState('');
 
   // Calculate dynamic canvas dimensions based on position bounding box
   const canvasDimensions = useMemo(() => {
@@ -87,15 +91,32 @@ export default function SpreadDesigner({
   );
 
   const handleAddPosition = () => {
-    const label = window.prompt('Position label:', `Position ${positions.length + 1}`);
-    if (!label) return;
     const cx = snap(canvasDimensions.width / 2 - DEFAULT_W / 2);
     const cy = snap(canvasDimensions.height / 2 - DEFAULT_H / 2);
+    const newIndex = positions.length;
+    const defaultLabel = `Position ${newIndex + 1}`;
+    const defaultKey = String(newIndex + 1);
     onChange([
       ...positions,
-      { x: cx, y: cy, width: DEFAULT_W, height: DEFAULT_H, label, key: String(positions.length + 1) },
+      { x: cx, y: cy, width: DEFAULT_W, height: DEFAULT_H, label: defaultLabel, key: defaultKey },
     ]);
-    onSelectIndex(positions.length);
+    onSelectIndex(newIndex);
+    // Open context menu for the new position so user can edit
+    // Use a small delay to ensure the position is rendered
+    setTimeout(() => {
+      const svg = svgRef.current;
+      if (svg) {
+        const rect = svg.getBoundingClientRect();
+        setContextMenu({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+          index: newIndex,
+        });
+        setEditMode(true);
+        setEditLabel(defaultLabel);
+        setEditKey(defaultKey);
+      }
+    }, 0);
   };
 
   const handleClearAll = () => {
@@ -190,12 +211,26 @@ export default function SpreadDesigner({
   const handleEditPosition = () => {
     if (contextMenu === null) return;
     const pos = positions[contextMenu.index];
-    const label = window.prompt('Position label:', pos.label);
-    if (label === null) return;
-    const key = window.prompt('Legend key (number or letter):', pos.key || String(contextMenu.index + 1));
+    setEditLabel(pos.label || '');
+    setEditKey(pos.key || String(contextMenu.index + 1));
+    setEditMode(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (contextMenu === null) return;
     const updated = [...positions];
-    updated[contextMenu.index] = { ...updated[contextMenu.index], label, key: key || undefined };
+    updated[contextMenu.index] = {
+      ...updated[contextMenu.index],
+      label: editLabel,
+      key: editKey || undefined,
+    };
     onChange(updated);
+    setEditMode(false);
+    setContextMenu(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditMode(false);
     setContextMenu(null);
   };
 
@@ -262,6 +297,14 @@ export default function SpreadDesigner({
           />
           <span>Snap to Grid</span>
         </label>
+        <label className="designer__grid-toggle">
+          <input
+            type="checkbox"
+            checked={showLabelsOnPositions}
+            onChange={(e) => setShowLabelsOnPositions(e.target.checked)}
+          />
+          <span>Show Labels</span>
+        </label>
       </div>
 
       <div className="designer__canvas-wrapper">
@@ -315,15 +358,17 @@ export default function SpreadDesigner({
                   {pos.key || idx + 1}
                 </text>
 
-                {/* Label (center) */}
-                <text
-                  x={pos.x + pos.width / 2}
-                  y={pos.y + pos.height / 2 + 4}
-                  className="designer__label-text"
-                  onMouseDown={(e) => handlePositionMouseDown(e, idx)}
-                >
-                  {pos.label}
-                </text>
+                {/* Label (center) - only shown when toggle is enabled */}
+                {showLabelsOnPositions && (
+                  <text
+                    x={pos.x + pos.width / 2}
+                    y={pos.y + pos.height / 2 + 4}
+                    className="designer__label-text"
+                    onMouseDown={(e) => handlePositionMouseDown(e, idx)}
+                  >
+                    {pos.label}
+                  </text>
+                )}
 
                 {/* Rotated indicator */}
                 {pos.rotated && (
@@ -370,33 +415,69 @@ export default function SpreadDesigner({
       {/* Context menu */}
       {contextMenu && (
         <>
-          <div className="designer__menu-overlay" onClick={() => { setContextMenu(null); setShowSlotMenu(false); }} />
+          <div className="designer__menu-overlay" onClick={() => { setContextMenu(null); setShowSlotMenu(false); setEditMode(false); }} />
           <div
             className="designer__context-menu"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
-            <button onClick={handleEditPosition}>Edit Label / Key</button>
-            <button onClick={handleRotatePosition}>
-              {positions[contextMenu.index]?.rotated ? 'Unrotate' : 'Rotate 90°'}
-            </button>
-            {/* Only show deck slot option if there are multiple slots */}
-            {deckSlots.length > 1 && (
+            {editMode ? (
+              <div className="designer__edit-form">
+                <div className="designer__edit-field">
+                  <label>Label:</label>
+                  <input
+                    type="text"
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveEdit();
+                      if (e.key === 'Escape') handleCancelEdit();
+                    }}
+                  />
+                </div>
+                <div className="designer__edit-field">
+                  <label>Key:</label>
+                  <input
+                    type="text"
+                    value={editKey}
+                    onChange={(e) => setEditKey(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveEdit();
+                      if (e.key === 'Escape') handleCancelEdit();
+                    }}
+                  />
+                </div>
+                <div className="designer__edit-buttons">
+                  <button onClick={handleSaveEdit}>Save</button>
+                  <button onClick={handleCancelEdit}>Cancel</button>
+                </div>
+              </div>
+            ) : (
               <>
-                <button onClick={() => setShowSlotMenu(!showSlotMenu)}>
-                  Deck Slot: {positions[contextMenu.index]?.deck_slot || deckSlots[0]?.key || 'A'} ▸
+                <button onClick={handleEditPosition}>Edit Label / Key</button>
+                <button onClick={handleRotatePosition}>
+                  {positions[contextMenu.index]?.rotated ? 'Unrotate' : 'Rotate 90°'}
                 </button>
-                {showSlotMenu && (
-                  <div className="designer__submenu">
-                    {deckSlots.map((slot) => (
-                      <button key={slot.key} onClick={() => handleSetDeckSlot(slot.key)}>
-                        {slot.key}: {slot.label || slot.cartomancy_type}
-                      </button>
-                    ))}
-                  </div>
+                {/* Only show deck slot option if there are multiple slots */}
+                {deckSlots.length > 1 && (
+                  <>
+                    <button onClick={() => setShowSlotMenu(!showSlotMenu)}>
+                      Deck Slot: {positions[contextMenu.index]?.deck_slot || deckSlots[0]?.key || 'A'} ▸
+                    </button>
+                    {showSlotMenu && (
+                      <div className="designer__submenu">
+                        {deckSlots.map((slot) => (
+                          <button key={slot.key} onClick={() => handleSetDeckSlot(slot.key)}>
+                            {slot.key}: {slot.label || slot.cartomancy_type}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
+                <button onClick={handleDeletePosition} className="designer__menu-danger">Delete</button>
               </>
             )}
-            <button onClick={handleDeletePosition} className="designer__menu-danger">Delete</button>
           </div>
         </>
       )}

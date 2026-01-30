@@ -262,3 +262,31 @@ class EntriesMixin:
         cursor = self.conn.cursor()
         cursor.execute('DELETE FROM follow_up_notes WHERE id = ?', (note_id,))
         self._commit()
+
+    # === Entry Querents ===
+    def get_entry_querents(self, entry_id: int):
+        """Get all querents for an entry, ordered by position"""
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT p.* FROM profiles p
+            JOIN entry_querents eq ON p.id = eq.profile_id
+            WHERE eq.entry_id = ?
+            ORDER BY eq.position
+        ''', (entry_id,))
+        return cursor.fetchall()
+
+    def set_entry_querents(self, entry_id: int, profile_ids: list):
+        """Set the querents for an entry (replaces all existing)"""
+        cursor = self.conn.cursor()
+        cursor.execute('DELETE FROM entry_querents WHERE entry_id = ?', (entry_id,))
+        for position, profile_id in enumerate(profile_ids):
+            cursor.execute('''
+                INSERT INTO entry_querents (entry_id, profile_id, position)
+                VALUES (?, ?, ?)
+            ''', (entry_id, profile_id, position))
+        # Also update the legacy querent_id column (first querent or NULL)
+        legacy_querent_id = profile_ids[0] if profile_ids else None
+        cursor.execute('''
+            UPDATE journal_entries SET querent_id = ? WHERE id = ?
+        ''', (legacy_querent_id, entry_id))
+        self._commit()

@@ -125,6 +125,79 @@
   font-weight: 500;
 }
 
+/* ── Querents ── */
+
+.entry-editor__field--querents {
+  flex: 1.5;
+}
+
+.entry-editor__querents-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.entry-editor__add-querent-btn {
+  padding: 2px 8px;
+  font-size: var(--font-size-small);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.entry-editor__add-querent-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.entry-editor__no-querents {
+  color: var(--text-dim);
+  font-size: var(--font-size-small);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.entry-editor__querents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.entry-editor__querent-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.entry-editor__querent-row select {
+  flex: 1;
+}
+
+.entry-editor__remove-querent-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entry-editor__remove-querent-btn:hover {
+  background: rgba(217, 83, 79, 0.15);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 /* ── Footer ── */
 
 .entry-editor__footer {

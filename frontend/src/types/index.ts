@@ -140,6 +140,9 @@ export interface JournalEntryFull extends JournalEntry {
   readings: EntryReadingParsed[];
   tags: Tag[];
   follow_up_notes: FollowUpNote[];
+  /** Multiple querents for this entry */
+  querents: Profile[];
+  /** Legacy single querent name (first querent, for backwards compatibility) */
   querent_name: string | null;
   reader_name: string | null;
 }

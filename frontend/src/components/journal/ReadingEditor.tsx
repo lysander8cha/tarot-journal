@@ -424,6 +424,42 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
   );
 }
 
+/**
+ * Calculate image style for card display, handling both position rotation and card reversal.
+ * When a position is rotated 90°, we need to swap the image dimensions so it fills the slot correctly.
+ */
+function getCardImageStyle(
+  positionRotated: boolean | undefined,
+  cardReversed: boolean | undefined,
+  slotWidth: number,
+  slotHeight: number,
+): React.CSSProperties | undefined {
+  // Calculate total rotation: position (90°) + reversed (180°)
+  const rotation = (positionRotated && cardReversed) ? 270
+    : positionRotated ? 90
+    : cardReversed ? 180
+    : 0;
+
+  if (rotation === 0) {
+    return undefined;
+  }
+
+  if (rotation === 180) {
+    // Simple 180° flip - no dimension changes needed
+    return { transform: 'rotate(180deg)' };
+  }
+
+  // For 90° or 270° rotation, we need to swap dimensions so the image fills the slot correctly
+  // The image's layout box needs to be swapped, then rotated into place
+  return {
+    width: slotHeight,
+    height: slotWidth,
+    objectFit: 'contain' as const,
+    transform: `rotate(${rotation}deg) translate(${rotation === 90 ? '0, -100%' : '-100%, 0'})`,
+    transformOrigin: 'top left',
+  };
+}
+
 /** Visual canvas editor for spread positions using deck slots */
 function VisualSpreadEditor({
   positions,
@@ -530,7 +566,7 @@ function VisualSpreadEditor({
                   className="reading-editor__visual-img"
                   src={cardThumbnailUrl(cardId)}
                   alt={card.name}
-                  style={card.reversed ? { transform: 'rotate(180deg)' } : undefined}
+                  style={getCardImageStyle(pos.rotated, card.reversed, slotWidth, slotHeight)}
                 />
               ) : (
                 <div className="reading-editor__visual-placeholder">

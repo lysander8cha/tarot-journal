@@ -378,6 +378,27 @@ class CoreMixin:
             )
         ''')
 
+        # Entry querents junction table (allows entries to have multiple querents)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS entry_querents (
+                entry_id INTEGER NOT NULL,
+                profile_id INTEGER NOT NULL,
+                position INTEGER DEFAULT 0,
+                PRIMARY KEY (entry_id, profile_id),
+                FOREIGN KEY (entry_id) REFERENCES journal_entries(id) ON DELETE CASCADE,
+                FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+            )
+        ''')
+
+        # Migrate existing querent_id values to entry_querents table
+        cursor.execute('SELECT COUNT(*) FROM entry_querents')
+        if cursor.fetchone()[0] == 0:
+            cursor.execute('''
+                INSERT OR IGNORE INTO entry_querents (entry_id, profile_id, position)
+                SELECT id, querent_id, 0 FROM journal_entries
+                WHERE querent_id IS NOT NULL
+            ''')
+
         # Card archetypes table (predefined standard card archetypes by type)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS card_archetypes (

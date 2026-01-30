@@ -207,3 +207,15 @@
 .spread-display__legend-card--reversed {
   color: var(--warning);
 }
+
+/* ── Clickable cards ── */
+
+.spread-display__card--clickable {
+  cursor: pointer;
+}
+
+.spread-display__card--clickable:hover .spread-display__card-img {
+  opacity: 0.85;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

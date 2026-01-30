@@ -6,9 +6,10 @@ import './SpreadDisplay.css';
 
 interface SpreadDisplayProps {
   reading: EntryReadingParsed;
+  onCardDoubleClick?: (cardId: number) => void;
 }
 
-export default function SpreadDisplay({ reading }: SpreadDisplayProps) {
+export default function SpreadDisplay({ reading, onCardDoubleClick }: SpreadDisplayProps) {
   const { data: spread } = useQuery<Spread>({
     queryKey: ['spread', reading.spread_id],
     queryFn: () => getSpread(reading.spread_id!),
@@ -22,21 +23,23 @@ export default function SpreadDisplay({ reading }: SpreadDisplayProps) {
     spread?.positions && Array.isArray(spread.positions) ? spread.positions : [];
 
   if (positions.length > 0 && cards.length > 0) {
-    return <PositionedLayout cards={cards} positions={positions} spreadName={reading.spread_name} />;
+    return <PositionedLayout cards={cards} positions={positions} spreadName={reading.spread_name} onCardDoubleClick={onCardDoubleClick} />;
   }
 
   // Fallback: simple card row
-  return <SimpleCardRow cards={cards} spreadName={reading.spread_name} deckName={reading.deck_name} />;
+  return <SimpleCardRow cards={cards} spreadName={reading.spread_name} deckName={reading.deck_name} onCardDoubleClick={onCardDoubleClick} />;
 }
 
 function PositionedLayout({
   cards,
   positions,
   spreadName,
+  onCardDoubleClick,
 }: {
   cards: EntryReadingParsed['cards_used'];
   positions: SpreadPosition[];
   spreadName: string | null;
+  onCardDoubleClick?: (cardId: number) => void;
 }) {
   // Calculate the actual bounding box of content (trimming empty space)
   const minX = Math.min(...positions.map(p => p.x || 0));
@@ -88,7 +91,14 @@ function PositionedLayout({
                 {/* Position badge */}
                 <span className="spread-display__slot-badge">{pos.key || idx + 1}</span>
                 {card ? (
-                  <CardSlot card={card} hideLabel />
+                  <CardSlot
+                    card={card}
+                    hideLabel
+                    positionRotated={pos.rotated}
+                    slotWidth={pos.width || 80}
+                    slotHeight={pos.height || 120}
+                    onDoubleClick={onCardDoubleClick}
+                  />
                 ) : (
                   <div className="spread-display__empty-slot">
                     <span className="spread-display__slot-label">{pos.label || idx + 1}</span>
@@ -124,10 +134,12 @@ function SimpleCardRow({
   cards,
   spreadName,
   deckName,
+  onCardDoubleClick,
 }: {
   cards: EntryReadingParsed['cards_used'];
   spreadName: string | null;
   deckName: string | null;
+  onCardDoubleClick?: (cardId: number) => void;
 }) {
   return (
     <div className="spread-display">
@@ -139,7 +151,7 @@ function SimpleCardRow({
         <div className="spread-display__card-row">
           {cards.map((card, idx) => (
             <div key={idx} className="spread-display__card-item">
-              <CardSlot card={card} />
+              <CardSlot card={card} onDoubleClick={onCardDoubleClick} />
             </div>
           ))}
         </div>
@@ -150,15 +162,61 @@ function SimpleCardRow({
   );
 }
 
-function CardSlot({ card, hideLabel }: { card: { name: string; reversed?: boolean; card_id?: number }; hideLabel?: boolean }) {
+function CardSlot({
+  card,
+  hideLabel,
+  positionRotated,
+  slotWidth,
+  slotHeight,
+  onDoubleClick,
+}: {
+  card: { name: string; reversed?: boolean; card_id?: number };
+  hideLabel?: boolean;
+  positionRotated?: boolean;
+  slotWidth?: number;
+  slotHeight?: number;
+  onDoubleClick?: (cardId: number) => void;
+}) {
+  const handleDoubleClick = () => {
+    if (card.card_id && onDoubleClick) {
+      onDoubleClick(card.card_id);
+    }
+  };
+
+  // Calculate image style for rotation, handling both position rotation and card reversal
+  const getImageStyle = (): React.CSSProperties | undefined => {
+    const rotation = (positionRotated && card.reversed) ? 270
+      : positionRotated ? 90
+      : card.reversed ? 180
+      : 0;
+
+    if (rotation === 0) return undefined;
+    if (rotation === 180) return { transform: 'rotate(180deg)' };
+
+    // For 90° or 270° rotation with known slot dimensions, swap dimensions for proper sizing
+    if (slotWidth && slotHeight) {
+      // Calculate aspect ratio for scaling - swap because we're rotating 90°
+      const scaleRatio = slotWidth / slotHeight;
+      return {
+        transform: `rotate(${rotation}deg) scale(${scaleRatio})`,
+      };
+    }
+
+    // Fallback for cards without slot dimensions (simple card row)
+    return { transform: `rotate(${rotation}deg)` };
+  };
+
   return (
-    <div className={`spread-display__card ${card.reversed ? 'spread-display__card--reversed' : ''}`}>
+    <div
+      className={`spread-display__card ${card.reversed ? 'spread-display__card--reversed' : ''} ${card.card_id && onDoubleClick ? 'spread-display__card--clickable' : ''}`}
+      onDoubleClick={handleDoubleClick}
+    >
       {card.card_id ? (
         <img
           className="spread-display__card-img"
           src={cardThumbnailUrl(card.card_id)}
           alt={card.name}
-          style={card.reversed ? { transform: 'rotate(180deg)' } : undefined}
+          style={getImageStyle()}
         />
       ) : (
         <div className="spread-display__card-placeholder" />

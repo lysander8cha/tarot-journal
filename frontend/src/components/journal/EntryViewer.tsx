@@ -1,8 +1,10 @@
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getEntry, deleteEntry } from '../../api/entries';
 import RichTextViewer from '../common/RichTextViewer';
 import SpreadDisplay from './SpreadDisplay';
 import FollowUpNotes from './FollowUpNotes';
+import CardViewModal from '../library/CardViewModal';
 import type { JournalEntryFull } from '../../types';
 import './EntryViewer.css';
 
@@ -30,11 +32,26 @@ function formatDateTime(dateStr: string | null): string {
 
 export default function EntryViewer({ entryId, onEdit, onDeleted }: EntryViewerProps) {
   const queryClient = useQueryClient();
+  const [viewingCardId, setViewingCardId] = useState<number | null>(null);
 
   const { data: entry, isLoading, error } = useQuery<JournalEntryFull>({
     queryKey: ['entry', entryId],
     queryFn: () => getEntry(entryId),
   });
+
+  // Collect all card IDs from all readings for navigation in the modal
+  const allCardIds = useMemo(() => {
+    if (!entry) return [];
+    const ids: number[] = [];
+    for (const reading of entry.readings) {
+      for (const card of reading.cards_used || []) {
+        if (card.card_id && !ids.includes(card.card_id)) {
+          ids.push(card.card_id);
+        }
+      }
+    }
+    return ids;
+  }, [entry]);
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this journal entry? This cannot be undone.')) return;
@@ -82,10 +99,12 @@ export default function EntryViewer({ entryId, onEdit, onDeleted }: EntryViewerP
               <span>{entry.location_name}</span>
             </div>
           )}
-          {entry.querent_name && (
+          {entry.querents && entry.querents.length > 0 && (
             <div className="entry-viewer__meta-item">
-              <span className="entry-viewer__meta-label">Querent</span>
-              <span>{entry.querent_name}</span>
+              <span className="entry-viewer__meta-label">
+                {entry.querents.length === 1 ? 'Querent' : 'Querents'}
+              </span>
+              <span>{entry.querents.map(q => q.name).join(', ')}</span>
             </div>
           )}
           {entry.reader_name && (
@@ -116,7 +135,11 @@ export default function EntryViewer({ entryId, onEdit, onDeleted }: EntryViewerP
           <div className="entry-viewer__section">
             <h3 className="entry-viewer__section-title">Readings</h3>
             {entry.readings.map((reading) => (
-              <SpreadDisplay key={reading.id} reading={reading} />
+              <SpreadDisplay
+                key={reading.id}
+                reading={reading}
+                onCardDoubleClick={setViewingCardId}
+              />
             ))}
           </div>
         )}
@@ -134,6 +157,16 @@ export default function EntryViewer({ entryId, onEdit, onDeleted }: EntryViewerP
           <FollowUpNotes entryId={entryId} notes={entry.follow_up_notes} />
         </div>
       </div>
+
+      {/* Card View Modal */}
+      {viewingCardId !== null && (
+        <CardViewModal
+          cardId={viewingCardId}
+          cardIds={allCardIds}
+          onClose={() => setViewingCardId(null)}
+          onNavigate={setViewingCardId}
+        />
+      )}
     </div>
   );
 }

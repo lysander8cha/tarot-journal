@@ -176,3 +176,74 @@
   user-select: none;
   font-weight: 700;
 }
+
+/* Edit form in context menu */
+.designer__edit-form {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 280px;
+}
+
+.designer__edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.designer__edit-field label {
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+}
+
+.designer__edit-field input {
+  padding: 8px 10px;
+  font-size: var(--font-size-body);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.designer__edit-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.designer__edit-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.designer__edit-buttons button {
+  flex: 1;
+  padding: 5px 10px;
+  font-size: var(--font-size-small);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.designer__edit-buttons button:first-child {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.designer__edit-buttons button:first-child:hover {
+  background: var(--accent-hover);
+}
+
+.designer__edit-buttons button:last-child {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.designer__edit-buttons button:last-child:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}

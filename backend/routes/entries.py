@@ -119,7 +119,11 @@ def get_entry(entry_id):
         nd['content'] = convert_content_to_html(nd.get('content'))
         entry['follow_up_notes'].append(nd)
 
-    # Profile names
+    # Querents (multiple) - from junction table
+    querents = db.get_entry_querents(entry_id)
+    entry['querents'] = [_row_to_dict(q) for q in querents]
+
+    # Legacy single querent name (for backwards compatibility)
     if entry.get('querent_id'):
         q = db.get_profile(entry['querent_id'])
         entry['querent_name'] = q['name'] if q else None
@@ -268,6 +272,24 @@ def set_entry_tags(entry_id):
     data = request.get_json()
     tag_ids = data.get('tag_ids', [])
     db.set_entry_tags(entry_id, tag_ids)
+    return jsonify({'ok': True})
+
+
+# ── Entry Querents ─────────────────────────────────────────────
+
+@entries_bp.route('/api/entries/<int:entry_id>/querents')
+def get_entry_querents(entry_id):
+    db = current_app.config['DB']
+    rows = db.get_entry_querents(entry_id)
+    return jsonify([_row_to_dict(r) for r in rows])
+
+
+@entries_bp.route('/api/entries/<int:entry_id>/querents', methods=['PUT'])
+def set_entry_querents(entry_id):
+    db = current_app.config['DB']
+    data = request.get_json()
+    profile_ids = data.get('profile_ids', [])
+    db.set_entry_querents(entry_id, profile_ids)
     return jsonify({'ok': True})
 
 

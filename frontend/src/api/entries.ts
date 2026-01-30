@@ -125,6 +125,12 @@ export async function setEntryTags(entryId: number, tagIds: number[]): Promise<v
   await api.put(`/api/entries/${entryId}/tags`, { tag_ids: tagIds });
 }
 
+// ── Entry Querents ──────────────────────────────────────────
+
+export async function setEntryQuerents(entryId: number, profileIds: number[]): Promise<void> {
+  await api.put(`/api/entries/${entryId}/querents`, { profile_ids: profileIds });
+}
+
 // ── Profiles ─────────────────────────────────────────────────
 
 export async function getProfiles(): Promise<Profile[]> {

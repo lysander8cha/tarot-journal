@@ -7,6 +7,7 @@ import {
   addEntryReading,
   deleteEntryReadings,
   setEntryTags,
+  setEntryQuerents,
   getProfiles,
 } from '../../api/entries';
 import { getEntryTags as getAllEntryTags } from '../../api/tags';
@@ -22,7 +23,7 @@ interface InitialFormState {
   dateMode: 'now' | 'custom';
   readingDatetime: string;
   locationName: string;
-  querentId: number | null;
+  querentIds: number[];
   readerId: number | null;
   content: string;
   readings: ReadingData[];
@@ -87,7 +88,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
   const [dateMode, setDateMode] = useState<'now' | 'custom'>('now');
   const [readingDatetime, setReadingDatetime] = useState(nowLocalISO());
   const [locationName, setLocationName] = useState('');
-  const [querentId, setQuerentId] = useState<number | null>(null);
+  const [querentIds, setQuerentIds] = useState<number[]>([]);
   const [readerId, setReaderId] = useState<number | null>(null);
   const [content, setContent] = useState('');
   const [readings, setReadings] = useState<ReadingData[]>([]);
@@ -108,7 +109,10 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
         ? existingEntry.reading_datetime.replace(' ', 'T').slice(0, 16)
         : nowLocalISO();
       const locationVal = existingEntry.location_name || '';
-      const querentVal = existingEntry.querent_id;
+      // Use querents array, or fall back to legacy querent_id if empty
+      const querentIdsVal = existingEntry.querents?.length
+        ? existingEntry.querents.map(q => q.id)
+        : (existingEntry.querent_id ? [existingEntry.querent_id] : []);
       const readerVal = existingEntry.reader_id;
       const contentVal = existingEntry.content || '';
       const tagIds = existingEntry.tags.map(t => t.id);
@@ -133,7 +137,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
       setDateMode(dateModeVal);
       setReadingDatetime(datetimeVal);
       setLocationName(locationVal);
-      setQuerentId(querentVal);
+      setQuerentIds(querentIdsVal);
       setReaderId(readerVal);
       setContent(contentVal);
       setSelectedTagIds(tagIds);
@@ -145,7 +149,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
         dateMode: dateModeVal,
         readingDatetime: datetimeVal,
         locationName: locationVal,
-        querentId: querentVal,
+        querentIds: querentIdsVal,
         readerId: readerVal,
         content: contentVal,
         readings: readingData.length > 0 ? readingData : [],
@@ -165,13 +169,14 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
       const defaultQuerent = defaults?.default_querent_same_as_reader
         ? defaultReader
         : (defaults?.default_querent ?? null);
+      const defaultQuerentIds = defaultQuerent ? [defaultQuerent] : [];
 
       setTitle('');
       setDateMode('now');
       setReadingDatetime(datetimeVal);
       setLocationName('');
       setReaderId(defaultReader);
-      setQuerentId(defaultQuerent);
+      setQuerentIds(defaultQuerentIds);
       setContent('');
       setReadings([]);
       setSelectedTagIds([]);
@@ -184,7 +189,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
         dateMode: 'now',
         readingDatetime: datetimeVal,
         locationName: '',
-        querentId: defaultQuerent,
+        querentIds: defaultQuerentIds,
         readerId: defaultReader,
         content: '',
         readings: [],
@@ -219,13 +224,16 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
     setSaving(true);
     try {
       const datetime = dateMode === 'now' ? new Date().toISOString() : readingDatetime;
+      // Filter out any unselected querents (value 0)
+      const validQuerentIds = querentIds.filter(id => id > 0);
 
       const entryData = {
         title: title.trim() || undefined,
         content: content || undefined,
         reading_datetime: datetime || undefined,
         location_name: locationName.trim() || undefined,
-        querent_id: querentId,
+        // Legacy querent_id: first querent or null
+        querent_id: validQuerentIds.length > 0 ? validQuerentIds[0] : null,
         reader_id: readerId,
       };
 
@@ -269,6 +277,9 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
       // Set tags
       await setEntryTags(savedEntryId, selectedTagIds);
 
+      // Set querents
+      await setEntryQuerents(savedEntryId, validQuerentIds);
+
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['entries'] });
       queryClient.invalidateQueries({ queryKey: ['entry-search'] });
@@ -295,9 +306,12 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
     if (dateMode !== initial.dateMode) return true;
     if (dateMode === 'custom' && readingDatetime !== initial.readingDatetime) return true;
     if (locationName !== initial.locationName) return true;
-    if (querentId !== initial.querentId) return true;
     if (readerId !== initial.readerId) return true;
     if (content !== initial.content) return true;
+
+    // Compare querent selections
+    if (querentIds.length !== initial.querentIds.length) return true;
+    if (!querentIds.every((id, idx) => initial.querentIds[idx] === id)) return true;
 
     // Compare tag selections
     if (selectedTagIds.length !== initial.selectedTagIds.length) return true;
@@ -307,7 +321,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
     if (JSON.stringify(readings) !== JSON.stringify(initial.readings)) return true;
 
     return false;
-  }, [title, dateMode, readingDatetime, locationName, querentId, readerId, content, selectedTagIds, readings]);
+  }, [title, dateMode, readingDatetime, locationName, querentIds, readerId, content, selectedTagIds, readings]);
 
   if (!open) return null;
 
@@ -374,20 +388,50 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
             />
           </div>
 
-          {/* Querent / Reader */}
+          {/* Querents / Reader */}
           {profiles.length > 0 && (
             <div className="entry-editor__row">
-              <div className="entry-editor__field">
-                <label className="entry-editor__label">Querent</label>
-                <select
-                  value={querentId ?? ''}
-                  onChange={(e) => setQuerentId(e.target.value ? Number(e.target.value) : null)}
-                >
-                  <option value="">None</option>
-                  {profiles.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+              <div className="entry-editor__field entry-editor__field--querents">
+                <div className="entry-editor__querents-header">
+                  <label className="entry-editor__label">Querent{querentIds.length !== 1 ? 's' : ''}</label>
+                  <button
+                    type="button"
+                    className="entry-editor__add-querent-btn"
+                    onClick={() => setQuerentIds(prev => [...prev, 0])}
+                  >
+                    + Add Querent
+                  </button>
+                </div>
+                {querentIds.length === 0 ? (
+                  <div className="entry-editor__no-querents">No querents selected</div>
+                ) : (
+                  <div className="entry-editor__querents-list">
+                    {querentIds.map((qId, idx) => (
+                      <div key={idx} className="entry-editor__querent-row">
+                        <select
+                          value={qId || ''}
+                          onChange={(e) => {
+                            const newId = e.target.value ? Number(e.target.value) : 0;
+                            setQuerentIds(prev => prev.map((id, i) => i === idx ? newId : id));
+                          }}
+                        >
+                          <option value="">Select a profile...</option>
+                          {profiles.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="entry-editor__remove-querent-btn"
+                          onClick={() => setQuerentIds(prev => prev.filter((_, i) => i !== idx))}
+                          title="Remove querent"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="entry-editor__field">
                 <label className="entry-editor__label">Reader</label>
