@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getCard, updateCard, updateCardMetadata, setCardTags, setCardGroups,
@@ -53,6 +53,18 @@ interface EditableField {
   field_options?: string[];
 }
 
+interface InitialCardFormState {
+  name: string;
+  cardOrder: number;
+  archetype: string;
+  rank: string;
+  suit: string;
+  notes: string;
+  selectedTagIds: number[];
+  selectedGroupIds: number[];
+  customFields: EditableField[];
+}
+
 export default function CardEditModal({ cardId, deckId, onClose, onSaved }: CardEditModalProps) {
   const queryClient = useQueryClient();
 
@@ -98,9 +110,13 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
   // This prevents deckCustomFields refetches from resetting user edits.
   const formPopulatedRef = useRef(false);
 
+  // Track initial form state for dirty checking
+  const initialStateRef = useRef<InitialCardFormState | null>(null);
+
   // Reset form state when switching to a different card
   useEffect(() => {
     formPopulatedRef.current = false;
+    initialStateRef.current = null;
     setName('');
     setCardOrder(0);
     setArchetype('');
@@ -195,9 +211,65 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
           };
         });
 
-      setCustomFields([...legacyFields, ...tableFields, ...deckDefinedFields]);
+      const allFields = [...legacyFields, ...tableFields, ...deckDefinedFields];
+      setCustomFields(allFields);
+
+      // Store initial state for dirty checking
+      initialStateRef.current = {
+        name: card.name,
+        cardOrder: card.card_order,
+        archetype: card.archetype || '',
+        rank: card.rank || '',
+        suit: card.suit || '',
+        notes: card.notes || '',
+        selectedTagIds: (card.own_tags || []).map(t => t.id),
+        selectedGroupIds: (card.groups || []).map(g => g.id),
+        customFields: allFields,
+      };
     }
   }, [card, deckCustomFields]);
+
+  // Compute whether form has unsaved changes
+  // NOTE: This must be before any early returns to comply with Rules of Hooks
+  const isDirty = useMemo(() => {
+    const initial = initialStateRef.current;
+    if (!initial) return false;
+
+    // Compare simple fields
+    if (name !== initial.name) return true;
+    if (cardOrder !== initial.cardOrder) return true;
+    if (archetype !== initial.archetype) return true;
+    if (rank !== initial.rank) return true;
+    if (suit !== initial.suit) return true;
+    if (notes !== initial.notes) return true;
+
+    // Compare tag selections
+    if (selectedTagIds.length !== initial.selectedTagIds.length) return true;
+    if (!selectedTagIds.every(id => initial.selectedTagIds.includes(id))) return true;
+
+    // Compare group selections
+    if (selectedGroupIds.length !== initial.selectedGroupIds.length) return true;
+    if (!selectedGroupIds.every(id => initial.selectedGroupIds.includes(id))) return true;
+
+    // Compare custom fields (deep comparison via JSON, excluding _key fields)
+    const currentFieldsForCompare = customFields.map(f => ({
+      id: f.id,
+      field_name: f.field_name,
+      field_value: f.field_value,
+      deleted: f.deleted,
+      legacy: f.legacy,
+    }));
+    const initialFieldsForCompare = initial.customFields.map(f => ({
+      id: f.id,
+      field_name: f.field_name,
+      field_value: f.field_value,
+      deleted: f.deleted,
+      legacy: f.legacy,
+    }));
+    if (JSON.stringify(currentFieldsForCompare) !== JSON.stringify(initialFieldsForCompare)) return true;
+
+    return false;
+  }, [name, cardOrder, archetype, rank, suit, notes, selectedTagIds, selectedGroupIds, customFields]);
 
   if (cardId === null) return null;
 
@@ -325,7 +397,7 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
   const visibleFields = customFields.filter(f => !f.deleted);
 
   return (
-    <Modal open={true} onClose={onClose} width={700}>
+    <Modal open={true} onClose={onClose} width={700} isDirty={isDirty}>
       {isLoading ? (
         <div className="card-edit__loading">Loading...</div>
       ) : card ? (

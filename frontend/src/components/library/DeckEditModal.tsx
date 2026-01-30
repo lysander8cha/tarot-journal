@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getDeck, updateDeck, getDeckTagAssignments, setDeckTags, getCartomancyTypes,
@@ -11,6 +11,19 @@ import { exportDeckUrl } from '../../api/importExport';
 import type { Deck, Tag, DeckCustomField } from '../../types';
 import Modal from '../common/Modal';
 import './DeckEditModal.css';
+
+interface InitialDeckFormState {
+  name: string;
+  datePublished: string;
+  publisher: string;
+  credits: string;
+  notes: string;
+  bookletInfo: string;
+  selectedTypeIds: number[];
+  selectedTagIds: number[];
+  suitNames: Record<string, string>;
+  courtNames: Record<string, string>;
+}
 
 interface DeckEditModalProps {
   deckId: number | null;
@@ -83,6 +96,10 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
   const [originalCourtNames, setOriginalCourtNames] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  // Track initial form state for dirty checking
+  const initialStateRef = useRef<InitialDeckFormState | null>(null);
+  const formPopulatedRef = useRef(false);
+
   // Determine which suit/court options to show based on selected types
   const selectedTypeNames = types
     .filter(t => selectedTypeIds.includes(t.id))
@@ -140,6 +157,70 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
   useEffect(() => {
     setSelectedTypeIds(deckTypeAssignments.map(t => t.id));
   }, [deckTypeAssignments]);
+
+  // Store initial state once all data is loaded (only once per deck)
+  useEffect(() => {
+    if (deck && !formPopulatedRef.current) {
+      formPopulatedRef.current = true;
+      const suitNamesVal = (() => {
+        try {
+          return deck.suit_names ? JSON.parse(deck.suit_names) : {};
+        } catch { return {}; }
+      })();
+      const courtNamesVal = (() => {
+        try {
+          return deck.court_names ? JSON.parse(deck.court_names) : {};
+        } catch { return {}; }
+      })();
+
+      initialStateRef.current = {
+        name: deck.name,
+        datePublished: deck.date_published || '',
+        publisher: deck.publisher || '',
+        credits: deck.credits || '',
+        notes: deck.notes || '',
+        bookletInfo: deck.booklet_info || '',
+        selectedTypeIds: deckTypeAssignments.map(t => t.id),
+        selectedTagIds: deckTagAssignments.map(t => t.id),
+        suitNames: suitNamesVal,
+        courtNames: courtNamesVal,
+      };
+    }
+  }, [deck, deckTagAssignments, deckTypeAssignments]);
+
+  // Reset tracking when deck changes
+  useEffect(() => {
+    formPopulatedRef.current = false;
+    initialStateRef.current = null;
+  }, [deckId]);
+
+  // Compute whether form has unsaved changes
+  // NOTE: This must be before any early returns to comply with Rules of Hooks
+  const isDirty = useMemo(() => {
+    const initial = initialStateRef.current;
+    if (!initial) return false;
+
+    if (name !== initial.name) return true;
+    if (datePublished !== initial.datePublished) return true;
+    if (publisher !== initial.publisher) return true;
+    if (credits !== initial.credits) return true;
+    if (notes !== initial.notes) return true;
+    if (bookletInfo !== initial.bookletInfo) return true;
+
+    // Compare type selections
+    if (selectedTypeIds.length !== initial.selectedTypeIds.length) return true;
+    if (!selectedTypeIds.every(id => initial.selectedTypeIds.includes(id))) return true;
+
+    // Compare tag selections
+    if (selectedTagIds.length !== initial.selectedTagIds.length) return true;
+    if (!selectedTagIds.every(id => initial.selectedTagIds.includes(id))) return true;
+
+    // Compare suit/court names
+    if (JSON.stringify(suitNames) !== JSON.stringify(initial.suitNames)) return true;
+    if (JSON.stringify(courtNames) !== JSON.stringify(initial.courtNames)) return true;
+
+    return false;
+  }, [name, datePublished, publisher, credits, notes, bookletInfo, selectedTypeIds, selectedTagIds, suitNames, courtNames]);
 
   if (deckId === null) return null;
 
@@ -229,7 +310,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
   };
 
   return (
-    <Modal open={true} onClose={onClose} width={600}>
+    <Modal open={true} onClose={onClose} width={600} isDirty={isDirty}>
       {isLoading ? (
         <div className="deck-edit__loading">Loading...</div>
       ) : deck ? (

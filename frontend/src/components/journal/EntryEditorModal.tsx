@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getEntry,
@@ -16,6 +16,18 @@ import RichTextEditor from '../common/RichTextEditor';
 import ReadingEditor, { type ReadingData } from './ReadingEditor';
 import type { JournalEntryFull, Tag, Profile } from '../../types';
 import './EntryEditorModal.css';
+
+interface InitialFormState {
+  title: string;
+  dateMode: 'now' | 'custom';
+  readingDatetime: string;
+  locationName: string;
+  querentId: number | null;
+  readerId: number | null;
+  content: string;
+  readings: ReadingData[];
+  selectedTagIds: number[];
+}
 
 interface EntryEditorModalProps {
   entryId: number | null; // null = creating new entry
@@ -84,21 +96,22 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Track initial form state for dirty checking
+  const initialStateRef = useRef<InitialFormState | null>(null);
+
   // Populate form when editing
   useEffect(() => {
     if (isEditing && existingEntry && !initialized) {
-      setTitle(existingEntry.title || '');
-      if (existingEntry.reading_datetime) {
-        setDateMode('custom');
-        setReadingDatetime(existingEntry.reading_datetime.replace(' ', 'T').slice(0, 16));
-      } else {
-        setDateMode('now');
-      }
-      setLocationName(existingEntry.location_name || '');
-      setQuerentId(existingEntry.querent_id);
-      setReaderId(existingEntry.reader_id);
-      setContent(existingEntry.content || '');
-      setSelectedTagIds(existingEntry.tags.map(t => t.id));
+      const titleVal = existingEntry.title || '';
+      const dateModeVal: 'now' | 'custom' = existingEntry.reading_datetime ? 'custom' : 'now';
+      const datetimeVal = existingEntry.reading_datetime
+        ? existingEntry.reading_datetime.replace(' ', 'T').slice(0, 16)
+        : nowLocalISO();
+      const locationVal = existingEntry.location_name || '';
+      const querentVal = existingEntry.querent_id;
+      const readerVal = existingEntry.reader_id;
+      const contentVal = existingEntry.content || '';
+      const tagIds = existingEntry.tags.map(t => t.id);
 
       // Convert existing readings to ReadingData
       const readingData: ReadingData[] = existingEntry.readings.map(r => ({
@@ -115,7 +128,30 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
           position_index: c.position_index ?? idx,
         })),
       }));
+
+      setTitle(titleVal);
+      setDateMode(dateModeVal);
+      setReadingDatetime(datetimeVal);
+      setLocationName(locationVal);
+      setQuerentId(querentVal);
+      setReaderId(readerVal);
+      setContent(contentVal);
+      setSelectedTagIds(tagIds);
       setReadings(readingData.length > 0 ? readingData : []);
+
+      // Store initial state for dirty checking
+      initialStateRef.current = {
+        title: titleVal,
+        dateMode: dateModeVal,
+        readingDatetime: datetimeVal,
+        locationName: locationVal,
+        querentId: querentVal,
+        readerId: readerVal,
+        content: contentVal,
+        readings: readingData.length > 0 ? readingData : [],
+        selectedTagIds: tagIds,
+      };
+
       setInitialized(true);
     }
   }, [existingEntry, isEditing, initialized]);
@@ -123,15 +159,17 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
   // Reset form when modal opens for new entry
   useEffect(() => {
     if (open && !isEditing) {
-      setTitle('');
-      setDateMode('now');
-      setReadingDatetime(nowLocalISO());
-      setLocationName('');
+      const datetimeVal = nowLocalISO();
       // Apply defaults for reader and querent
       const defaultReader = defaults?.default_reader ?? null;
       const defaultQuerent = defaults?.default_querent_same_as_reader
         ? defaultReader
         : (defaults?.default_querent ?? null);
+
+      setTitle('');
+      setDateMode('now');
+      setReadingDatetime(datetimeVal);
+      setLocationName('');
       setReaderId(defaultReader);
       setQuerentId(defaultQuerent);
       setContent('');
@@ -139,6 +177,19 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
       setSelectedTagIds([]);
       setInitialized(false);
       setError(null);
+
+      // Store initial state for dirty checking (empty for new entry)
+      initialStateRef.current = {
+        title: '',
+        dateMode: 'now',
+        readingDatetime: datetimeVal,
+        locationName: '',
+        querentId: defaultQuerent,
+        readerId: defaultReader,
+        content: '',
+        readings: [],
+        selectedTagIds: [],
+      };
     }
     if (open && isEditing) {
       setInitialized(false);
@@ -234,10 +285,34 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
     }
   };
 
+  // Compute whether form has unsaved changes
+  const isDirty = useMemo(() => {
+    const initial = initialStateRef.current;
+    if (!initial) return false;
+
+    // Compare simple fields
+    if (title !== initial.title) return true;
+    if (dateMode !== initial.dateMode) return true;
+    if (dateMode === 'custom' && readingDatetime !== initial.readingDatetime) return true;
+    if (locationName !== initial.locationName) return true;
+    if (querentId !== initial.querentId) return true;
+    if (readerId !== initial.readerId) return true;
+    if (content !== initial.content) return true;
+
+    // Compare tag selections
+    if (selectedTagIds.length !== initial.selectedTagIds.length) return true;
+    if (!selectedTagIds.every(id => initial.selectedTagIds.includes(id))) return true;
+
+    // Compare readings (deep comparison via JSON)
+    if (JSON.stringify(readings) !== JSON.stringify(initial.readings)) return true;
+
+    return false;
+  }, [title, dateMode, readingDatetime, locationName, querentId, readerId, content, selectedTagIds, readings]);
+
   if (!open) return null;
 
   return (
-    <Modal open={true} onClose={onClose} width={800}>
+    <Modal open={true} onClose={onClose} width={800} isDirty={isDirty}>
       <div className="entry-editor">
         <h2 className="entry-editor__title">
           {isEditing ? 'Edit Entry' : 'New Journal Entry'}

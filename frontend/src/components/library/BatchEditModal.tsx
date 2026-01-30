@@ -174,7 +174,7 @@ export default function BatchEditModal({ cardIds, deckId, onClose, onSaved }: Ba
     (groupAction !== 'skip' && selectedGroupIds.length > 0);
 
   return (
-    <Modal open={true} onClose={onClose} width={550}>
+    <Modal open={true} onClose={onClose} width={550} isDirty={hasChanges}>
       <div className="batch-edit">
         <h2 className="batch-edit__title">
           Batch Edit ({cardIds.length} card{cardIds.length !== 1 ? 's' : ''})

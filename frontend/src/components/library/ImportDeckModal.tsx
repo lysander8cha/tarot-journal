@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCartomancyTypes } from '../../api/decks';
 import {
@@ -239,8 +239,21 @@ export default function ImportDeckModal({ onClose, onImported }: ImportDeckModal
   const showCustomCourtFields = courtPreset === 'Custom...';
   const suitKeys = getSuitKeys();
 
+  // Track if user has entered any configuration that would be lost
+  // Only relevant during 'configure' and 'preview' steps
+  const isDirty = useMemo(() => {
+    // Once importing is in progress or done, no need to warn
+    if (step === 'importing' || step === 'done') return false;
+
+    // If user has entered a folder path or deck name, there's work to lose
+    if (folder.trim()) return true;
+    if (deckName.trim()) return true;
+
+    return false;
+  }, [step, folder, deckName]);
+
   return (
-    <Modal open={true} onClose={onClose} width={650}>
+    <Modal open={true} onClose={onClose} width={650} isDirty={isDirty}>
       <div className="import-deck">
         <h2 className="import-deck__title">Import Deck from Folder</h2>
 
