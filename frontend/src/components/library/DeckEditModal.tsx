@@ -170,7 +170,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
     refetchCustomFields();
   };
 
-  const handleUpdateCustomField = async (fieldId: number, updates: { field_name?: string; field_type?: string }) => {
+  const handleUpdateCustomField = async (fieldId: number, updates: { field_name?: string; field_type?: string; field_options?: string[] }) => {
     await updateDeckCustomField(fieldId, updates);
     refetchCustomFields();
   };
@@ -435,35 +435,60 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
               {customFields.length > 0 ? (
                 <div className="deck-edit__custom-fields">
                   {customFields.map(field => (
-                    <div key={field.id} className="deck-edit__custom-field-row">
-                      <input
-                        className="deck-edit__custom-field-name"
-                        type="text"
-                        defaultValue={field.field_name}
-                        onBlur={e => {
-                          const val = e.target.value.trim();
-                          if (val && val !== field.field_name) {
-                            handleUpdateCustomField(field.id, { field_name: val });
-                          }
-                        }}
-                        placeholder="Field name"
-                      />
-                      <select
-                        className="deck-edit__custom-field-type"
-                        defaultValue={field.field_type}
-                        onChange={e => handleUpdateCustomField(field.id, { field_type: e.target.value })}
-                      >
-                        <option value="text">Text</option>
-                        <option value="number">Number</option>
-                        <option value="select">Dropdown</option>
-                      </select>
-                      <button
-                        className="deck-edit__custom-field-delete"
-                        onClick={() => handleDeleteCustomField(field.id)}
-                        title="Delete field"
-                      >
-                        &times;
-                      </button>
+                    <div key={field.id} className="deck-edit__custom-field">
+                      <div className="deck-edit__custom-field-row">
+                        <input
+                          className="deck-edit__custom-field-name"
+                          type="text"
+                          defaultValue={field.field_name}
+                          onBlur={e => {
+                            const val = e.target.value.trim();
+                            if (val && val !== field.field_name) {
+                              handleUpdateCustomField(field.id, { field_name: val });
+                            }
+                          }}
+                          placeholder="Field name"
+                        />
+                        <select
+                          className="deck-edit__custom-field-type"
+                          defaultValue={field.field_type}
+                          onChange={e => handleUpdateCustomField(field.id, { field_type: e.target.value })}
+                        >
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="select">Dropdown</option>
+                        </select>
+                        <button
+                          className="deck-edit__custom-field-delete"
+                          onClick={() => handleDeleteCustomField(field.id)}
+                          title="Delete field"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      {field.field_type === 'select' && (
+                        <div className="deck-edit__custom-field-options">
+                          <label className="deck-edit__custom-field-options-label">
+                            Options (one per line):
+                          </label>
+                          <textarea
+                            className="deck-edit__custom-field-options-input"
+                            defaultValue={(() => {
+                              if (!field.field_options) return '';
+                              try {
+                                const opts = JSON.parse(field.field_options);
+                                return Array.isArray(opts) ? opts.join('\n') : '';
+                              } catch { return ''; }
+                            })()}
+                            onBlur={e => {
+                              const lines = e.target.value.split('\n').map(l => l.trim()).filter(Boolean);
+                              handleUpdateCustomField(field.id, { field_options: lines });
+                            }}
+                            placeholder="Option 1&#10;Option 2&#10;Option 3"
+                            rows={4}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

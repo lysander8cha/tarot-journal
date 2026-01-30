@@ -214,3 +214,25 @@
   color: var(--danger, #e74c3c);
   border-color: var(--danger, #e74c3c);
 }
+
+.card-edit__cf-select {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: var(--font-size-body);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.card-edit__cf-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.card-edit__cf-name[readonly] {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: default;
+}

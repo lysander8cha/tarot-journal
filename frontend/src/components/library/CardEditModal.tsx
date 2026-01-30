@@ -6,7 +6,8 @@ import {
   type CardCustomField,
 } from '../../api/cards';
 import { getCardTags } from '../../api/tags';
-import { getDeckGroups } from '../../api/decks';
+import { getDeckGroups, getDeckCustomFields } from '../../api/decks';
+import type { DeckCustomField } from '../../types';
 import { cardPreviewUrl } from '../../api/images';
 import type { Tag, CardGroup } from '../../types';
 import Modal from '../common/Modal';
@@ -46,6 +47,10 @@ interface EditableField {
   deleted: boolean;
   /** true if field originates from the legacy custom_fields JSON blob */
   legacy: boolean;
+  /** Field type: 'text', 'dropdown', etc. */
+  field_type?: string;
+  /** Options for dropdown fields (parsed from JSON) */
+  field_options?: string[];
 }
 
 export default function CardEditModal({ cardId, deckId, onClose, onSaved }: CardEditModalProps) {
@@ -66,6 +71,13 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
   const { data: allGroups = [] } = useQuery({
     queryKey: ['deck-groups', deckId],
     queryFn: () => getDeckGroups(deckId!),
+    enabled: deckId !== null,
+  });
+
+  // Fetch deck-level custom field definitions
+  const { data: deckCustomFields = [] } = useQuery<DeckCustomField[]>({
+    queryKey: ['deck-custom-fields', deckId],
+    queryFn: () => getDeckCustomFields(deckId!),
     enabled: deckId !== null,
   });
 
@@ -107,18 +119,74 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
         } catch { /* ignore invalid JSON */ }
       }
 
-      // Load table-based custom fields
-      const tableFields: EditableField[] = (card.card_custom_fields || []).map(f => ({
-        id: f.id,
-        field_name: f.field_name,
-        field_value: f.field_value || '',
-        deleted: false,
-        legacy: false,
-      }));
+      // Load table-based custom fields (existing card values)
+      // For each card field, look up the deck definition to get field_type and field_options
+      const tableFields: EditableField[] = (card.card_custom_fields || []).map(f => {
+        // Find the deck-level definition for this field (case-insensitive match)
+        const deckDef = deckCustomFields.find(
+          def => def.field_name.toLowerCase() === f.field_name.toLowerCase()
+        );
 
-      setCustomFields([...legacyFields, ...tableFields]);
+        // Parse field_options from deck definition (not from card field)
+        let options: string[] | undefined;
+        if (deckDef?.field_options) {
+          try {
+            options = JSON.parse(deckDef.field_options);
+          } catch { /* ignore invalid JSON */ }
+        }
+
+        return {
+          id: f.id,
+          field_name: f.field_name,
+          field_value: f.field_value || '',
+          deleted: false,
+          legacy: false,
+          // Use field_type and field_options from deck definition
+          field_type: deckDef?.field_type || f.field_type,
+          field_options: options,
+        };
+      });
+
+      // Build a set of field names that already have values (from legacy or table)
+      const existingFieldNames = new Set([
+        ...legacyFields.map(f => f.field_name.toLowerCase()),
+        ...tableFields.map(f => f.field_name.toLowerCase()),
+      ]);
+
+      // Add deck-defined fields that don't have values yet
+      const deckDefinedFields: EditableField[] = deckCustomFields
+        .filter(def => !existingFieldNames.has(def.field_name.toLowerCase()))
+        .map(def => {
+          let options: string[] | undefined;
+          if (def.field_options) {
+            try {
+              options = JSON.parse(def.field_options);
+            } catch { /* ignore invalid JSON */ }
+          }
+          return {
+            id: null,
+            field_name: def.field_name,
+            field_value: '',
+            deleted: false,
+            legacy: false,
+            field_type: def.field_type,
+            field_options: options,
+          };
+        });
+
+      // DEBUG: Log field counts to diagnose missing fields
+      console.log('[CardEdit] Custom fields debug:', {
+        legacyFields: legacyFields.map(f => f.field_name),
+        tableFields: tableFields.map(f => ({ name: f.field_name, type: f.field_type, options: f.field_options })),
+        deckCustomFields: deckCustomFields.map(f => ({ name: f.field_name, type: f.field_type, options: f.field_options })),
+        existingFieldNames: Array.from(existingFieldNames),
+        deckDefinedFields: deckDefinedFields.map(f => ({ name: f.field_name, type: f.field_type, options: f.field_options })),
+        totalFields: legacyFields.length + tableFields.length + deckDefinedFields.length,
+      });
+
+      setCustomFields([...legacyFields, ...tableFields, ...deckDefinedFields]);
     }
-  }, [card]);
+  }, [card, deckCustomFields]);
 
   if (cardId === null) return null;
 
@@ -211,7 +279,9 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
           // Add new field
           await addCardCustomField(card.id, {
             field_name: field.field_name,
+            field_type: field.field_type || 'text',
             field_value: field.field_value,
+            field_options: field.field_options,
           });
         } else if (!field.deleted && field.id !== null) {
           // Update existing field
@@ -336,6 +406,8 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
                 visibleFields.map((field, vi) => {
                   // Find the real index in the full array (including deleted)
                   const realIndex = customFields.indexOf(field);
+                  const isDropdown = (field.field_type === 'dropdown' || field.field_type === 'select') && field.field_options && field.field_options.length > 0;
+
                   return (
                     <div key={field.id ?? `new-${vi}`} className="card-edit__custom-field">
                       <div className="card-edit__cf-header">
@@ -345,6 +417,7 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
                           value={field.field_name}
                           onChange={e => updateField(realIndex, 'field_name', e.target.value)}
                           placeholder="Field name"
+                          readOnly={isDropdown} // Dropdown field names come from deck definition
                         />
                         <button
                           className="card-edit__cf-delete"
@@ -355,12 +428,25 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
                         </button>
                       </div>
                       <div className="card-edit__cf-editor">
-                        <RichTextEditor
-                          content={field.field_value}
-                          onChange={(html) => updateField(realIndex, 'field_value', html)}
-                          placeholder="Enter text..."
-                          minHeight={100}
-                        />
+                        {isDropdown ? (
+                          <select
+                            className="card-edit__cf-select"
+                            value={field.field_value}
+                            onChange={e => updateField(realIndex, 'field_value', e.target.value)}
+                          >
+                            <option value="">-- Select --</option>
+                            {field.field_options!.map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <RichTextEditor
+                            content={field.field_value}
+                            onChange={(html) => updateField(realIndex, 'field_value', html)}
+                            placeholder="Enter text..."
+                            minHeight={100}
+                          />
+                        )}
                       </div>
                     </div>
                   );
