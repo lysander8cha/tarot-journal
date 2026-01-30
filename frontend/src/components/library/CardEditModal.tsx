@@ -142,17 +142,33 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
       setSelectedTagIds((card.own_tags || []).map(t => t.id));
       setSelectedGroupIds((card.groups || []).map(g => g.id));
       // Load legacy custom_fields JSON entries
+      // Look up deck definitions to get proper field_type and field_options
       let legacyFields: EditableField[] = [];
       if (card.custom_fields) {
         try {
           const parsed = JSON.parse(card.custom_fields);
-          legacyFields = Object.entries(parsed).map(([key, value]) => ({
-            id: null,
-            field_name: key,
-            field_value: String(value ?? ''),
-            deleted: false,
-            legacy: true,
-          }));
+          legacyFields = Object.entries(parsed).map(([key, value]) => {
+            // Find deck definition for this legacy field
+            const deckDef = deckCustomFields.find(
+              def => def.field_name.toLowerCase() === key.toLowerCase()
+            );
+            // Parse field_options from deck definition
+            let options: string[] | undefined;
+            if (deckDef?.field_options) {
+              try {
+                options = JSON.parse(deckDef.field_options);
+              } catch { /* ignore invalid JSON */ }
+            }
+            return {
+              id: null,
+              field_name: key,
+              field_value: String(value ?? ''),
+              deleted: false,
+              legacy: true,
+              field_type: deckDef?.field_type,
+              field_options: options,
+            };
+          });
         } catch { /* ignore invalid JSON */ }
       }
 
@@ -164,11 +180,17 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
           def => def.field_name.toLowerCase() === f.field_name.toLowerCase()
         );
 
-        // Parse field_options from deck definition (not from card field)
+        // Parse field_options from deck definition, with fallback to card field
         let options: string[] | undefined;
         if (deckDef?.field_options) {
           try {
             options = JSON.parse(deckDef.field_options);
+          } catch { /* ignore invalid JSON */ }
+        }
+        // Fallback: use card's stored field_options if deck definition not found
+        if (!options && f.field_options) {
+          try {
+            options = JSON.parse(f.field_options);
           } catch { /* ignore invalid JSON */ }
         }
 
