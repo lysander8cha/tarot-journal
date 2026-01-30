@@ -341,6 +341,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
                 value={reading}
                 onChange={(data) => updateReading(idx, data)}
                 onRemove={() => removeReading(idx)}
+                defaultDecks={defaults?.default_decks}
               />
             ))}
             {readings.length === 0 && (

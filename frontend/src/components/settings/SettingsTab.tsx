@@ -13,7 +13,8 @@ import {
   clearCache,
 } from '../../api/settings';
 import { getProfiles } from '../../api/profiles';
-import type { ThemeColors, Profile } from '../../types';
+import { getCartomancyTypes, getDecks } from '../../api/decks';
+import type { ThemeColors, Profile, Deck, CartomancyType } from '../../types';
 import './SettingsTab.css';
 
 const COLOR_LABELS: Record<string, string> = {
@@ -73,6 +74,16 @@ export default function SettingsTab() {
     queryFn: getProfiles,
   });
 
+  const { data: cartomancyTypes = [] } = useQuery<CartomancyType[]>({
+    queryKey: ['cartomancy-types'],
+    queryFn: getCartomancyTypes,
+  });
+
+  const { data: decks = [] } = useQuery<Deck[]>({
+    queryKey: ['decks'],
+    queryFn: () => getDecks(),
+  });
+
   const { data: cacheStats } = useQuery({
     queryKey: ['cache-stats'],
     queryFn: getCacheStats,
@@ -120,6 +131,31 @@ export default function SettingsTab() {
     } catch {
       showMsg('Failed to save default', 'error');
     }
+  };
+
+  const handleDefaultDeckChange = async (typeName: string, deckId: number | null) => {
+    try {
+      const updatedDecks = {
+        ...(defaults?.default_decks || {}),
+        [typeName]: deckId,
+      };
+      await updateDefaults({ default_decks: updatedDecks });
+      queryClient.invalidateQueries({ queryKey: ['settings-defaults'] });
+    } catch {
+      showMsg('Failed to save default deck', 'error');
+    }
+  };
+
+  // Helper to get decks that match a given cartomancy type
+  const getDecksForType = (typeName: string): Deck[] => {
+    return decks.filter(deck => {
+      // Check multi-type array first
+      if (deck.cartomancy_types && deck.cartomancy_types.length > 0) {
+        return deck.cartomancy_types.some(t => t.name === typeName);
+      }
+      // Fall back to legacy single-type field
+      return deck.cartomancy_type === typeName;
+    });
   };
 
   const handleBackup = async () => {
@@ -289,6 +325,30 @@ export default function SettingsTab() {
                 Querent same as reader
               </label>
             </div>
+          </div>
+
+          <h4 className="settings-tab__subsection-title">Default Decks</h4>
+          <p className="settings-tab__hint">
+            Select a default deck for each type. These will be auto-selected when creating journal entries.
+          </p>
+          <div className="settings-tab__defaults-grid">
+            {cartomancyTypes.map((type) => {
+              const typeDecks = getDecksForType(type.name);
+              return (
+                <div key={type.id} className="settings-tab__field">
+                  <label className="settings-tab__label">{type.name}</label>
+                  <select
+                    value={defaults?.default_decks?.[type.name] ?? ''}
+                    onChange={(e) => handleDefaultDeckChange(type.name, e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">None</option>
+                    {typeDecks.map((deck) => (
+                      <option key={deck.id} value={deck.id}>{deck.name}</option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
           </div>
         </section>
 

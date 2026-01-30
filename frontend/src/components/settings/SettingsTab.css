@@ -161,6 +161,18 @@
 }
 
 /* Defaults */
+.settings-tab__subsection-title {
+  font-size: var(--font-size-body);
+  color: var(--text-secondary);
+  margin: 16px 0 4px;
+}
+
+.settings-tab__hint {
+  font-size: var(--font-size-small);
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+
 .settings-tab__defaults-grid {
   display: flex;
   flex-wrap: wrap;

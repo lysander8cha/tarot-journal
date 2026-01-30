@@ -47,9 +47,11 @@ interface ReadingEditorProps {
   onChange: (data: ReadingData) => void;
   onRemove: () => void;
   index: number;
+  /** Default deck IDs by cartomancy type name */
+  defaultDecks?: Record<string, number | null>;
 }
 
-export default function ReadingEditor({ value, onChange, onRemove, index }: ReadingEditorProps) {
+export default function ReadingEditor({ value, onChange, onRemove, index, defaultDecks }: ReadingEditorProps) {
   const { data: decks = [] } = useQuery({
     queryKey: ['decks'],
     queryFn: () => getDecks(),
@@ -92,9 +94,9 @@ export default function ReadingEditor({ value, onChange, onRemove, index }: Read
   // Track deck assignments for each slot (derive from cards or use local state)
   const [slotDecks, setSlotDecks] = useState<SlotDeckMap>({});
 
-  // When spread changes, reset slot deck assignments
+  // When spread changes, reset slot deck assignments and apply defaults
   useEffect(() => {
-    if (value.spread_id) {
+    if (value.spread_id && spread) {
       // Try to derive slot assignments from existing cards
       const derived: SlotDeckMap = {};
       value.cards.forEach((card, idx) => {
@@ -104,9 +106,45 @@ export default function ReadingEditor({ value, onChange, onRemove, index }: Read
           derived[slotKey] = card.deck_id;
         }
       });
+
+      // Apply default decks for slots that weren't derived from existing cards
+      if (defaultDecks && deckSlots.length > 0) {
+        for (const slot of deckSlots) {
+          if (!derived[slot.key]) {
+            const defaultDeckId = defaultDecks[slot.cartomancy_type];
+            if (defaultDeckId) {
+              // Verify the default deck exists and matches the type
+              const deck = decks.find(d => d.id === defaultDeckId);
+              if (deck && deckMatchesType(deck, slot.cartomancy_type)) {
+                derived[slot.key] = defaultDeckId;
+              }
+            }
+          }
+        }
+      }
+
+      // For single-deck spreads without explicit slots, apply default based on spread's type
+      if (defaultDecks && deckSlots.length === 0 && !value.deck_id) {
+        const spreadType = spread.cartomancy_type;
+        if (spreadType && defaultDecks[spreadType]) {
+          const defaultDeckId = defaultDecks[spreadType];
+          if (defaultDeckId) {
+            const deck = decks.find(d => d.id === defaultDeckId);
+            if (deck) {
+              onChange({
+                ...value,
+                deck_id: defaultDeckId,
+                deck_name: deck.name,
+                cartomancy_type: deck.cartomancy_type || null,
+              });
+            }
+          }
+        }
+      }
+
       setSlotDecks(derived);
     }
-  }, [value.spread_id]);
+  }, [value.spread_id, spread, defaultDecks, decks.length]);
 
   // When spread changes, resize cards array to match positions
   useEffect(() => {
