@@ -79,18 +79,44 @@
 
 .batch-edit__footer {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
   margin-top: 4px;
+}
+
+.batch-edit__footer-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-edit__footer-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .batch-edit__progress {
   color: var(--text-dim);
   font-size: var(--font-size-small);
   margin-right: auto;
+}
+
+.batch-edit__error {
+  padding: 10px 12px;
+  background: rgba(217, 83, 79, 0.15);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  color: var(--danger);
+  font-size: var(--font-size-body);
+}
+
+.batch-edit__failed-ids {
+  margin-top: 6px;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
 }
 
 .batch-edit__save-btn {

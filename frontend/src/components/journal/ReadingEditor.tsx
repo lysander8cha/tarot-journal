@@ -94,7 +94,12 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
   // Track deck assignments for each slot (derive from cards or use local state)
   const [slotDecks, setSlotDecks] = useState<SlotDeckMap>({});
 
-  // When spread changes, reset slot deck assignments and apply defaults
+  // When spread changes, reset slot deck assignments and apply defaults.
+  // NOTE: We intentionally use `decks.length` instead of `decks` in the dependency array.
+  // This prevents the effect from re-running when deck data refetches during editing,
+  // which would disrupt the user's slot assignments. The tradeoff is that if a deck is
+  // renamed mid-edit, the display might be slightly stale until the modal is reopened.
+  // Stability during editing is more important than reactivity to external changes.
   useEffect(() => {
     if (value.spread_id && spread) {
       // Try to derive slot assignments from existing cards

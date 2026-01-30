@@ -116,11 +116,26 @@
 
 .card-edit__footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
   margin-top: 16px;
+}
+
+.card-edit__footer-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.card-edit__error {
+  padding: 10px 12px;
+  background: rgba(217, 83, 79, 0.15);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  color: var(--danger);
+  font-size: var(--font-size-body);
 }
 
 .card-edit__save-btn {

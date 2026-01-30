@@ -82,6 +82,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Populate form when editing
   useEffect(() => {
@@ -137,9 +138,11 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
       setReadings([]);
       setSelectedTagIds([]);
       setInitialized(false);
+      setError(null);
     }
     if (open && isEditing) {
       setInitialized(false);
+      setError(null);
     }
   }, [open, entryId, defaults]);
 
@@ -224,6 +227,8 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
       onClose();
     } catch (err) {
       console.error('Failed to save entry:', err);
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(`Failed to save entry: ${message}`);
     } finally {
       setSaving(false);
     }
@@ -389,10 +394,13 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
 
         {/* Footer */}
         <div className="entry-editor__footer">
-          <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Entry'}
-          </button>
+          {error && <div className="entry-editor__error">{error}</div>}
+          <div className="entry-editor__footer-buttons">
+            <button onClick={onClose}>Cancel</button>
+            <button className="primary" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Entry'}
+            </button>
+          </div>
         </div>
       </div>
     </Modal>

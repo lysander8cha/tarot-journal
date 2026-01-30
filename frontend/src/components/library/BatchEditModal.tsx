@@ -51,6 +51,8 @@ export default function BatchEditModal({ cardIds, deckId, onClose, onSaved }: Ba
 
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [failedCards, setFailedCards] = useState<number[]>([]);
 
   if (cardIds.length === 0) return null;
 
@@ -64,11 +66,15 @@ export default function BatchEditModal({ cardIds, deckId, onClose, onSaved }: Ba
   const handleSave = async () => {
     setSaving(true);
     setProgress(0);
+    setError(null);
+    setFailedCards([]);
 
-    try {
-      for (let i = 0; i < cardIds.length; i++) {
-        const cardId = cardIds[i];
+    const failed: number[] = [];
 
+    for (let i = 0; i < cardIds.length; i++) {
+      const cardId = cardIds[i];
+
+      try {
         // Update metadata if any field action is not 'skip'
         if (archetypeAction !== 'skip' || rankAction !== 'skip' || suitAction !== 'skip' || notesAction !== 'skip') {
           const meta: Record<string, string> = {};
@@ -131,19 +137,30 @@ export default function BatchEditModal({ cardIds, deckId, onClose, onSaved }: Ba
             await setCardGroups(cardId, newIds);
           }
         }
-
-        setProgress(i + 1);
+      } catch (err) {
+        console.error(`Failed to update card ${cardId}:`, err);
+        failed.push(cardId);
       }
 
-      queryClient.invalidateQueries({ queryKey: ['cards'] });
-      queryClient.invalidateQueries({ queryKey: ['card-search'] });
-      queryClient.invalidateQueries({ queryKey: ['card-detail'] });
+      setProgress(i + 1);
+    }
 
+    queryClient.invalidateQueries({ queryKey: ['cards'] });
+    queryClient.invalidateQueries({ queryKey: ['card-search'] });
+    queryClient.invalidateQueries({ queryKey: ['card-detail'] });
+
+    if (failed.length > 0) {
+      setFailedCards(failed);
+      const successCount = cardIds.length - failed.length;
+      if (successCount === 0) {
+        setError(`Failed to update all ${failed.length} cards.`);
+      } else {
+        setError(`Updated ${successCount} cards successfully, but ${failed.length} failed.`);
+      }
+      setSaving(false);
+    } else {
       onSaved();
       onClose();
-    } catch (err) {
-      console.error('Batch edit failed:', err);
-    } finally {
       setSaving(false);
     }
   };
@@ -277,19 +294,37 @@ export default function BatchEditModal({ cardIds, deckId, onClose, onSaved }: Ba
         </div>
 
         <div className="batch-edit__footer">
-          {saving && (
-            <span className="batch-edit__progress">
-              {progress} / {cardIds.length}
-            </span>
+          {error && (
+            <div className="batch-edit__error">
+              <div>{error}</div>
+              {failedCards.length > 0 && failedCards.length <= 10 && (
+                <div className="batch-edit__failed-ids">
+                  Failed card IDs: {failedCards.join(', ')}
+                </div>
+              )}
+            </div>
           )}
-          <button onClick={onClose} disabled={saving}>Cancel</button>
-          <button
-            className="batch-edit__save-btn"
-            onClick={handleSave}
-            disabled={saving || !hasChanges}
-          >
-            {saving ? 'Saving...' : 'Apply'}
-          </button>
+          <div className="batch-edit__footer-row">
+            {saving && (
+              <span className="batch-edit__progress">
+                {progress} / {cardIds.length}
+              </span>
+            )}
+            <div className="batch-edit__footer-buttons">
+              <button onClick={onClose} disabled={saving}>
+                {error ? 'Close' : 'Cancel'}
+              </button>
+              {!error && (
+                <button
+                  className="batch-edit__save-btn"
+                  onClick={handleSave}
+                  disabled={saving || !hasChanges}
+                >
+                  {saving ? 'Saving...' : 'Apply'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </Modal>

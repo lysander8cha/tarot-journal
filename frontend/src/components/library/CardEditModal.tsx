@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getCard, updateCard, updateCardMetadata, setCardTags, setCardGroups,
@@ -92,9 +92,15 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [customFields, setCustomFields] = useState<EditableField[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Track whether we've populated the form for the current card.
+  // This prevents deckCustomFields refetches from resetting user edits.
+  const formPopulatedRef = useRef(false);
 
   // Reset form state when switching to a different card
   useEffect(() => {
+    formPopulatedRef.current = false;
     setName('');
     setCardOrder(0);
     setArchetype('');
@@ -104,11 +110,13 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
     setSelectedTagIds([]);
     setSelectedGroupIds([]);
     setCustomFields([]);
+    setError(null);
   }, [cardId]);
 
-  // Populate form when card data loads
+  // Populate form when card data loads (only on initial load, not on deckCustomFields refetch)
   useEffect(() => {
-    if (card) {
+    if (card && !formPopulatedRef.current) {
+      formPopulatedRef.current = true;
       setName(card.name);
       setCardOrder(card.card_order);
       setArchetype(card.archetype || '');
@@ -307,6 +315,8 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
       onClose();
     } catch (err) {
       console.error('Failed to save card:', err);
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(`Failed to save card: ${message}`);
     } finally {
       setSaving(false);
     }
@@ -505,14 +515,17 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
           </div>
 
           <div className="card-edit__footer">
-            <button onClick={onClose}>Cancel</button>
-            <button
-              className="card-edit__save-btn"
-              onClick={handleSave}
-              disabled={saving || !name.trim()}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
+            {error && <div className="card-edit__error">{error}</div>}
+            <div className="card-edit__footer-buttons">
+              <button onClick={onClose}>Cancel</button>
+              <button
+                className="card-edit__save-btn"
+                onClick={handleSave}
+                disabled={saving || !name.trim()}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
