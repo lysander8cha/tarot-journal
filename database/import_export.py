@@ -163,16 +163,26 @@ class ImportExportMixin:
         """
         data = self.export_entries_json(entry_ids)
 
-        # Collect all unique image paths from readings
-        image_paths = set()
+        # Collect all unique deck_ids from readings first
+        deck_ids = set()
         for entry in data['entries']:
             for reading in entry.get('readings', []):
                 deck_id = reading.get('deck_id')
                 if deck_id:
-                    cards = self.get_cards(deck_id)
-                    for card in cards:
-                        if card['image_path'] and os.path.exists(card['image_path']):
-                            image_paths.add(card['image_path'])
+                    deck_ids.add(deck_id)
+
+        # Batch fetch all cards for all decks at once
+        image_paths = set()
+        if deck_ids:
+            placeholders = ','.join('?' * len(deck_ids))
+            cursor = self.conn.cursor()
+            cursor.execute(
+                f'SELECT image_path FROM cards WHERE deck_id IN ({placeholders}) AND image_path IS NOT NULL',
+                list(deck_ids)
+            )
+            for row in cursor.fetchall():
+                if row['image_path'] and os.path.exists(row['image_path']):
+                    image_paths.add(row['image_path'])
 
         # Create ZIP file
         with zipfile.ZipFile(filepath, 'w', zipfile.ZIP_DEFLATED) as zf:

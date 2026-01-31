@@ -38,18 +38,42 @@ def _parse_cards_used(cards_json):
 
 def _enrich_cards_with_ids(db, cards):
     """Look up card IDs by deck_id + name so the frontend can fetch thumbnails."""
+    # Collect cards that need lookup
+    cards_needing_lookup = []
     for card in cards:
         if card.get('card_id'):
             continue
         deck_id = card.get('deck_id')
         name = card.get('name')
         if deck_id and name:
-            row = db.conn.execute(
-                'SELECT id FROM cards WHERE deck_id = ? AND name = ?',
-                (deck_id, name)
-            ).fetchone()
-            if row:
-                card['card_id'] = row['id']
+            cards_needing_lookup.append((deck_id, name))
+
+    if not cards_needing_lookup:
+        return cards
+
+    # Batch query all cards at once
+    # Build a query with OR conditions for each (deck_id, name) pair
+    conditions = ' OR '.join(['(deck_id = ? AND name = ?)'] * len(cards_needing_lookup))
+    params = [val for pair in cards_needing_lookup for val in pair]
+    rows = db.conn.execute(
+        f'SELECT id, deck_id, name FROM cards WHERE {conditions}',
+        params
+    ).fetchall()
+
+    # Build lookup map: (deck_id, name) -> card_id
+    id_map = {(row['deck_id'], row['name']): row['id'] for row in rows}
+
+    # Apply IDs to cards
+    for card in cards:
+        if card.get('card_id'):
+            continue
+        deck_id = card.get('deck_id')
+        name = card.get('name')
+        if deck_id and name:
+            card_id = id_map.get((deck_id, name))
+            if card_id:
+                card['card_id'] = card_id
+
     return cards
 
 
