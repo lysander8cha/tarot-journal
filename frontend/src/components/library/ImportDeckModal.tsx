@@ -114,25 +114,32 @@ export default function ImportDeckModal({ onClose, onImported }: ImportDeckModal
       return;
     }
 
-    getPresetInfo(preset).then((info) => {
-      if (info) {
-        const newType = info.type || 'Oracle';
-        setDeckType(newType);
+    getPresetInfo(preset)
+      .then((info) => {
+        if (info) {
+          const newType = info.type || 'Oracle';
+          setDeckType(newType);
 
-        // Update suit names from preset or use defaults for new type
-        if (info.suit_names) {
-          setSuitNames(info.suit_names);
-        } else {
-          setSuitNames(DEFAULT_SUIT_NAMES[newType] || DEFAULT_SUIT_NAMES['Oracle']);
-        }
+          // Update suit names from preset or use defaults for new type
+          if (info.suit_names) {
+            setSuitNames(info.suit_names);
+          } else {
+            setSuitNames(DEFAULT_SUIT_NAMES[newType] || DEFAULT_SUIT_NAMES['Oracle']);
+          }
 
-        // Update cartomancy type dropdown to match preset
-        const matchingType = types.find((t) => t.name === newType);
-        if (matchingType) {
-          setTypeId(matchingType.id);
+          // Update cartomancy type dropdown to match preset
+          const matchingType = types.find((t) => t.name === newType);
+          if (matchingType) {
+            setTypeId(matchingType.id);
+          }
         }
-      }
-    });
+      })
+      .catch((err) => {
+        console.error('Failed to load preset info:', err);
+        // Fall back to Oracle defaults
+        setDeckType('Oracle');
+        setSuitNames(DEFAULT_SUIT_NAMES['Oracle']);
+      });
   }, [preset, types]);
 
   // Handle folder browse button

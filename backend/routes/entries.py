@@ -71,7 +71,12 @@ def list_entries():
 def search_entries():
     db = current_app.config['DB']
     tag_ids_raw = request.args.get('tag_ids', '')
-    tag_ids = [int(x) for x in tag_ids_raw.split(',') if x.strip()] if tag_ids_raw else None
+    tag_ids = None
+    if tag_ids_raw:
+        try:
+            tag_ids = [int(x) for x in tag_ids_raw.split(',') if x.strip()]
+        except ValueError:
+            return jsonify({'error': 'Invalid tag_ids format - must be comma-separated integers'}), 400
 
     rows = db.search_entries(
         query=request.args.get('query') or None,
@@ -381,7 +386,12 @@ def export_entries():
     """Export entries as JSON. Optional ?ids=1,2,3 to export specific entries."""
     db = current_app.config['DB']
     ids_raw = request.args.get('ids', '')
-    entry_ids = [int(x) for x in ids_raw.split(',') if x.strip()] if ids_raw else None
+    entry_ids = None
+    if ids_raw:
+        try:
+            entry_ids = [int(x) for x in ids_raw.split(',') if x.strip()]
+        except ValueError:
+            return jsonify({'error': 'Invalid ids format - must be comma-separated integers'}), 400
     data = db.export_entries_json(entry_ids)
     return jsonify(data)
 
