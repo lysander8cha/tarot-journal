@@ -198,51 +198,53 @@ class CardsMixin:
         cards can be:
         - list of (name, image_path, order) tuples (legacy format)
         - list of dicts with keys: name, image_path, sort_order, archetype, rank, suit, custom_fields (new format)
-        If auto_metadata is True and legacy format is used, automatically assign archetype/rank/suit."""
-        cursor = self.conn.cursor()
+        If auto_metadata is True and legacy format is used, automatically assign archetype/rank/suit.
 
-        # Check if new dict format or legacy tuple format
-        if cards and isinstance(cards[0], dict):
-            # New format with pre-computed metadata
-            # Insert cards and collect custom_fields to apply after
-            cards_with_custom_fields = []
-            for c in cards:
-                cursor.execute(
-                    '''INSERT INTO cards (deck_id, name, image_path, card_order, archetype, rank, suit)
-                       VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                    (deck_id, c['name'], c['image_path'], c['sort_order'],
-                     c.get('archetype'), c.get('rank'), c.get('suit'))
+        All operations are wrapped in a transaction for atomicity - if any card fails,
+        the entire batch is rolled back.
+        """
+        with self.transaction():
+            cursor = self.conn.cursor()
+
+            # Check if new dict format or legacy tuple format
+            if cards and isinstance(cards[0], dict):
+                # New format with pre-computed metadata
+                # Insert cards and collect custom_fields to apply after
+                cards_with_custom_fields = []
+                for c in cards:
+                    cursor.execute(
+                        '''INSERT INTO cards (deck_id, name, image_path, card_order, archetype, rank, suit)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                        (deck_id, c['name'], c['image_path'], c['sort_order'],
+                         c.get('archetype'), c.get('rank'), c.get('suit'))
+                    )
+                    card_id = cursor.lastrowid
+                    if c.get('custom_fields'):
+                        cards_with_custom_fields.append((card_id, c['custom_fields']))
+
+                # Apply custom_fields after all cards are inserted
+                for card_id, custom_fields in cards_with_custom_fields:
+                    self.update_card_metadata(card_id, custom_fields=custom_fields)
+            else:
+                # Legacy tuple format
+                cursor.executemany(
+                    'INSERT INTO cards (deck_id, name, image_path, card_order) VALUES (?, ?, ?, ?)',
+                    [(deck_id, name, path, order) for name, path, order in cards]
                 )
-                card_id = cursor.lastrowid
-                if c.get('custom_fields'):
-                    cards_with_custom_fields.append((card_id, c['custom_fields']))
 
-            # Apply custom_fields after all cards are inserted
-            for card_id, custom_fields in cards_with_custom_fields:
-                self.update_card_metadata(card_id, custom_fields=custom_fields)
-        else:
-            # Legacy tuple format
-            cursor.executemany(
-                'INSERT INTO cards (deck_id, name, image_path, card_order) VALUES (?, ?, ?, ?)',
-                [(deck_id, name, path, order) for name, path, order in cards]
-            )
-            self._commit()
+                # Auto-assign metadata for all cards
+                if auto_metadata:
+                    deck = self.get_deck(deck_id)
+                    if deck:
+                        cartomancy_type = deck['cartomancy_type_name']
+                        # Get all cards we just added and assign metadata
+                        all_cards = self.get_cards(deck_id)
+                        for card in all_cards:
+                            # Only update if metadata is not already set
+                            existing_archetype = card['archetype'] if 'archetype' in card.keys() else None
+                            if not existing_archetype:
+                                self.auto_assign_card_metadata(card['id'], card['name'], cartomancy_type)
 
-            # Auto-assign metadata for all cards
-            if auto_metadata:
-                deck = self.get_deck(deck_id)
-                if deck:
-                    cartomancy_type = deck['cartomancy_type_name']
-                    # Get all cards we just added and assign metadata
-                    all_cards = self.get_cards(deck_id)
-                    for card in all_cards:
-                        # Only update if metadata is not already set
-                        existing_archetype = card['archetype'] if 'archetype' in card.keys() else None
-                        if not existing_archetype:
-                            self.auto_assign_card_metadata(card['id'], card['name'], cartomancy_type)
-                    return
-
-        self._commit()
         logger.info("Bulk added %d cards to deck %d", len(cards), deck_id)
 
     # === Card Archetypes ===
