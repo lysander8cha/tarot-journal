@@ -25,9 +25,12 @@ class ImportExportMixin:
         """
         Export entries to a JSON-serializable dictionary.
         If entry_ids is None, exports all entries.
+
+        Uses batch queries to avoid N+1 query pattern.
         """
         cursor = self.conn.cursor()
 
+        # Fetch all entries
         if entry_ids:
             # Safe IN clause: placeholders are '?' chars, values passed as params
             placeholders = ','.join('?' * len(entry_ids))
@@ -35,49 +38,109 @@ class ImportExportMixin:
         else:
             cursor.execute('SELECT * FROM journal_entries')
 
+        entries = cursor.fetchall()
+        if not entries:
+            return {
+                'version': '1.0',
+                'exported_at': datetime.now().isoformat(),
+                'entries': []
+            }
+
+        # Collect all entry IDs for batch queries
+        all_entry_ids = [entry['id'] for entry in entries]
+        placeholders = ','.join('?' * len(all_entry_ids))
+
+        # Batch fetch all readings
+        cursor.execute(f'''
+            SELECT * FROM entry_readings
+            WHERE entry_id IN ({placeholders})
+            ORDER BY entry_id, position_order
+        ''', all_entry_ids)
+        readings_by_entry = {}
+        for reading in cursor.fetchall():
+            entry_id = reading['entry_id']
+            if entry_id not in readings_by_entry:
+                readings_by_entry[entry_id] = []
+            reading_dict = dict(reading)
+            if reading_dict.get('cards_used'):
+                try:
+                    reading_dict['cards_used'] = json.loads(reading_dict['cards_used'])
+                except (json.JSONDecodeError, ValueError) as e:
+                    logger.warning("Failed to parse cards_used for reading in entry %s: %s", entry_id, e)
+                    reading_dict['cards_used'] = []
+            readings_by_entry[entry_id].append(reading_dict)
+
+        # Batch fetch all tags
+        cursor.execute(f'''
+            SELECT t.*, et.entry_id FROM tags t
+            JOIN entry_tags et ON t.id = et.tag_id
+            WHERE et.entry_id IN ({placeholders})
+        ''', all_entry_ids)
+        tags_by_entry = {}
+        for row in cursor.fetchall():
+            entry_id = row['entry_id']
+            if entry_id not in tags_by_entry:
+                tags_by_entry[entry_id] = []
+            tag_dict = dict(row)
+            del tag_dict['entry_id']  # Remove join column
+            tags_by_entry[entry_id].append(tag_dict)
+
+        # Batch fetch all follow-up notes
+        cursor.execute(f'''
+            SELECT * FROM follow_up_notes
+            WHERE entry_id IN ({placeholders})
+            ORDER BY entry_id, created_at ASC
+        ''', all_entry_ids)
+        notes_by_entry = {}
+        for note in cursor.fetchall():
+            entry_id = note['entry_id']
+            if entry_id not in notes_by_entry:
+                notes_by_entry[entry_id] = []
+            notes_by_entry[entry_id].append(dict(note))
+
+        # Collect unique profile IDs and batch fetch
+        profile_ids = set()
+        for entry in entries:
+            if entry['querent_id']:
+                profile_ids.add(entry['querent_id'])
+            if entry['reader_id']:
+                profile_ids.add(entry['reader_id'])
+
+        profiles_by_id = {}
+        if profile_ids:
+            profile_placeholders = ','.join('?' * len(profile_ids))
+            cursor.execute(f'SELECT * FROM profiles WHERE id IN ({profile_placeholders})',
+                          list(profile_ids))
+            for profile in cursor.fetchall():
+                profiles_by_id[profile['id']] = dict(profile)
+
+        # Assemble the results
         entries_data = []
-        for entry in cursor.fetchall():
+        for entry in entries:
             entry_dict = dict(entry)
             entry_id = entry_dict['id']
 
-            # Get readings for this entry
-            readings = self.get_entry_readings(entry_id)
-            entry_dict['readings'] = []
-            for reading in readings:
-                reading_dict = dict(reading)
-                # Parse cards_used JSON string
-                if reading_dict.get('cards_used'):
-                    try:
-                        reading_dict['cards_used'] = json.loads(reading_dict['cards_used'])
-                    except (json.JSONDecodeError, ValueError) as e:
-                        logger.warning("Failed to parse cards_used for reading in entry %s: %s", entry_id, e)
-                        reading_dict['cards_used'] = []
-                entry_dict['readings'].append(reading_dict)
+            # Attach readings
+            entry_dict['readings'] = readings_by_entry.get(entry_id, [])
 
-            # Get tags for this entry
-            cursor.execute('''
-                SELECT t.* FROM tags t
-                JOIN entry_tags et ON t.id = et.tag_id
-                WHERE et.entry_id = ?
-            ''', (entry_id,))
-            entry_dict['tags'] = [dict(tag) for tag in cursor.fetchall()]
+            # Attach tags
+            entry_dict['tags'] = tags_by_entry.get(entry_id, [])
 
-            # Get querent and reader profile names (for portability)
-            if entry_dict.get('querent_id'):
-                querent = self.get_profile(entry_dict['querent_id'])
-                entry_dict['querent_name'] = querent['name'] if querent else None
+            # Attach profile names
+            querent_id = entry_dict.get('querent_id')
+            if querent_id and querent_id in profiles_by_id:
+                entry_dict['querent_name'] = profiles_by_id[querent_id]['name']
             else:
                 entry_dict['querent_name'] = None
 
-            if entry_dict.get('reader_id'):
-                reader = self.get_profile(entry_dict['reader_id'])
-                entry_dict['reader_name'] = reader['name'] if reader else None
+            reader_id = entry_dict.get('reader_id')
+            if reader_id and reader_id in profiles_by_id:
+                entry_dict['reader_name'] = profiles_by_id[reader_id]['name']
             else:
                 entry_dict['reader_name'] = None
 
-            # Get follow-up notes
-            follow_up_notes = self.get_follow_up_notes(entry_id)
-            entry_dict['follow_up_notes'] = [dict(note) for note in follow_up_notes]
+            # Attach follow-up notes
+            entry_dict['follow_up_notes'] = notes_by_entry.get(entry_id, [])
 
             entries_data.append(entry_dict)
 
