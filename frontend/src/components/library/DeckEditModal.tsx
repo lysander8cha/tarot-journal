@@ -95,6 +95,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
   const [originalSuitNames, setOriginalSuitNames] = useState<Record<string, string>>({});
   const [originalCourtNames, setOriginalCourtNames] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   // Track initial form state for dirty checking
   const initialStateRef = useRef<InitialDeckFormState | null>(null);
@@ -265,6 +266,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
   const handleSave = async () => {
     if (!deck) return;
     setSaving(true);
+    setError('');
     try {
       // Use the first selected type as the primary cartomancy_type_id
       const primaryTypeId = selectedTypeIds[0] || deck.cartomancy_type_id;
@@ -304,6 +306,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
       onClose();
     } catch (err) {
       console.error('Failed to save deck:', err);
+      setError('Failed to save deck. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -315,6 +318,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
         <div className="deck-edit__loading">Loading...</div>
       ) : deck ? (
         <div className="deck-edit">
+          {error && <div className="deck-edit__error">{error}</div>}
           <div className="deck-edit__header">
             {deck.card_back_image && (
               <img className="deck-edit__back-img" src={deckBackUrl(deck.id)} alt="Deck back" />

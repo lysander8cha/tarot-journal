@@ -281,25 +281,37 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
       }
 
       // Set tags
+      let tagsFailed = false;
       try {
         await setEntryTags(savedEntryId, selectedTagIds);
       } catch (tagErr) {
         console.error('Failed to save tags:', tagErr);
-        // Continue - don't block on tag failure
+        tagsFailed = true;
       }
 
       // Set querents
+      let querentsFailed = false;
       try {
         await setEntryQuerents(savedEntryId, validQuerentIds);
       } catch (querentErr) {
         console.error('Failed to save querents:', querentErr);
-        // Continue - don't block on querent failure
+        querentsFailed = true;
       }
 
       // Report any partial failures
+      const failures: string[] = [];
       if (failedReadings.length > 0) {
-        const failedList = failedReadings.join(', ');
-        setError(`Entry saved, but reading(s) #${failedList} failed to save. Please try editing the entry again.`);
+        failures.push(`reading(s) #${failedReadings.join(', ')}`);
+      }
+      if (tagsFailed) {
+        failures.push('tags');
+      }
+      if (querentsFailed) {
+        failures.push('querents');
+      }
+
+      if (failures.length > 0) {
+        setError(`Entry saved, but failed to save: ${failures.join(', ')}. Please try editing the entry again.`);
         // Still close and notify - the entry was saved
         queryClient.invalidateQueries({ queryKey: ['entries'] });
         queryClient.invalidateQueries({ queryKey: ['entry-search'] });

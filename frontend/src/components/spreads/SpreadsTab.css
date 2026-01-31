@@ -9,6 +9,16 @@
   height: 100%;
 }
 
+.spreads-tab__error {
+  color: var(--danger);
+  font-size: var(--font-size-small);
+  padding: 8px 12px;
+  margin: 12px 20px 0;
+  background-color: var(--danger-bg, rgba(220, 53, 69, 0.1));
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+}
+
 .spreads-tab__editor-scroll {
   flex: 1;
   overflow-y: auto;

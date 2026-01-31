@@ -15,6 +15,7 @@ export default function ProfilesTab() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   // Form state
   const [name, setName] = useState('');
@@ -62,6 +63,7 @@ export default function ProfilesTab() {
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
+    setError('');
     try {
       const data = {
         name: name.trim(),
@@ -83,6 +85,7 @@ export default function ProfilesTab() {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
     } catch (err) {
       console.error('Failed to save profile:', err);
+      setError('Failed to save profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -91,6 +94,7 @@ export default function ProfilesTab() {
   const handleDelete = async () => {
     if (!selectedId) return;
     if (!window.confirm(`Delete "${selectedProfile?.name}"? Journal entries referencing this profile will have their querent/reader cleared.`)) return;
+    setError('');
     try {
       await deleteProfile(selectedId);
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
@@ -98,6 +102,7 @@ export default function ProfilesTab() {
       setIsNew(false);
     } catch (err) {
       console.error('Failed to delete profile:', err);
+      setError('Failed to delete profile. Please try again.');
     }
   };
 
@@ -140,6 +145,8 @@ export default function ProfilesTab() {
                 <h3 className="profiles-tab__form-title">
                   {isNew ? 'New Profile' : 'Edit Profile'}
                 </h3>
+
+                {error && <div className="profiles-tab__error">{error}</div>}
 
                 <div className="profiles-tab__field">
                   <label className="profiles-tab__label">Name *</label>

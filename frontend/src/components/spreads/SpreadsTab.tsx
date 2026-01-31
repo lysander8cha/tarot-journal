@@ -15,6 +15,7 @@ export default function SpreadsTab() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [isNew, setIsNew] = useState(false);
+  const [error, setError] = useState('');
 
   // Local editing state
   const [name, setName] = useState('');
@@ -75,6 +76,7 @@ export default function SpreadsTab() {
 
   const handleClone = async () => {
     if (!selectedSpread) return;
+    setError('');
     try {
       const result = await cloneSpread(selectedSpread.id);
       queryClient.invalidateQueries({ queryKey: ['spreads'] });
@@ -89,12 +91,14 @@ export default function SpreadsTab() {
       setIsNew(false);
     } catch (err) {
       console.error('Failed to clone spread:', err);
+      setError('Failed to clone spread. Please try again.');
     }
   };
 
   const handleDelete = async () => {
     if (!selectedSpread) return;
     if (!window.confirm(`Delete "${selectedSpread.name}"? This cannot be undone.`)) return;
+    setError('');
     try {
       await deleteSpread(selectedSpread.id);
       queryClient.invalidateQueries({ queryKey: ['spreads'] });
@@ -102,12 +106,14 @@ export default function SpreadsTab() {
       setIsNew(false);
     } catch (err) {
       console.error('Failed to delete spread:', err);
+      setError('Failed to delete spread. Please try again.');
     }
   };
 
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
+    setError('');
     try {
       if (isNew) {
         const result = await createSpread({
@@ -154,6 +160,7 @@ export default function SpreadsTab() {
       queryClient.invalidateQueries({ queryKey: ['spreads'] });
     } catch (err) {
       console.error('Failed to save spread:', err);
+      setError('Failed to save spread. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -177,6 +184,7 @@ export default function SpreadsTab() {
         <Panel minSize="30%">
           {hasSelection ? (
             <div className="spreads-tab__editor">
+              {error && <div className="spreads-tab__error">{error}</div>}
               <div className="spreads-tab__editor-scroll">
                 <div className="spreads-tab__props-section">
                   <SpreadProperties

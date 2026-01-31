@@ -17,6 +17,7 @@ export default function FollowUpNotes({ entryId, notes }: FollowUpNotesProps) {
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [editorContent, setEditorContent] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleAdd = () => {
     setEditorContent('');
@@ -32,6 +33,7 @@ export default function FollowUpNotes({ entryId, notes }: FollowUpNotesProps) {
 
   const handleSave = async () => {
     setSaving(true);
+    setError('');
     try {
       if (editingNoteId) {
         await updateFollowUpNote(editingNoteId, editorContent);
@@ -44,6 +46,7 @@ export default function FollowUpNotes({ entryId, notes }: FollowUpNotesProps) {
       setEditorContent('');
     } catch (err) {
       console.error('Failed to save note:', err);
+      setError('Failed to save note. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -51,11 +54,13 @@ export default function FollowUpNotes({ entryId, notes }: FollowUpNotesProps) {
 
   const handleDelete = async (noteId: number) => {
     if (!window.confirm('Delete this follow-up note?')) return;
+    setError('');
     try {
       await deleteFollowUpNote(noteId);
       queryClient.invalidateQueries({ queryKey: ['entry', entryId] });
     } catch (err) {
       console.error('Failed to delete note:', err);
+      setError('Failed to delete note. Please try again.');
     }
   };
 
@@ -75,6 +80,8 @@ export default function FollowUpNotes({ entryId, notes }: FollowUpNotesProps) {
           </button>
         )}
       </div>
+
+      {error && <div className="follow-up-notes__error">{error}</div>}
 
       {showAdd && (
         <div className="follow-up-notes__editor">

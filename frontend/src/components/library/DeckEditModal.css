@@ -6,6 +6,16 @@
   color: var(--text-dim);
 }
 
+.deck-edit__error {
+  color: var(--danger);
+  font-size: var(--font-size-small);
+  padding: 8px 12px;
+  background-color: var(--danger-bg, rgba(220, 53, 69, 0.1));
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
 .deck-edit__header {
   display: flex;
   gap: 16px;
