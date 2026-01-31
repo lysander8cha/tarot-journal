@@ -52,6 +52,8 @@ def get_spread(spread_id):
 def add_spread():
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     name = data.get('name', '').strip()
     if not name:
         return jsonify({'error': 'name is required'}), 400
@@ -72,6 +74,8 @@ def add_spread():
 def update_spread(spread_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_spread(
         spread_id,
         name=data.get('name'),

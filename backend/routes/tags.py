@@ -25,6 +25,8 @@ def get_entry_tags():
 def add_entry_tag():
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     name = data.get('name', '').strip()
     if not name:
         return jsonify({'error': 'name is required'}), 400
@@ -36,6 +38,8 @@ def add_entry_tag():
 def update_entry_tag(tag_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_tag(tag_id, name=data.get('name'), color=data.get('color'))
     return jsonify({'ok': True})
 
@@ -61,6 +65,8 @@ def get_deck_tags():
 def add_deck_tag():
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     name = data.get('name', '').strip()
     if not name:
         return jsonify({'error': 'name is required'}), 400
@@ -72,6 +78,8 @@ def add_deck_tag():
 def update_deck_tag(tag_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_deck_tag(tag_id, name=data.get('name'), color=data.get('color'))
     return jsonify({'ok': True})
 
@@ -97,6 +105,8 @@ def get_card_tags():
 def add_card_tag():
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     name = data.get('name', '').strip()
     if not name:
         return jsonify({'error': 'name is required'}), 400
@@ -108,6 +118,8 @@ def add_card_tag():
 def update_card_tag(tag_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_card_tag(tag_id, name=data.get('name'), color=data.get('color'))
     return jsonify({'ok': True})
 

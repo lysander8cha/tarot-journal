@@ -250,7 +250,8 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
         savedEntryId = result.id;
       }
 
-      // Add readings
+      // Add readings - track failures individually so we can report them
+      const failedReadings: number[] = [];
       for (let i = 0; i < readings.length; i++) {
         const r = readings[i];
         const cardsUsed = r.cards
@@ -263,22 +264,51 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
             position_index: c.position_index,
           }));
 
-        await addEntryReading(savedEntryId, {
-          spread_id: r.spread_id,
-          spread_name: r.spread_name || undefined,
-          deck_id: r.deck_id,
-          deck_name: r.deck_name || undefined,
-          cartomancy_type: r.cartomancy_type || undefined,
-          cards_used: cardsUsed,
-          position_order: i,
-        });
+        try {
+          await addEntryReading(savedEntryId, {
+            spread_id: r.spread_id,
+            spread_name: r.spread_name || undefined,
+            deck_id: r.deck_id,
+            deck_name: r.deck_name || undefined,
+            cartomancy_type: r.cartomancy_type || undefined,
+            cards_used: cardsUsed,
+            position_order: i,
+          });
+        } catch (readingErr) {
+          console.error(`Failed to save reading ${i + 1}:`, readingErr);
+          failedReadings.push(i + 1);
+        }
       }
 
       // Set tags
-      await setEntryTags(savedEntryId, selectedTagIds);
+      try {
+        await setEntryTags(savedEntryId, selectedTagIds);
+      } catch (tagErr) {
+        console.error('Failed to save tags:', tagErr);
+        // Continue - don't block on tag failure
+      }
 
       // Set querents
-      await setEntryQuerents(savedEntryId, validQuerentIds);
+      try {
+        await setEntryQuerents(savedEntryId, validQuerentIds);
+      } catch (querentErr) {
+        console.error('Failed to save querents:', querentErr);
+        // Continue - don't block on querent failure
+      }
+
+      // Report any partial failures
+      if (failedReadings.length > 0) {
+        const failedList = failedReadings.join(', ');
+        setError(`Entry saved, but reading(s) #${failedList} failed to save. Please try editing the entry again.`);
+        // Still close and notify - the entry was saved
+        queryClient.invalidateQueries({ queryKey: ['entries'] });
+        queryClient.invalidateQueries({ queryKey: ['entry-search'] });
+        queryClient.invalidateQueries({ queryKey: ['entry', savedEntryId] });
+        onSaved(savedEntryId);
+        // Don't close - let user see the warning
+        setSaving(false);
+        return;
+      }
 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['entries'] });

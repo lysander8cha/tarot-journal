@@ -126,7 +126,7 @@ class CardsMixin:
         if conditions:
             sql += ' WHERE ' + ' AND '.join(conditions)
 
-        # Sort order
+        # Sort order - uses whitelist dict to prevent SQL injection
         sort_column = {
             'name': 'c.name',
             'deck': 'd.name, c.card_order',
@@ -136,9 +136,10 @@ class CardsMixin:
         sort_dir = 'ASC' if sort_asc else 'DESC'
         sql += f' ORDER BY {sort_column} {sort_dir}'
 
-        # Limit
+        # Limit - use parameterized query for consistency
         if limit:
-            sql += f' LIMIT {int(limit)}'
+            sql += ' LIMIT ?'
+            params.append(int(limit))
 
         cursor.execute(sql, params)
         return cursor.fetchall()
@@ -169,6 +170,7 @@ class CardsMixin:
         return card_id
 
     def update_card(self, card_id: int, name: str = None, image_path: str = None, card_order: int = None):
+        """Update card fields. Safe dynamic SQL: column names are hardcoded, values use ? params."""
         cursor = self.conn.cursor()
         updates = []
         params = []
@@ -508,7 +510,7 @@ class CardsMixin:
     # === Card Metadata ===
     def update_card_metadata(self, card_id: int, archetype: str = None, rank: str = None,
                              suit: str = None, notes: str = None, custom_fields: dict = None):
-        """Update card metadata fields"""
+        """Update card metadata fields. Safe dynamic SQL: column names are hardcoded, values use ? params."""
         cursor = self.conn.cursor()
         updates = []
         params = []
@@ -577,7 +579,7 @@ class CardsMixin:
     def update_deck_custom_field(self, field_id: int, field_name: str = None,
                                  field_type: str = None, field_options: list = None,
                                  field_order: int = None):
-        """Update a deck custom field definition"""
+        """Update a deck custom field definition. Safe dynamic SQL: column names are hardcoded."""
         cursor = self.conn.cursor()
         updates = []
         params = []
@@ -633,7 +635,7 @@ class CardsMixin:
     def update_card_custom_field(self, field_id: int, field_name: str = None,
                                  field_type: str = None, field_value: str = None,
                                  field_options: list = None, field_order: int = None):
-        """Update a card custom field"""
+        """Update a card custom field. Safe dynamic SQL: column names are hardcoded."""
         cursor = self.conn.cursor()
         updates = []
         params = []

@@ -157,6 +157,10 @@ export default function BatchEditModal({ cardIds, deckId, onClose, onSaved }: Ba
       } else {
         setError(`Updated ${successCount} cards successfully, but ${failed.length} failed.`);
       }
+      // Log full list to console for debugging
+      if (failed.length > 10) {
+        console.warn('Full list of failed card IDs:', failed);
+      }
       setSaving(false);
     } else {
       onSaved();
@@ -297,9 +301,13 @@ export default function BatchEditModal({ cardIds, deckId, onClose, onSaved }: Ba
           {error && (
             <div className="batch-edit__error">
               <div>{error}</div>
-              {failedCards.length > 0 && failedCards.length <= 10 && (
+              {failedCards.length > 0 && (
                 <div className="batch-edit__failed-ids">
-                  Failed card IDs: {failedCards.join(', ')}
+                  {failedCards.length <= 10 ? (
+                    <>Failed card IDs: {failedCards.join(', ')}</>
+                  ) : (
+                    <>Failed card IDs: {failedCards.slice(0, 10).join(', ')} and {failedCards.length - 10} more (see browser console for full list)</>
+                  )}
                 </div>
               )}
             </div>

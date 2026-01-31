@@ -143,6 +143,8 @@ def get_entry(entry_id):
 def create_entry():
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     entry_id = db.add_entry(
         title=data.get('title'),
         content=data.get('content'),
@@ -160,6 +162,8 @@ def create_entry():
 def update_entry(entry_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_entry(
         entry_id,
         title=data.get('title'),
@@ -199,6 +203,8 @@ def get_entry_readings(entry_id):
 def add_entry_reading(entry_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     reading_id = db.add_entry_reading(
         entry_id,
         spread_id=data.get('spread_id'),
@@ -237,6 +243,8 @@ def get_follow_up_notes(entry_id):
 def add_follow_up_note(entry_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     content = data.get('content', '')
     note_id = db.add_follow_up_note(entry_id, content)
     return jsonify({'id': note_id}), 201
@@ -246,6 +254,8 @@ def add_follow_up_note(entry_id):
 def update_follow_up_note(note_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_follow_up_note(note_id, data.get('content', ''))
     return jsonify({'ok': True})
 
@@ -270,6 +280,8 @@ def get_entry_tags(entry_id):
 def set_entry_tags(entry_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     tag_ids = data.get('tag_ids', [])
     db.set_entry_tags(entry_id, tag_ids)
     return jsonify({'ok': True})
@@ -288,6 +300,8 @@ def get_entry_querents(entry_id):
 def set_entry_querents(entry_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     profile_ids = data.get('profile_ids', [])
     db.set_entry_querents(entry_id, profile_ids)
     return jsonify({'ok': True})
@@ -315,6 +329,8 @@ def get_profile(profile_id):
 def add_profile():
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     name = data.get('name', '').strip()
     if not name:
         return jsonify({'error': 'name is required'}), 400
@@ -335,6 +351,8 @@ def add_profile():
 def update_profile(profile_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_profile(
         profile_id,
         name=data.get('name'),
@@ -373,6 +391,8 @@ def import_entries():
     """Import entries from JSON data."""
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     merge_tags = data.get('merge_tags', True)
     entries_data = data.get('data', data)
     result = db.import_entries_from_json(entries_data, merge_tags=merge_tags)

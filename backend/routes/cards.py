@@ -74,6 +74,8 @@ def get_card(card_id):
 def add_card():
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     deck_id = data.get('deck_id')
     name = data.get('name', '').strip()
     if not deck_id or not name:
@@ -91,6 +93,8 @@ def add_card():
 def update_card(card_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_card(
         card_id,
         name=data.get('name'),
@@ -111,6 +115,8 @@ def delete_card(card_id):
 def update_card_metadata(card_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_card_metadata(
         card_id,
         archetype=data.get('archetype'),
@@ -137,6 +143,8 @@ def get_card_tags(card_id):
 def set_card_tag_assignments(card_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     tag_ids = data.get('tag_ids', [])
     db.set_card_tags(card_id, tag_ids)
     return jsonify({'ok': True})
@@ -153,6 +161,8 @@ def get_card_groups(card_id):
 def set_card_group_assignments(card_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     group_ids = data.get('group_ids', [])
     db.set_card_groups(card_id, group_ids)
     return jsonify({'ok': True})
@@ -169,6 +179,8 @@ def get_card_custom_fields(card_id):
 def add_card_custom_field(card_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     field_name = data.get('field_name', '').strip()
     field_type = data.get('field_type', 'text')
     if not field_name:
@@ -188,6 +200,8 @@ def add_card_custom_field(card_id):
 def update_card_custom_field(field_id):
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     db.update_card_custom_field(
         field_id,
         field_name=data.get('field_name'),

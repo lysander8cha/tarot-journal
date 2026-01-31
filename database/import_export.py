@@ -29,6 +29,7 @@ class ImportExportMixin:
         cursor = self.conn.cursor()
 
         if entry_ids:
+            # Safe IN clause: placeholders are '?' chars, values passed as params
             placeholders = ','.join('?' * len(entry_ids))
             cursor.execute(f'SELECT * FROM journal_entries WHERE id IN ({placeholders})', entry_ids)
         else:

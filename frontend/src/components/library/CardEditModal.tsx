@@ -157,7 +157,9 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
             if (deckDef?.field_options) {
               try {
                 options = JSON.parse(deckDef.field_options);
-              } catch { /* ignore invalid JSON */ }
+              } catch (e) {
+                console.warn(`Failed to parse field_options for "${deckDef.field_name}":`, e);
+              }
             }
             return {
               id: null,
@@ -169,7 +171,11 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
               field_options: options,
             };
           });
-        } catch { /* ignore invalid JSON */ }
+        } catch (e) {
+          console.warn(`Failed to parse custom_fields JSON for card ${card.id}:`, e);
+          // Show user a warning that some custom fields couldn't be loaded
+          setError('Warning: Some custom field data could not be loaded (corrupted JSON). Fields may be missing.');
+        }
       }
 
       // Load table-based custom fields (existing card values)
@@ -185,13 +191,17 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
         if (deckDef?.field_options) {
           try {
             options = JSON.parse(deckDef.field_options);
-          } catch { /* ignore invalid JSON */ }
+          } catch (e) {
+            console.warn(`Failed to parse deck field_options for "${deckDef.field_name}":`, e);
+          }
         }
         // Fallback: use card's stored field_options if deck definition not found
         if (!options && f.field_options) {
           try {
             options = JSON.parse(f.field_options);
-          } catch { /* ignore invalid JSON */ }
+          } catch (e) {
+            console.warn(`Failed to parse card field_options for "${f.field_name}":`, e);
+          }
         }
 
         return {
@@ -220,7 +230,9 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
           if (def.field_options) {
             try {
               options = JSON.parse(def.field_options);
-            } catch { /* ignore invalid JSON */ }
+            } catch (e) {
+              console.warn(`Failed to parse field_options for deck field "${def.field_name}":`, e);
+            }
           }
           return {
             id: null,

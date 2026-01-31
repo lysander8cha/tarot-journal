@@ -97,6 +97,7 @@ class EntriesMixin:
 
         if tag_ids:
             joins.append('JOIN entry_tags et ON je.id = et.entry_id')
+            # Safe IN clause: placeholders are '?' chars, values passed as params
             placeholders = ','.join('?' * len(tag_ids))
             conditions.append(f'et.tag_id IN ({placeholders})')
             params.extend(tag_ids)
@@ -158,6 +159,7 @@ class EntriesMixin:
                      reading_datetime: str = None, location_name: str = None,
                      location_lat: float = None, location_lon: float = None,
                      querent_id: int = None, reader_id: int = None):
+        """Update entry fields. Safe dynamic SQL: column names are hardcoded, values use ? params."""
         cursor = self.conn.cursor()
         now = datetime.now().isoformat()
         updates = []

@@ -37,7 +37,7 @@ class ProfilesMixin:
                        birth_date: str = None, birth_time: str = None,
                        birth_place_name: str = None, birth_place_lat: float = None,
                        birth_place_lon: float = None, querent_only: bool = None):
-        """Update an existing profile"""
+        """Update an existing profile. Safe dynamic SQL: column names are hardcoded, values use ? params."""
         cursor = self.conn.cursor()
         updates = []
         params = []

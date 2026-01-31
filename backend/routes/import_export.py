@@ -43,6 +43,8 @@ def get_preset_info():
 def scan_folder():
     """Scan a folder and preview what cards would be imported."""
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     folder = data.get('folder', '').strip()
     preset_name = data.get('preset_name', '')
     custom_suit_names = data.get('custom_suit_names')
@@ -80,6 +82,8 @@ def import_from_folder():
     """Import a deck from a folder of images."""
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
     folder = data.get('folder', '').strip()
     deck_name = data.get('deck_name', '').strip()
