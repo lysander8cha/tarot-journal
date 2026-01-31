@@ -47,7 +47,11 @@ class ImportExportMixin:
                 reading_dict = dict(reading)
                 # Parse cards_used JSON string
                 if reading_dict.get('cards_used'):
-                    reading_dict['cards_used'] = json.loads(reading_dict['cards_used'])
+                    try:
+                        reading_dict['cards_used'] = json.loads(reading_dict['cards_used'])
+                    except (json.JSONDecodeError, ValueError) as e:
+                        logger.warning("Failed to parse cards_used for reading in entry %s: %s", entry_id, e)
+                        reading_dict['cards_used'] = []
                 entry_dict['readings'].append(reading_dict)
 
             # Get tags for this entry

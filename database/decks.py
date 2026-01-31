@@ -6,6 +6,10 @@ import json
 import re
 from typing import Optional, List
 
+from logger_config import get_logger
+
+logger = get_logger('database')
+
 
 class DecksMixin:
     """Mixin providing deck and cartomancy type operations."""
@@ -166,32 +170,35 @@ class DecksMixin:
 
     def get_deck_suit_names(self, deck_id: int) -> dict:
         """Get custom suit names for a deck, or defaults"""
-        deck = self.get_deck(deck_id)
-        if deck and deck['suit_names']:
-            return json.loads(deck['suit_names'])
-        return {
+        defaults = {
             'wands': 'Wands',
             'cups': 'Cups',
             'swords': 'Swords',
             'pentacles': 'Pentacles'
         }
+        deck = self.get_deck(deck_id)
+        if deck and deck['suit_names']:
+            try:
+                return json.loads(deck['suit_names'])
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning("Failed to parse suit_names for deck %s: %s", deck_id, e)
+        return defaults
 
     def get_deck_court_names(self, deck_id: int) -> dict:
         """Get custom court card names for a deck, or defaults"""
-        deck = self.get_deck(deck_id)
-        if deck:
-            try:
-                court_names = deck['court_names']
-                if court_names:
-                    return json.loads(court_names)
-            except (KeyError, TypeError):
-                pass
-        return {
+        defaults = {
             'page': 'Page',
             'knight': 'Knight',
             'queen': 'Queen',
             'king': 'King'
         }
+        deck = self.get_deck(deck_id)
+        if deck and deck.get('court_names'):
+            try:
+                return json.loads(deck['court_names'])
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning("Failed to parse court_names for deck %s: %s", deck_id, e)
+        return defaults
 
     def update_deck_suit_names(self, deck_id: int, suit_names: dict, old_suit_names: dict = None):
         """Update suit names and rename all cards accordingly."""

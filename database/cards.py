@@ -679,7 +679,12 @@ class CardsMixin:
         ''', (deck_id,))
         results = []
         for row in cursor.fetchall():
-            custom_fields = json.loads(row['custom_fields']) if row['custom_fields'] else {}
+            custom_fields = {}
+            if row['custom_fields']:
+                try:
+                    custom_fields = json.loads(row['custom_fields'])
+                except (json.JSONDecodeError, ValueError) as e:
+                    logger.warning("Failed to parse custom_fields for card %s: %s", row['card_id'], e)
             results.append({
                 'card_id': row['card_id'],
                 'card_name': row['card_name'],
@@ -692,7 +697,12 @@ class CardsMixin:
         cursor = self.conn.cursor()
         cursor.execute('SELECT custom_fields FROM cards WHERE id = ?', (card_id,))
         row = cursor.fetchone()
-        custom_fields = json.loads(row['custom_fields']) if row and row['custom_fields'] else {}
+        custom_fields = {}
+        if row and row['custom_fields']:
+            try:
+                custom_fields = json.loads(row['custom_fields'])
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning("Failed to parse custom_fields for card %s, starting fresh: %s", card_id, e)
         custom_fields[field_name] = value
         cursor.execute('UPDATE cards SET custom_fields = ? WHERE id = ?',
                        (json.dumps(custom_fields), card_id))
