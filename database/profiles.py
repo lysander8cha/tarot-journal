@@ -23,6 +23,8 @@ class ProfilesMixin:
                     birth_place_lat: float = None, birth_place_lon: float = None,
                     querent_only: bool = False):
         """Add a new profile"""
+        if not name or not name.strip():
+            raise ValueError("Profile name is required")
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO profiles (name, gender, birth_date, birth_time,

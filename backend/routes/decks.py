@@ -4,26 +4,9 @@ Deck endpoints -- CRUD for card decks.
 
 import json
 from flask import Blueprint, jsonify, request, current_app
+from backend.utils import row_to_dict, sort_types
 
 decks_bp = Blueprint('decks', __name__)
-
-# Preferred display order for cartomancy types
-TYPE_ORDER = ['Tarot', 'Lenormand', 'Oracle', 'Playing Cards', 'Kipper', 'I Ching']
-
-
-def _row_to_dict(row):
-    return dict(row) if row else None
-
-
-def _sort_types(types):
-    """Sort types by preferred display order, with unknown types at the end."""
-    def sort_key(t):
-        name = t.get('name', '') if isinstance(t, dict) else t['name']
-        try:
-            return TYPE_ORDER.index(name)
-        except ValueError:
-            return len(TYPE_ORDER)
-    return sorted(types, key=sort_key)
 
 
 @decks_bp.route('/api/decks')
@@ -51,7 +34,7 @@ def get_decks():
         # Cartomancy types from bulk query
         types = all_types.get(deck_id, [])
         if types:
-            deck['cartomancy_types'] = _sort_types(types)
+            deck['cartomancy_types'] = sort_types(types)
             deck['cartomancy_type_names'] = ', '.join(t['name'] for t in types)
         else:
             # Fall back to primary type if no assignments exist
@@ -72,7 +55,7 @@ def get_deck(deck_id):
     row = db.get_deck(deck_id)
     if not row:
         return jsonify({'error': 'Deck not found'}), 404
-    return jsonify(_row_to_dict(row))
+    return jsonify(row_to_dict(row))
 
 
 @decks_bp.route('/api/decks', methods=['POST'])
@@ -130,8 +113,8 @@ def delete_deck(deck_id):
 def get_deck_types(deck_id):
     db = current_app.config['DB']
     rows = db.get_types_for_deck(deck_id)
-    types = [_row_to_dict(r) for r in rows]
-    return jsonify(_sort_types(types))
+    types = [row_to_dict(r) for r in rows]
+    return jsonify(sort_types(types))
 
 
 @decks_bp.route('/api/decks/<int:deck_id>/types', methods=['PUT'])
@@ -187,7 +170,7 @@ def update_court_names(deck_id):
 def get_deck_tags(deck_id):
     db = current_app.config['DB']
     rows = db.get_tags_for_deck(deck_id)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @decks_bp.route('/api/decks/<int:deck_id>/tags', methods=['PUT'])
@@ -207,7 +190,7 @@ def set_deck_tag_assignments(deck_id):
 def get_deck_custom_fields(deck_id):
     db = current_app.config['DB']
     rows = db.get_deck_custom_fields(deck_id)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @decks_bp.route('/api/decks/<int:deck_id>/custom-fields', methods=['POST'])
@@ -256,7 +239,7 @@ def delete_deck_custom_field(field_id):
 def get_deck_groups(deck_id):
     db = current_app.config['DB']
     rows = db.get_card_groups(deck_id)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @decks_bp.route('/api/decks/<int:deck_id>/groups', methods=['POST'])

@@ -4,12 +4,9 @@ Spread endpoints -- CRUD, clone for card spreads.
 
 import json
 from flask import Blueprint, jsonify, request, current_app
+from backend.utils import row_to_dict
 
 spreads_bp = Blueprint('spreads', __name__)
-
-
-def _row_to_dict(row):
-    return dict(row) if row else None
 
 
 def _parse_spread(d):
@@ -36,7 +33,7 @@ def _parse_spread(d):
 def get_spreads():
     db = current_app.config['DB']
     rows = db.get_spreads()
-    return jsonify([_parse_spread(_row_to_dict(r)) for r in rows])
+    return jsonify([_parse_spread(row_to_dict(r)) for r in rows])
 
 
 @spreads_bp.route('/api/spreads/<int:spread_id>')
@@ -45,7 +42,7 @@ def get_spread(spread_id):
     row = db.get_spread(spread_id)
     if not row:
         return jsonify({'error': 'Spread not found'}), 404
-    return jsonify(_parse_spread(_row_to_dict(row)))
+    return jsonify(_parse_spread(row_to_dict(row)))
 
 
 @spreads_bp.route('/api/spreads', methods=['POST'])
@@ -104,7 +101,7 @@ def clone_spread(spread_id):
     if not row:
         return jsonify({'error': 'Spread not found'}), 404
 
-    original = _parse_spread(_row_to_dict(row))
+    original = _parse_spread(row_to_dict(row))
     data = request.get_json() or {}
     new_name = data.get('name', f"Copy of {original['name']}")
 

@@ -3,12 +3,9 @@ Archetype endpoints -- search/autocomplete for card archetypes.
 """
 
 from flask import Blueprint, jsonify, request, current_app
+from backend.utils import row_to_dict
 
 archetypes_bp = Blueprint('archetypes', __name__)
-
-
-def _row_to_dict(row):
-    return dict(row) if row else None
 
 
 @archetypes_bp.route('/api/archetypes')
@@ -17,7 +14,7 @@ def get_archetypes():
     db = current_app.config['DB']
     ctype = request.args.get('cartomancy_type')
     rows = db.get_archetypes(cartomancy_type=ctype)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @archetypes_bp.route('/api/archetypes/search')

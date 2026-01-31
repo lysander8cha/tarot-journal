@@ -12,13 +12,10 @@ import logging
 from flask import Blueprint, jsonify, request, current_app, send_file
 
 from backend.security import is_valid_directory
+from backend.utils import row_to_dict
 
 logger = logging.getLogger(__name__)
 import_export_bp = Blueprint('import_export', __name__)
-
-
-def _row_to_dict(row):
-    return dict(row) if row else None
 
 
 @import_export_bp.route('/api/import/preset-info')

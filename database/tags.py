@@ -18,6 +18,8 @@ class TagsMixin:
         return cursor.fetchone()
 
     def add_tag(self, name: str, color: str = '#6B5B95'):
+        if not name or not name.strip():
+            raise ValueError("Tag name is required")
         cursor = self.conn.cursor()
         cursor.execute('INSERT INTO tags (name, color) VALUES (?, ?)', (name, color))
         self._commit()
@@ -88,6 +90,8 @@ class TagsMixin:
 
     def add_deck_tag(self, name: str, color: str = '#6B5B95'):
         """Create a new deck tag"""
+        if not name or not name.strip():
+            raise ValueError("Tag name is required")
         cursor = self.conn.cursor()
         cursor.execute('INSERT INTO deck_tags (name, color) VALUES (?, ?)', (name, color))
         self._commit()
@@ -188,6 +192,8 @@ class TagsMixin:
 
     def add_card_tag(self, name: str, color: str = '#6B5B95'):
         """Create a new card tag"""
+        if not name or not name.strip():
+            raise ValueError("Tag name is required")
         cursor = self.conn.cursor()
         cursor.execute('INSERT INTO card_tags (name, color) VALUES (?, ?)', (name, color))
         self._commit()

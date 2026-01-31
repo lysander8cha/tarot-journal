@@ -4,15 +4,12 @@ Card endpoints -- CRUD and search for individual cards.
 
 import json
 from flask import Blueprint, jsonify, request, current_app
+from backend.utils import row_to_dict
 
 cards_bp = Blueprint('cards', __name__)
 
 # Pagination limits to prevent memory exhaustion
 MAX_LIMIT = 500
-
-
-def _row_to_dict(row):
-    return dict(row) if row else None
 
 
 @cards_bp.route('/api/cards')
@@ -23,7 +20,7 @@ def get_cards():
     if not deck_id:
         return jsonify({'error': 'deck_id query parameter is required'}), 400
     rows = db.get_cards(deck_id)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @cards_bp.route('/api/cards/search')
@@ -48,7 +45,7 @@ def search_cards():
         sort_asc=request.args.get('sort_asc', 'true').lower() == 'true',
         limit=limit,
     )
-    return jsonify([_row_to_dict(r) for r in results])
+    return jsonify([row_to_dict(r) for r in results])
 
 
 @cards_bp.route('/api/cards/<int:card_id>')
@@ -57,16 +54,16 @@ def get_card(card_id):
     row = db.get_card_with_metadata(card_id)
     if not row:
         return jsonify({'error': 'Card not found'}), 404
-    card = _row_to_dict(row)
+    card = row_to_dict(row)
     # Add deck name
     deck = db.get_deck(card['deck_id'])
     card['deck_name'] = deck['name'] if deck else ''
     # Add tags and groups
-    card['own_tags'] = [_row_to_dict(t) for t in db.get_tags_for_card(card_id)]
-    card['inherited_tags'] = [_row_to_dict(t) for t in db.get_inherited_tags_for_card(card_id)]
-    card['groups'] = [_row_to_dict(g) for g in db.get_groups_for_card(card_id)]
+    card['own_tags'] = [row_to_dict(t) for t in db.get_tags_for_card(card_id)]
+    card['inherited_tags'] = [row_to_dict(t) for t in db.get_inherited_tags_for_card(card_id)]
+    card['groups'] = [row_to_dict(g) for g in db.get_groups_for_card(card_id)]
     # Add custom fields
-    card['card_custom_fields'] = [_row_to_dict(f) for f in db.get_card_custom_fields(card_id)]
+    card['card_custom_fields'] = [row_to_dict(f) for f in db.get_card_custom_fields(card_id)]
     return jsonify(card)
 
 
@@ -134,8 +131,8 @@ def get_card_tags(card_id):
     own = db.get_tags_for_card(card_id)
     inherited = db.get_inherited_tags_for_card(card_id)
     return jsonify({
-        'own': [_row_to_dict(r) for r in own],
-        'inherited': [_row_to_dict(r) for r in inherited],
+        'own': [row_to_dict(r) for r in own],
+        'inherited': [row_to_dict(r) for r in inherited],
     })
 
 
@@ -154,7 +151,7 @@ def set_card_tag_assignments(card_id):
 def get_card_groups(card_id):
     db = current_app.config['DB']
     rows = db.get_groups_for_card(card_id)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @cards_bp.route('/api/cards/<int:card_id>/groups', methods=['PUT'])
@@ -172,7 +169,7 @@ def set_card_group_assignments(card_id):
 def get_card_custom_fields(card_id):
     db = current_app.config['DB']
     rows = db.get_card_custom_fields(card_id)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @cards_bp.route('/api/cards/<int:card_id>/custom-fields', methods=['POST'])

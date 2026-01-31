@@ -6,16 +6,13 @@ Also serves profiles and spreads needed by the journal editor.
 import json
 from flask import Blueprint, jsonify, request, current_app
 from backend.services.richtext import convert_content_to_html
+from backend.utils import row_to_dict
 
 entries_bp = Blueprint('entries', __name__)
 
 # Pagination limits to prevent memory exhaustion
 MAX_LIMIT = 500
 DEFAULT_LIMIT = 50
-
-
-def _row_to_dict(row):
-    return dict(row) if row else None
 
 
 def _parse_cards_used(cards_json):
@@ -88,7 +85,7 @@ def list_entries():
     limit = max(1, min(limit, MAX_LIMIT))
     offset = max(0, offset)
     rows = db.get_entries(limit=limit, offset=offset)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @entries_bp.route('/api/entries/search')
@@ -112,7 +109,7 @@ def search_entries():
         date_from=request.args.get('date_from') or None,
         date_to=request.args.get('date_to') or None,
     )
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @entries_bp.route('/api/entries/<int:entry_id>')
@@ -123,7 +120,7 @@ def get_entry(entry_id):
     if not row:
         return jsonify({'error': 'Entry not found'}), 404
 
-    entry = _row_to_dict(row)
+    entry = row_to_dict(row)
 
     # Convert content to HTML
     entry['content'] = convert_content_to_html(entry.get('content'))
@@ -132,25 +129,25 @@ def get_entry(entry_id):
     readings = db.get_entry_readings(entry_id)
     entry['readings'] = []
     for r in readings:
-        rd = _row_to_dict(r)
+        rd = row_to_dict(r)
         rd['cards_used'] = _enrich_cards_with_ids(db, _parse_cards_used(rd.get('cards_used')))
         entry['readings'].append(rd)
 
     # Tags
     tags = db.get_entry_tags(entry_id)
-    entry['tags'] = [_row_to_dict(t) for t in tags]
+    entry['tags'] = [row_to_dict(t) for t in tags]
 
     # Follow-up notes (with HTML conversion)
     notes = db.get_follow_up_notes(entry_id)
     entry['follow_up_notes'] = []
     for n in notes:
-        nd = _row_to_dict(n)
+        nd = row_to_dict(n)
         nd['content'] = convert_content_to_html(nd.get('content'))
         entry['follow_up_notes'].append(nd)
 
     # Querents (multiple) - from junction table
     querents = db.get_entry_querents(entry_id)
-    entry['querents'] = [_row_to_dict(q) for q in querents]
+    entry['querents'] = [row_to_dict(q) for q in querents]
 
     # Legacy single querent name (for backwards compatibility)
     if entry.get('querent_id'):
@@ -222,7 +219,7 @@ def get_entry_readings(entry_id):
     rows = db.get_entry_readings(entry_id)
     result = []
     for r in rows:
-        rd = _row_to_dict(r)
+        rd = row_to_dict(r)
         rd['cards_used'] = _enrich_cards_with_ids(db, _parse_cards_used(rd.get('cards_used')))
         result.append(rd)
     return jsonify(result)
@@ -262,7 +259,7 @@ def get_follow_up_notes(entry_id):
     rows = db.get_follow_up_notes(entry_id)
     result = []
     for n in rows:
-        nd = _row_to_dict(n)
+        nd = row_to_dict(n)
         nd['content'] = convert_content_to_html(nd.get('content'))
         result.append(nd)
     return jsonify(result)
@@ -302,7 +299,7 @@ def delete_follow_up_note(note_id):
 def get_entry_tags(entry_id):
     db = current_app.config['DB']
     rows = db.get_entry_tags(entry_id)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @entries_bp.route('/api/entries/<int:entry_id>/tags', methods=['PUT'])
@@ -322,7 +319,7 @@ def set_entry_tags(entry_id):
 def get_entry_querents(entry_id):
     db = current_app.config['DB']
     rows = db.get_entry_querents(entry_id)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @entries_bp.route('/api/entries/<int:entry_id>/querents', methods=['PUT'])
@@ -342,7 +339,7 @@ def set_entry_querents(entry_id):
 def get_profiles():
     db = current_app.config['DB']
     rows = db.get_profiles()
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @entries_bp.route('/api/profiles/<int:profile_id>')
@@ -351,7 +348,7 @@ def get_profile(profile_id):
     row = db.get_profile(profile_id)
     if not row:
         return jsonify({'error': 'Profile not found'}), 404
-    return jsonify(_row_to_dict(row))
+    return jsonify(row_to_dict(row))
 
 
 @entries_bp.route('/api/profiles', methods=['POST'])

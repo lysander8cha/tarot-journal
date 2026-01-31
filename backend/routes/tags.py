@@ -3,12 +3,9 @@ Tag endpoints -- CRUD for entry tags, deck tags, and card tags.
 """
 
 from flask import Blueprint, jsonify, request, current_app
+from backend.utils import row_to_dict
 
 tags_bp = Blueprint('tags', __name__)
-
-
-def _row_to_dict(row):
-    return dict(row) if row else None
 
 
 # ── Entry Tags ───────────────────────────────────────────────
@@ -18,7 +15,7 @@ def get_entry_tags():
     """Get all available entry tags."""
     db = current_app.config['DB']
     rows = db.get_tags()
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @tags_bp.route('/api/entry-tags', methods=['POST'])
@@ -58,7 +55,7 @@ def get_deck_tags():
     """Get all available deck tags."""
     db = current_app.config['DB']
     rows = db.get_deck_tags()
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @tags_bp.route('/api/deck-tags', methods=['POST'])
@@ -98,7 +95,7 @@ def get_card_tags():
     """Get all available card tags."""
     db = current_app.config['DB']
     rows = db.get_card_tags()
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @tags_bp.route('/api/card-tags', methods=['POST'])
