@@ -73,11 +73,13 @@ class ProfilesMixin:
             self._commit()
 
     def delete_profile(self, profile_id: int):
-        """Delete a profile (will set querent_id/reader_id to NULL in journal entries)"""
+        """Delete a profile and clean up all references."""
         cursor = self.conn.cursor()
-        # Clear references in journal entries
+        # Clear legacy references in journal entries
         cursor.execute('UPDATE journal_entries SET querent_id = NULL WHERE querent_id = ?', (profile_id,))
         cursor.execute('UPDATE journal_entries SET reader_id = NULL WHERE reader_id = ?', (profile_id,))
+        # Remove from entry_querents junction table (multiple querents feature)
+        cursor.execute('DELETE FROM entry_querents WHERE profile_id = ?', (profile_id,))
         # Delete the profile
         cursor.execute('DELETE FROM profiles WHERE id = ?', (profile_id,))
         self._commit()
