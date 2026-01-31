@@ -36,6 +36,8 @@ export interface ReadingData {
     deck_id?: number;
     deck_name?: string;
     position_index?: number;
+    /** Card ID for reliable lookup even if card name changes */
+    card_id?: number;
     /** Client-side unique key for React rendering (not persisted to backend) */
     _key?: string;
   }>;
@@ -230,10 +232,13 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
     const deck = decks.find(d => d.id === slotDeckId);
 
     newCards[idx] = { ...newCards[idx], [field]: val, position_index: idx };
-    // When selecting a card by name, also store deck info
+    // When selecting a card by name, also store deck info and card_id
     if (field === 'name' && slotDeckId) {
       newCards[idx].deck_id = slotDeckId;
       newCards[idx].deck_name = deck?.name;
+      // Look up and store card_id so the entry survives card renames
+      const selectedCard = deckCards.find(c => c.name === val);
+      newCards[idx].card_id = selectedCard?.id;
     }
     onChange({ ...value, cards: newCards });
   };
@@ -355,6 +360,7 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
             cards={value.cards}
             deckSlots={deckSlots}
             slotDecks={slotDecks}
+            decks={decks}
             onUpdateCard={(idx, updates) => {
               const pos = positions[idx];
               const slotKey = pos?.deck_slot || deckSlots[0]?.key;
@@ -466,12 +472,14 @@ function VisualSpreadEditor({
   cards,
   deckSlots,
   slotDecks,
+  decks,
   onUpdateCard,
 }: {
   positions: SpreadPosition[];
   cards: ReadingData['cards'];
   deckSlots: DeckSlot[];
   slotDecks: SlotDeckMap;
+  decks: Deck[];
   onUpdateCard: (idx: number, updates: Partial<ReadingData['cards'][0]>) => void;
 }) {
   // Calculate bounding box and scale to fit within a reasonable size
@@ -602,7 +610,17 @@ function VisualSpreadEditor({
               <select
                 className="reading-editor__card-select"
                 value={card?.name || ''}
-                onChange={(e) => onUpdateCard(idx, { name: e.target.value })}
+                onChange={(e) => {
+                  const selectedName = e.target.value;
+                  const selectedCard = currentDeckCards.find(c => c.name === selectedName);
+                  const deck = decks.find(d => d.id === posDeckId);
+                  onUpdateCard(idx, {
+                    name: selectedName,
+                    card_id: selectedCard?.id,
+                    deck_id: posDeckId,
+                    deck_name: deck?.name,
+                  });
+                }}
                 disabled={!posDeckId}
               >
                 <option value="">{posDeckId ? '— select card —' : '— select deck above —'}</option>

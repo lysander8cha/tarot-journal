@@ -110,6 +110,25 @@
   fill: var(--accent);
   stroke: var(--text-primary);
   stroke-width: 1;
+  cursor: nwse-resize;
+  pointer-events: all;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Show resize handle when hovering over the position group */
+g:hover > .designer__resize-handle {
+  opacity: 1;
+}
+
+/* Always show resize handle when position is selected */
+.designer__resize-handle--visible {
+  opacity: 1;
+}
+
+.designer__resize-handle:hover {
+  fill: var(--accent-hover);
+  stroke-width: 2;
 }
 
 /* Context menu */

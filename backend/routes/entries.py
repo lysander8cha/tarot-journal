@@ -34,42 +34,62 @@ def _parse_cards_used(cards_json):
 
 
 def _enrich_cards_with_ids(db, cards):
-    """Look up card IDs by deck_id + name so the frontend can fetch thumbnails."""
-    # Collect cards that need lookup
-    cards_needing_lookup = []
+    """
+    Enrich card data for display. Uses card_id as primary lookup (survives renames),
+    falls back to deck_id + name for legacy entries without card_id.
+    """
+    # Separate cards by lookup strategy
+    cards_with_id = []
+    cards_needing_name_lookup = []
+
     for card in cards:
         if card.get('card_id'):
-            continue
-        deck_id = card.get('deck_id')
-        name = card.get('name')
-        if deck_id and name:
-            cards_needing_lookup.append((deck_id, name))
+            cards_with_id.append(card['card_id'])
+        else:
+            deck_id = card.get('deck_id')
+            name = card.get('name')
+            if deck_id and name:
+                cards_needing_name_lookup.append((deck_id, name))
 
-    if not cards_needing_lookup:
-        return cards
+    # Batch lookup cards by ID (to verify they exist and get current name)
+    id_to_card = {}
+    if cards_with_id:
+        placeholders = ','.join('?' * len(cards_with_id))
+        rows = db.conn.execute(
+            f'SELECT id, deck_id, name FROM cards WHERE id IN ({placeholders})',
+            cards_with_id
+        ).fetchall()
+        id_to_card = {row['id']: row for row in rows}
 
-    # Batch query all cards at once
-    # Build a query with OR conditions for each (deck_id, name) pair
-    conditions = ' OR '.join(['(deck_id = ? AND name = ?)'] * len(cards_needing_lookup))
-    params = [val for pair in cards_needing_lookup for val in pair]
-    rows = db.conn.execute(
-        f'SELECT id, deck_id, name FROM cards WHERE {conditions}',
-        params
-    ).fetchall()
+    # Batch lookup cards by (deck_id, name) for legacy entries
+    name_to_id = {}
+    if cards_needing_name_lookup:
+        conditions = ' OR '.join(['(deck_id = ? AND name = ?)'] * len(cards_needing_name_lookup))
+        params = [val for pair in cards_needing_name_lookup for val in pair]
+        rows = db.conn.execute(
+            f'SELECT id, deck_id, name FROM cards WHERE {conditions}',
+            params
+        ).fetchall()
+        name_to_id = {(row['deck_id'], row['name']): row['id'] for row in rows}
 
-    # Build lookup map: (deck_id, name) -> card_id
-    id_map = {(row['deck_id'], row['name']): row['id'] for row in rows}
-
-    # Apply IDs to cards
+    # Apply lookups to cards
     for card in cards:
-        if card.get('card_id'):
-            continue
-        deck_id = card.get('deck_id')
-        name = card.get('name')
-        if deck_id and name:
-            card_id = id_map.get((deck_id, name))
-            if card_id:
-                card['card_id'] = card_id
+        card_id = card.get('card_id')
+        if card_id:
+            # Card has ID - verify it exists and update name to current value
+            db_card = id_to_card.get(card_id)
+            if db_card:
+                # Card still exists - use current name from database
+                card['current_name'] = db_card['name']
+            # If card was deleted, keep original data but card_id won't resolve to thumbnail
+        else:
+            # Legacy entry without card_id - try name lookup
+            deck_id = card.get('deck_id')
+            name = card.get('name')
+            if deck_id and name:
+                found_id = name_to_id.get((deck_id, name))
+                if found_id:
+                    card['card_id'] = found_id
 
     return cards
 

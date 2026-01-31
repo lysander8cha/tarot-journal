@@ -8,7 +8,7 @@ const MIN_CANVAS_H = 460;
 const GRID_SIZE = 20;
 const DEFAULT_W = 80;
 const DEFAULT_H = 120;
-const HANDLE_SIZE = 10;
+const HANDLE_SIZE = 16;
 const CANVAS_PADDING = 20; // Padding around content
 
 interface SpreadDesignerProps {
@@ -38,10 +38,12 @@ export default function SpreadDesigner({
   } | null>(null);
   const [resizing, setResizing] = useState<{
     index: number;
-    startMouseX: number;
-    startMouseY: number;
+    startClientX: number;  // Screen coordinates (stable during resize)
+    startClientY: number;
     startW: number;
     startH: number;
+    scaleX: number;  // Locked scale factor at start of resize
+    scaleY: number;
   } | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -145,24 +147,30 @@ export default function SpreadDesigner({
   };
 
   const handleResizeMouseDown = (e: React.MouseEvent, index: number) => {
+    if (e.button !== 0) return; // left click only
     e.stopPropagation();
     e.preventDefault();
-    const pt = getSVGPoint(e);
     const pos = positions[index];
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    // Store screen coordinates and lock scale factors at start of resize
+    // This prevents jumpy behavior when canvas dimensions change during drag
     setResizing({
       index,
-      startMouseX: pt.x,
-      startMouseY: pt.y,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
       startW: pos.width,
       startH: pos.height,
+      scaleX: canvasDimensions.width / rect.width,
+      scaleY: canvasDimensions.height / rect.height,
     });
   };
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      const pt = getSVGPoint(e);
-
       if (dragging) {
+        const pt = getSVGPoint(e);
         const dx = pt.x - dragging.startMouseX;
         const dy = pt.y - dragging.startMouseY;
         let newX = snap(dragging.startPosX + dx);
@@ -176,8 +184,10 @@ export default function SpreadDesigner({
       }
 
       if (resizing) {
-        const dx = pt.x - resizing.startMouseX;
-        const dy = pt.y - resizing.startMouseY;
+        // Use locked scale factors from start of resize to avoid jumpy behavior
+        // when canvas dimensions change during drag
+        const dx = (e.clientX - resizing.startClientX) * resizing.scaleX;
+        const dy = (e.clientY - resizing.startClientY) * resizing.scaleY;
         const newW = snap(Math.max(40, resizing.startW + dx));
         const newH = snap(Math.max(40, resizing.startH + dy));
         // No upper limit on size; canvas will grow to fit
@@ -394,18 +404,16 @@ export default function SpreadDesigner({
                   </text>
                 )}
 
-                {/* Resize handle (bottom-right, shown when selected) */}
-                {isSelected && (
-                  <rect
-                    x={pos.x + pos.width - HANDLE_SIZE}
-                    y={pos.y + pos.height - HANDLE_SIZE}
-                    width={HANDLE_SIZE}
-                    height={HANDLE_SIZE}
-                    className="designer__resize-handle"
-                    onMouseDown={(e) => handleResizeMouseDown(e, idx)}
-                    style={{ cursor: 'nwse-resize' }}
-                  />
-                )}
+                {/* Resize handle - rendered INSIDE each position's group, AFTER other elements
+                    so it's on top in z-order. Visible on hover via CSS. */}
+                <rect
+                  x={pos.x + pos.width - HANDLE_SIZE}
+                  y={pos.y + pos.height - HANDLE_SIZE}
+                  width={HANDLE_SIZE}
+                  height={HANDLE_SIZE}
+                  className={`designer__resize-handle ${isSelected ? 'designer__resize-handle--visible' : ''}`}
+                  onMouseDown={(e) => handleResizeMouseDown(e, idx)}
+                />
               </g>
             );
           })}

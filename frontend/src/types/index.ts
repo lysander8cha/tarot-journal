@@ -112,6 +112,8 @@ export interface CardUsed {
   deck_name?: string;
   position_index?: number;
   card_id?: number;
+  /** Current name from database (if card was renamed after entry was created) */
+  current_name?: string;
 }
 
 /** EntryReading with cards_used parsed from JSON string to typed array */

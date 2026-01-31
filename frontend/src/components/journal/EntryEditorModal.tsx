@@ -130,6 +130,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
           deck_id: c.deck_id,
           deck_name: c.deck_name,
           position_index: c.position_index ?? idx,
+          card_id: c.card_id,  // Preserve card_id for reliable lookup
         })),
       }));
 
@@ -262,6 +263,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
             deck_id: c.deck_id,
             deck_name: c.deck_name,
             position_index: c.position_index,
+            card_id: c.card_id,  // Store card_id so entries survive card renames
           }));
 
         try {

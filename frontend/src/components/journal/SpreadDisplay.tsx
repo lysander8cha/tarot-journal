@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getSpread } from '../../api/spreads';
 import { cardThumbnailUrl } from '../../api/images';
-import type { EntryReadingParsed, Spread, SpreadPosition } from '../../types';
+import type { CardUsed, EntryReadingParsed, Spread, SpreadPosition } from '../../types';
 import './SpreadDisplay.css';
 
 interface SpreadDisplayProps {
@@ -86,7 +86,7 @@ function PositionedLayout({
                   width: `${widthPct}%`,
                   height: `${heightPct}%`,
                 }}
-                title={`${pos.label || `Position ${idx + 1}`}${card ? `: ${card.name}${card.reversed ? ' (R)' : ''}` : ''}`}
+                title={`${pos.label || `Position ${idx + 1}`}${card ? `: ${card.current_name || card.name}${card.reversed ? ' (R)' : ''}` : ''}`}
               >
                 {/* Position badge */}
                 <span className="spread-display__slot-badge">{pos.key || idx + 1}</span>
@@ -119,7 +119,7 @@ function PositionedLayout({
               <span className="spread-display__legend-key">{pos.key || idx + 1}</span>
               <span className="spread-display__legend-label">{pos.label || `Position ${idx + 1}`}:</span>
               <span className={`spread-display__legend-card ${card?.reversed ? 'spread-display__legend-card--reversed' : ''}`}>
-                {card?.name || '—'}
+                {card?.current_name || card?.name || '—'}
                 {card?.reversed && <span className="spread-display__reversed-badge"> R</span>}
               </span>
             </div>
@@ -170,7 +170,7 @@ function CardSlot({
   slotHeight,
   onDoubleClick,
 }: {
-  card: { name: string; reversed?: boolean; card_id?: number };
+  card: CardUsed;
   hideLabel?: boolean;
   positionRotated?: boolean;
   slotWidth?: number;
@@ -215,7 +215,7 @@ function CardSlot({
         <img
           className="spread-display__card-img"
           src={cardThumbnailUrl(card.card_id)}
-          alt={card.name}
+          alt={card.current_name || card.name}
           style={getImageStyle()}
         />
       ) : (
@@ -223,7 +223,7 @@ function CardSlot({
       )}
       {!hideLabel && (
         <div className="spread-display__card-name">
-          {card.name}
+          {card.current_name || card.name}
           {card.reversed && <span className="spread-display__reversed-badge"> R</span>}
         </div>
       )}
