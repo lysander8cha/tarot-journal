@@ -33,6 +33,10 @@ class CoreMixin:
         # data corruption if the app crashes mid-write
         self.conn.execute('PRAGMA journal_mode=WAL')
 
+        # Enable foreign key enforcement so CASCADE deletes work properly
+        # (SQLite has this OFF by default, which can leave orphaned records)
+        self.conn.execute('PRAGMA foreign_keys = ON')
+
         self._create_tables()
 
         # Ensure the connection is closed if the app exits unexpectedly

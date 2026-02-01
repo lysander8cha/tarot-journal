@@ -2,6 +2,9 @@
 Database operations for application settings and statistics.
 """
 
+import json
+from datetime import datetime, timedelta
+
 
 class SettingsMixin:
     """Mixin providing settings and statistics operations."""
@@ -85,7 +88,8 @@ class SettingsMixin:
             ORDER BY count DESC
             LIMIT 5
         ''')
-        stats['top_decks'] = cursor.fetchall()
+        # Convert Row objects to tuples for JSON serialization
+        stats['top_decks'] = [tuple(row) for row in cursor.fetchall()]
 
         # Most used spreads
         cursor.execute('''
@@ -96,6 +100,127 @@ class SettingsMixin:
             ORDER BY count DESC
             LIMIT 5
         ''')
-        stats['top_spreads'] = cursor.fetchall()
+        stats['top_spreads'] = [tuple(row) for row in cursor.fetchall()]
+
+        return stats
+
+    def get_card_frequency(self, limit: int = 20, deck_id: int = None):
+        """Get frequency of cards appearing in readings.
+
+        Parses the cards_used JSON from entry_readings and counts
+        how often each card appears, including reversed counts.
+
+        Args:
+            limit: Maximum number of cards to return (default 20)
+            deck_id: Optional deck ID to filter results
+
+        Returns:
+            List of dicts with name, count, reversed_count, deck_name
+        """
+        cursor = self.conn.cursor()
+
+        # Build query with optional deck filter
+        query = '''
+            SELECT cards_used, deck_name, deck_id
+            FROM entry_readings
+            WHERE cards_used IS NOT NULL
+        '''
+        params = []
+        if deck_id:
+            query += ' AND deck_id = ?'
+            params.append(deck_id)
+
+        cursor.execute(query, params)
+
+        # Aggregate card appearances in Python (SQLite JSON support is limited)
+        # Key: (card_name, deck_name) -> {count, reversed_count}
+        counts = {}
+
+        for row in cursor.fetchall():
+            try:
+                cards = json.loads(row['cards_used'])
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            deck_name = row['deck_name'] or 'Unknown Deck'
+
+            for card in cards:
+                if not isinstance(card, dict):
+                    continue
+                name = card.get('name', 'Unknown')
+                key = (name, deck_name)
+
+                if key not in counts:
+                    counts[key] = {'count': 0, 'reversed_count': 0}
+
+                counts[key]['count'] += 1
+                if card.get('reversed'):
+                    counts[key]['reversed_count'] += 1
+
+        # Sort by count descending and limit
+        sorted_cards = sorted(
+            counts.items(),
+            key=lambda x: x[1]['count'],
+            reverse=True
+        )[:limit]
+
+        return [
+            {
+                'name': name,
+                'deck_name': deck_name,
+                'count': data['count'],
+                'reversed_count': data['reversed_count']
+            }
+            for (name, deck_name), data in sorted_cards
+        ]
+
+    def get_extended_stats(self):
+        """Get extended statistics for the Stats tab overview.
+
+        Returns basic stats plus:
+        - entries_this_month: Number of entries created this month
+        - unique_cards_drawn: Total unique cards that have appeared in readings
+        - total_readings: Total number of readings across all entries
+        - avg_cards_per_reading: Average cards per reading
+        """
+        cursor = self.conn.cursor()
+
+        # Start with basic stats
+        stats = self.get_stats()
+
+        # Entries this month
+        first_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        cursor.execute(
+            'SELECT COUNT(*) FROM journal_entries WHERE created_at >= ?',
+            (first_of_month.isoformat(),)
+        )
+        stats['entries_this_month'] = cursor.fetchone()[0]
+
+        # Total readings
+        cursor.execute('SELECT COUNT(*) FROM entry_readings')
+        stats['total_readings'] = cursor.fetchone()[0]
+
+        # Unique cards drawn (count distinct card names across all readings)
+        cursor.execute('SELECT cards_used FROM entry_readings WHERE cards_used IS NOT NULL')
+        unique_cards = set()
+        total_card_draws = 0
+
+        for row in cursor.fetchall():
+            try:
+                cards = json.loads(row['cards_used'])
+                for card in cards:
+                    if isinstance(card, dict) and card.get('name'):
+                        unique_cards.add(card['name'])
+                        total_card_draws += 1
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+        stats['unique_cards_drawn'] = len(unique_cards)
+
+        # Average cards per reading
+        if stats['total_readings'] > 0:
+            stats['avg_cards_per_reading'] = round(total_card_draws / stats['total_readings'], 1)
+        else:
+            stats['avg_cards_per_reading'] = 0
 
         return stats

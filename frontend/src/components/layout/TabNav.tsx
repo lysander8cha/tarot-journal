@@ -1,6 +1,6 @@
 import './TabNav.css';
 
-export type TabId = 'library' | 'journal' | 'spreads' | 'profiles' | 'tags' | 'settings';
+export type TabId = 'library' | 'journal' | 'spreads' | 'profiles' | 'tags' | 'stats' | 'settings';
 
 interface TabNavProps {
   activeTab: TabId;
@@ -13,6 +13,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'spreads', label: 'Spreads' },
   { id: 'profiles', label: 'Profiles' },
   { id: 'tags', label: 'Tags' },
+  { id: 'stats', label: 'Stats' },
   { id: 'settings', label: 'Settings' },
 ];
 

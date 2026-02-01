@@ -7,6 +7,7 @@ import JournalTab from './components/journal/JournalTab';
 import SpreadsTab from './components/spreads/SpreadsTab';
 import ProfilesTab from './components/profiles/ProfilesTab';
 import TagsTab from './components/tags/TagsTab';
+import StatsTab from './components/stats/StatsTab';
 import SettingsTab from './components/settings/SettingsTab';
 import './styles/globals.css';
 
@@ -33,6 +34,7 @@ export default function App() {
             {activeTab === 'spreads' && <SpreadsTab />}
             {activeTab === 'profiles' && <ProfilesTab />}
             {activeTab === 'tags' && <TagsTab />}
+            {activeTab === 'stats' && <StatsTab />}
             {activeTab === 'settings' && <SettingsTab />}
           </div>
         </div>

@@ -4,7 +4,6 @@ import {
   getDeckTags, addDeckTag, updateDeckTag, deleteDeckTag,
   getCardTags, addCardTag, updateCardTag, deleteCardTag,
 } from '../../api/tags';
-import { getStats, type AppStats } from '../../api/stats';
 import TagSection from './TagSection';
 import type { Tag } from '../../types';
 import './TagsTab.css';
@@ -25,11 +24,6 @@ export default function TagsTab() {
   const { data: cardTags = [], isLoading: cardLoading } = useQuery<Tag[]>({
     queryKey: ['card-tags'],
     queryFn: getCardTags,
-  });
-
-  const { data: stats } = useQuery<AppStats>({
-    queryKey: ['stats'],
-    queryFn: getStats,
   });
 
   const invalidate = (key: string) => {
@@ -100,59 +94,6 @@ export default function TagsTab() {
             />
           </div>
         </div>
-
-        {/* Statistics panel */}
-        {stats && (
-          <div className="tags-tab__stats">
-            <h3 className="tags-tab__stats-title">Statistics</h3>
-            <div className="tags-tab__stats-grid">
-              <div className="tags-tab__stat">
-                <span className="tags-tab__stat-value">{stats.total_entries}</span>
-                <span className="tags-tab__stat-label">Journal Entries</span>
-              </div>
-              <div className="tags-tab__stat">
-                <span className="tags-tab__stat-value">{stats.total_decks}</span>
-                <span className="tags-tab__stat-label">Decks</span>
-              </div>
-              <div className="tags-tab__stat">
-                <span className="tags-tab__stat-value">{stats.total_cards}</span>
-                <span className="tags-tab__stat-label">Cards</span>
-              </div>
-              <div className="tags-tab__stat">
-                <span className="tags-tab__stat-value">{stats.total_spreads}</span>
-                <span className="tags-tab__stat-label">Spreads</span>
-              </div>
-            </div>
-
-            {stats.top_decks && stats.top_decks.length > 0 && (
-              <div className="tags-tab__stats-section">
-                <h4 className="tags-tab__stats-subtitle">Most Used Decks</h4>
-                <div className="tags-tab__stats-list">
-                  {stats.top_decks.map(([name, count], idx) => (
-                    <div key={idx} className="tags-tab__stats-row">
-                      <span className="tags-tab__stats-name">{name}</span>
-                      <span className="tags-tab__stats-count">{count} readings</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {stats.top_spreads && stats.top_spreads.length > 0 && (
-              <div className="tags-tab__stats-section">
-                <h4 className="tags-tab__stats-subtitle">Most Used Spreads</h4>
-                <div className="tags-tab__stats-list">
-                  {stats.top_spreads.map(([name, count], idx) => (
-                    <div key={idx} className="tags-tab__stats-row">
-                      <span className="tags-tab__stats-name">{name}</span>
-                      <span className="tags-tab__stats-count">{count} readings</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
