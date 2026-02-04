@@ -95,8 +95,10 @@ export default function LibraryTab() {
       <CardEditModal
         cardId={editingCardId}
         deckId={deckId}
+        cardIds={cardIds}
         onClose={() => setEditingCardId(null)}
         onSaved={() => {}}
+        onNavigate={setEditingCardId}
       />
 
       <DeckEditModal

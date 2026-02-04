@@ -17,8 +17,10 @@ import './CardEditModal.css';
 interface CardEditModalProps {
   cardId: number | null;
   deckId: number | null;
+  cardIds?: number[];
   onClose: () => void;
   onSaved: () => void;
+  onNavigate?: (cardId: number) => void;
 }
 
 interface CardDetail {
@@ -65,7 +67,7 @@ interface InitialCardFormState {
   customFields: EditableField[];
 }
 
-export default function CardEditModal({ cardId, deckId, onClose, onSaved }: CardEditModalProps) {
+export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, onSaved, onNavigate }: CardEditModalProps) {
   const queryClient = useQueryClient();
 
   const { data: card, isLoading } = useQuery<CardDetail>({
@@ -305,6 +307,9 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
     return false;
   }, [name, cardOrder, archetype, rank, suit, notes, selectedTagIds, selectedGroupIds, customFields]);
 
+  // Navigation state
+  const currentIndex = cardId !== null ? cardIds.indexOf(cardId) : -1;
+
   if (cardId === null) return null;
 
   const toggleTag = (tagId: number) => {
@@ -345,7 +350,7 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
     setCustomFields(prev => [...prev, { id: null, field_name: '', field_value: '', deleted: false, legacy: false }]);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (navigateToId?: number) => {
     if (!card) return;
     setSaving(true);
     try {
@@ -418,7 +423,13 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
       queryClient.invalidateQueries({ queryKey: ['card-search'] });
 
       onSaved();
-      onClose();
+
+      // Navigate to another card or close
+      if (navigateToId !== undefined && onNavigate) {
+        onNavigate(navigateToId);
+      } else {
+        onClose();
+      }
     } catch (err) {
       console.error('Failed to save card:', err);
       const message = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -622,11 +633,30 @@ export default function CardEditModal({ cardId, deckId, onClose, onSaved }: Card
 
           <div className="card-edit__footer">
             {error && <div className="card-edit__error">{error}</div>}
+            {cardIds.length > 1 && (
+              <div className="card-edit__nav">
+                <button
+                  disabled={saving || currentIndex <= 0}
+                  onClick={() => handleSave(cardIds[currentIndex - 1])}
+                >
+                  &lsaquo; Prev
+                </button>
+                <span className="card-edit__nav-position">
+                  {currentIndex + 1} / {cardIds.length}
+                </span>
+                <button
+                  disabled={saving || currentIndex >= cardIds.length - 1}
+                  onClick={() => handleSave(cardIds[currentIndex + 1])}
+                >
+                  Next &rsaquo;
+                </button>
+              </div>
+            )}
             <div className="card-edit__footer-buttons">
               <button onClick={onClose}>Cancel</button>
               <button
                 className="card-edit__save-btn"
-                onClick={handleSave}
+                onClick={() => handleSave()}
                 disabled={saving || !name.trim()}
               >
                 {saving ? 'Saving...' : 'Save'}

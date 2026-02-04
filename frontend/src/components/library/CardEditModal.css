@@ -123,6 +123,20 @@
   margin-top: 16px;
 }
 
+.card-edit__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.card-edit__nav-position {
+  color: var(--text-secondary);
+  font-size: var(--font-size-small);
+  min-width: 60px;
+  text-align: center;
+}
+
 .card-edit__footer-buttons {
   display: flex;
   justify-content: flex-end;
