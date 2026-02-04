@@ -21,7 +21,6 @@ export interface ExtendedStats extends AppStats {
 /** Card frequency data for visualization */
 export interface CardFrequency {
   name: string;
-  deck_name: string;
   count: number;
   reversed_count: number;
 }

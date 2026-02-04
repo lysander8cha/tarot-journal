@@ -13,7 +13,7 @@ interface CardFrequencySectionProps {
   data: CardFrequency[];
 }
 
-/** Custom tooltip that shows card name, deck, and counts */
+/** Custom tooltip that shows card name and counts */
 function CustomTooltip({
   active,
   payload,
@@ -36,9 +36,6 @@ function CustomTooltip({
     >
       <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
         {card.name}
-      </div>
-      <div style={{ color: 'var(--text-dim)', fontSize: 'var(--font-size-small)' }}>
-        {card.deck_name}
       </div>
       <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>
         Appearances: {card.count}

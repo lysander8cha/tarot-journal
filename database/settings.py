@@ -133,7 +133,8 @@ class SettingsMixin:
         cursor.execute(query, params)
 
         # Aggregate card appearances in Python (SQLite JSON support is limited)
-        # Key: (card_name, deck_name) -> {count, reversed_count}
+        # Key by card name only, so the same card across different decks
+        # is combined into one count
         counts = {}
 
         for row in cursor.fetchall():
@@ -142,20 +143,17 @@ class SettingsMixin:
             except (json.JSONDecodeError, TypeError):
                 continue
 
-            deck_name = row['deck_name'] or 'Unknown Deck'
-
             for card in cards:
                 if not isinstance(card, dict):
                     continue
                 name = card.get('name', 'Unknown')
-                key = (name, deck_name)
 
-                if key not in counts:
-                    counts[key] = {'count': 0, 'reversed_count': 0}
+                if name not in counts:
+                    counts[name] = {'count': 0, 'reversed_count': 0}
 
-                counts[key]['count'] += 1
+                counts[name]['count'] += 1
                 if card.get('reversed'):
-                    counts[key]['reversed_count'] += 1
+                    counts[name]['reversed_count'] += 1
 
         # Sort by count descending and limit
         sorted_cards = sorted(
@@ -167,11 +165,10 @@ class SettingsMixin:
         return [
             {
                 'name': name,
-                'deck_name': deck_name,
                 'count': data['count'],
                 'reversed_count': data['reversed_count']
             }
-            for (name, deck_name), data in sorted_cards
+            for name, data in sorted_cards
         ]
 
     def get_extended_stats(self):
