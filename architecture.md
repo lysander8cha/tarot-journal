@@ -15,6 +15,7 @@ This document provides a quick reference for understanding how the codebase is s
 | Database | SQLite with WAL mode |
 | State Management | TanStack React Query v5 |
 | Rich Text | TipTap 3 |
+| Charts | Recharts |
 
 ---
 
@@ -96,6 +97,7 @@ tarot_journal/
 | `tags.py` | `/api/tags/*` | Tag management (entries, decks, cards) |
 | `images.py` | `/api/images` | Card image serving |
 | `settings.py` | `/api/settings` | Theme and app preferences |
+| `stats.py` | `/api/stats` | Statistics and visualizations |
 | `import_export.py` | `/api/import`, `/api/export` | Deck/entry import-export |
 
 ### Backend Features
@@ -156,6 +158,7 @@ class Database(CoreMixin, DecksMixin, CardsMixin, CardGroupsMixin,
 | `spreads/` | Spread designer (visual SVG editor) |
 | `profiles/` | Querent/reader profiles |
 | `tags/` | Tag management |
+| `stats/` | Statistics dashboard with visualizations |
 | `settings/` | App settings |
 | `common/` | Shared components (Modal, RichText) |
 
@@ -170,6 +173,7 @@ class Database(CoreMixin, DecksMixin, CardsMixin, CardGroupsMixin,
 | `ReadingEditor.tsx` | Complex multi-deck reading editor |
 | `SpreadDesigner.tsx` | Visual spread layout editor |
 | `CardEditModal.tsx` | Edit individual card details |
+| `StatsTab.tsx` | Statistics dashboard with charts |
 
 ### State Management
 
@@ -181,7 +185,7 @@ class Database(CoreMixin, DecksMixin, CardsMixin, CardGroupsMixin,
 
 Each file corresponds to a backend domain:
 - `client.ts` - Axios instance (baseURL: localhost:5678)
-- `decks.ts`, `cards.ts`, `entries.ts`, etc.
+- `decks.ts`, `cards.ts`, `entries.ts`, `stats.ts`, etc.
 
 ---
 
@@ -284,8 +288,8 @@ npm run lint         # ESLint check
 ## Recent Development Focus
 
 Based on recent commits:
-1. N+1 query elimination in exports and bulk operations
-2. Transaction safety with proper rollback
-3. User-visible error feedback
-4. Input validation and security hardening
-5. Pagination limits to prevent memory issues
+1. **Statistics dashboard** with visualizations (card frequency, timeline, tag trends, deck/spread usage)
+2. Card frequency aggregation across all decks (unified view)
+3. Timeline charts showing entries and readings over time
+4. Preserved card_id in journal entries for accurate tracking
+5. N+1 query elimination and transaction safety
