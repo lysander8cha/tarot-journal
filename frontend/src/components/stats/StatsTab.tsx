@@ -1,56 +1,67 @@
 import { useQuery } from '@tanstack/react-query';
-import { getExtendedStats, getCardFrequency } from '../../api/stats';
-import type { ExtendedStats, CardFrequency } from '../../api/stats';
+import {
+  getExtendedStats,
+  getCardFrequency,
+  getTimeline,
+  getTagTrends,
+  getUsageStats,
+} from '../../api/stats';
+import type {
+  ExtendedStats,
+  CardFrequency,
+  TimelinePeriod,
+  TagTrend,
+  UsageStats,
+} from '../../api/stats';
 import OverviewSection from './OverviewSection';
+import TimelineSection from './TimelineSection';
 import CardFrequencySection from './CardFrequencySection';
+import TagTrendsSection from './TagTrendsSection';
+import UsageSection from './UsageSection';
 import './StatsTab.css';
 
 export default function StatsTab() {
-  const {
-    data: stats,
-    isLoading: statsLoading,
-    error: statsError,
-  } = useQuery<ExtendedStats>({
+  const { data: stats, isLoading: statsLoading } = useQuery<ExtendedStats>({
     queryKey: ['extended-stats'],
     queryFn: getExtendedStats,
   });
 
-  const {
-    data: cardFrequency,
-    isLoading: freqLoading,
-    error: freqError,
-  } = useQuery<CardFrequency[]>({
+  const { data: timeline, isLoading: timelineLoading } = useQuery<TimelinePeriod[]>({
+    queryKey: ['timeline'],
+    queryFn: () => getTimeline(12),
+  });
+
+  const { data: cardFrequency, isLoading: freqLoading } = useQuery<CardFrequency[]>({
     queryKey: ['card-frequency'],
     queryFn: () => getCardFrequency(20),
   });
 
-  const isLoading = statsLoading || freqLoading;
-  const hasError = statsError || freqError;
+  const { data: tagTrends, isLoading: tagsLoading } = useQuery<TagTrend[]>({
+    queryKey: ['tag-trends'],
+    queryFn: () => getTagTrends(15),
+  });
+
+  const { data: usage, isLoading: usageLoading } = useQuery<UsageStats>({
+    queryKey: ['usage-stats'],
+    queryFn: () => getUsageStats(10),
+  });
+
+  const isLoading = statsLoading || timelineLoading || freqLoading || tagsLoading || usageLoading;
 
   return (
     <div className="stats-tab">
       <div className="stats-tab__scroll">
         <h2 className="stats-tab__title">Insights</h2>
 
-        {hasError && (
-          <div className="stats-tab__error">
-            Failed to load statistics. Please try again.
-          </div>
-        )}
-
         {isLoading ? (
           <div className="stats-tab__loading">Loading statistics...</div>
         ) : (
           <>
-            {/* Overview metrics */}
             <OverviewSection stats={stats} />
-
-            {/* Card frequency chart */}
+            <TimelineSection data={timeline || []} />
             <CardFrequencySection data={cardFrequency || []} />
-
-            {/* Placeholder for future sections */}
-            {/* <TimelineSection data={timeline} /> */}
-            {/* <TagUsageSection data={tagUsage} /> */}
+            <TagTrendsSection data={tagTrends || []} />
+            {usage && <UsageSection data={usage} />}
           </>
         )}
       </div>

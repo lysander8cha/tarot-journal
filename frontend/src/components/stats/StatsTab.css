@@ -142,3 +142,21 @@
   color: var(--text-secondary);
   font-size: var(--font-size-body);
 }
+
+/* Usage section: side-by-side deck & spread charts */
+.stats-tab__usage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.stats-tab__usage-column {
+  min-width: 0;
+}
+
+.stats-tab__usage-subtitle {
+  font-size: var(--font-size-body);
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  font-weight: 500;
+}

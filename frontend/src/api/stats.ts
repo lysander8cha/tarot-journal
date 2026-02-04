@@ -25,6 +25,32 @@ export interface CardFrequency {
   reversed_count: number;
 }
 
+/** Timeline data point (one per month) */
+export interface TimelinePeriod {
+  period: string;
+  entries: number;
+  readings: number;
+}
+
+/** Tag usage count */
+export interface TagTrend {
+  name: string;
+  color: string;
+  count: number;
+}
+
+/** Single usage item (deck or spread) */
+export interface UsageItem {
+  name: string;
+  count: number;
+}
+
+/** Deck and spread usage stats */
+export interface UsageStats {
+  top_decks: UsageItem[];
+  top_spreads: UsageItem[];
+}
+
 export async function getStats(): Promise<AppStats> {
   const res = await api.get('/api/stats');
   return res.data;
@@ -45,5 +71,23 @@ export async function getCardFrequency(
 
   const query = params.toString();
   const res = await api.get(`/api/stats/card-frequency${query ? `?${query}` : ''}`);
+  return res.data;
+}
+
+export async function getTimeline(limit?: number): Promise<TimelinePeriod[]> {
+  const query = limit ? `?limit=${limit}` : '';
+  const res = await api.get(`/api/stats/timeline${query}`);
+  return res.data;
+}
+
+export async function getTagTrends(limit?: number): Promise<TagTrend[]> {
+  const query = limit ? `?limit=${limit}` : '';
+  const res = await api.get(`/api/stats/tag-trends${query}`);
+  return res.data;
+}
+
+export async function getUsageStats(limit?: number): Promise<UsageStats> {
+  const query = limit ? `?limit=${limit}` : '';
+  const res = await api.get(`/api/stats/usage${query}`);
   return res.data;
 }

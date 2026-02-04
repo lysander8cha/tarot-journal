@@ -221,3 +221,128 @@ class SettingsMixin:
             stats['avg_cards_per_reading'] = 0
 
         return stats
+
+    def get_timeline_stats(self, limit: int = 12):
+        """Get entry and reading counts grouped by month.
+
+        Returns data in chronological order (oldest first) so charts
+        read left-to-right over time.
+
+        Args:
+            limit: Number of months to return (default 12)
+
+        Returns:
+            List of dicts with period, entries, readings
+        """
+        cursor = self.conn.cursor()
+
+        # Count entries per month
+        cursor.execute('''
+            SELECT strftime('%Y-%m', created_at) as period,
+                   COUNT(*) as entries
+            FROM journal_entries
+            GROUP BY period
+            ORDER BY period DESC
+            LIMIT ?
+        ''', (limit,))
+        entries_by_month = {row['period']: row['entries'] for row in cursor.fetchall()}
+
+        # Count readings per month (via their parent entry's date)
+        cursor.execute('''
+            SELECT strftime('%Y-%m', je.created_at) as period,
+                   COUNT(er.id) as readings
+            FROM journal_entries je
+            JOIN entry_readings er ON je.id = er.entry_id
+            GROUP BY period
+            ORDER BY period DESC
+            LIMIT ?
+        ''', (limit,))
+        readings_by_month = {row['period']: row['readings'] for row in cursor.fetchall()}
+
+        # Combine into a single list, sorted chronologically
+        all_periods = sorted(
+            set(entries_by_month.keys()) | set(readings_by_month.keys())
+        )
+        # Take only the most recent `limit` periods
+        all_periods = all_periods[-limit:]
+
+        return [
+            {
+                'period': p,
+                'entries': entries_by_month.get(p, 0),
+                'readings': readings_by_month.get(p, 0)
+            }
+            for p in all_periods
+        ]
+
+    def get_tag_trends(self, limit: int = 15):
+        """Get entry tag usage counts.
+
+        Counts how many journal entries use each tag.
+
+        Args:
+            limit: Maximum tags to return (default 15)
+
+        Returns:
+            List of dicts with name, color, count
+        """
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT t.name, t.color, COUNT(et.entry_id) as count
+            FROM entry_tags et
+            JOIN tags t ON et.tag_id = t.id
+            GROUP BY t.id
+            ORDER BY count DESC
+            LIMIT ?
+        ''', (limit,))
+
+        return [
+            {
+                'name': row['name'],
+                'color': row['color'],
+                'count': row['count']
+            }
+            for row in cursor.fetchall()
+        ]
+
+    def get_usage_stats(self, limit: int = 10):
+        """Get deck and spread usage counts.
+
+        Args:
+            limit: Maximum items per category (default 10)
+
+        Returns:
+            Dict with top_decks and top_spreads lists
+        """
+        cursor = self.conn.cursor()
+
+        cursor.execute('''
+            SELECT deck_name as name, COUNT(*) as count
+            FROM entry_readings
+            WHERE deck_name IS NOT NULL
+            GROUP BY deck_name
+            ORDER BY count DESC
+            LIMIT ?
+        ''', (limit,))
+        top_decks = [
+            {'name': row['name'], 'count': row['count']}
+            for row in cursor.fetchall()
+        ]
+
+        cursor.execute('''
+            SELECT spread_name as name, COUNT(*) as count
+            FROM entry_readings
+            WHERE spread_name IS NOT NULL
+            GROUP BY spread_name
+            ORDER BY count DESC
+            LIMIT ?
+        ''', (limit,))
+        top_spreads = [
+            {'name': row['name'], 'count': row['count']}
+            for row in cursor.fetchall()
+        ]
+
+        return {
+            'top_decks': top_decks,
+            'top_spreads': top_spreads
+        }

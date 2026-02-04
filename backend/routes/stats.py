@@ -47,3 +47,45 @@ def get_card_frequency():
 
     data = db.get_card_frequency(limit=limit, deck_id=deck_id)
     return jsonify(data)
+
+
+@stats_bp.route('/api/stats/timeline')
+def get_timeline():
+    """Get entry and reading counts grouped by month.
+
+    Query params:
+        limit: Number of months to return (default 12, max 36)
+    """
+    db = current_app.config['DB']
+    limit = request.args.get('limit', 12, type=int)
+    limit = min(max(limit, 1), 36)
+    data = db.get_timeline_stats(limit=limit)
+    return jsonify(data)
+
+
+@stats_bp.route('/api/stats/tag-trends')
+def get_tag_trends():
+    """Get entry tag usage counts.
+
+    Query params:
+        limit: Max tags to return (default 15, max 50)
+    """
+    db = current_app.config['DB']
+    limit = request.args.get('limit', 15, type=int)
+    limit = min(max(limit, 1), 50)
+    data = db.get_tag_trends(limit=limit)
+    return jsonify(data)
+
+
+@stats_bp.route('/api/stats/usage')
+def get_usage_stats():
+    """Get deck and spread usage counts.
+
+    Query params:
+        limit: Max items per category (default 10, max 50)
+    """
+    db = current_app.config['DB']
+    limit = request.args.get('limit', 10, type=int)
+    limit = min(max(limit, 1), 50)
+    data = db.get_usage_stats(limit=limit)
+    return jsonify(data)
