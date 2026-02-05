@@ -89,7 +89,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
   });
 
   // Fetch deck-level custom field definitions
-  const { data: deckCustomFields = [] } = useQuery<DeckCustomField[]>({
+  const { data: deckCustomFields = [], isLoading: isLoadingDeckFields } = useQuery<DeckCustomField[]>({
     queryKey: ['deck-custom-fields', deckId],
     queryFn: () => getDeckCustomFields(deckId!),
     enabled: deckId !== null,
@@ -133,6 +133,11 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
 
   // Populate form when card data loads (only on initial load, not on deckCustomFields refetch)
   useEffect(() => {
+    // Wait for deck custom fields to finish loading before populating
+    // (needed for legacy fields to get correct field_type from deck definitions)
+    if (deckId !== null && isLoadingDeckFields) {
+      return;
+    }
     if (card && !formPopulatedRef.current) {
       formPopulatedRef.current = true;
       setName(card.name);
@@ -263,7 +268,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
         customFields: allFields,
       };
     }
-  }, [card, deckCustomFields]);
+  }, [card, deckCustomFields, deckId, isLoadingDeckFields]);
 
   // Compute whether form has unsaved changes
   // NOTE: This must be before any early returns to comply with Rules of Hooks
