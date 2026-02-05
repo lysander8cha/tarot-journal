@@ -417,8 +417,10 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
         }
       }
 
-      // Invalidate queries so lists refresh
-      queryClient.invalidateQueries({ queryKey: ['card-detail', cardId] });
+      // Remove the saved card's cached data so we get fresh data when navigating back
+      // (invalidateQueries can return stale data first, which causes form to populate with old values)
+      queryClient.removeQueries({ queryKey: ['card-detail', cardId] });
+      // Invalidate list queries so they refresh
       queryClient.invalidateQueries({ queryKey: ['cards'] });
       queryClient.invalidateQueries({ queryKey: ['card-search'] });
 
