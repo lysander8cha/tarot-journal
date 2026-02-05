@@ -5,6 +5,7 @@ import RichTextViewer from '../common/RichTextViewer';
 import SpreadDisplay from './SpreadDisplay';
 import FollowUpNotes from './FollowUpNotes';
 import CardViewModal from '../library/CardViewModal';
+import CardEditModal from '../library/CardEditModal';
 import type { JournalEntryFull } from '../../types';
 import './EntryViewer.css';
 
@@ -33,24 +34,29 @@ function formatDateTime(dateStr: string | null): string {
 export default function EntryViewer({ entryId, onEdit, onDeleted }: EntryViewerProps) {
   const queryClient = useQueryClient();
   const [viewingCardId, setViewingCardId] = useState<number | null>(null);
+  const [editingCardId, setEditingCardId] = useState<number | null>(null);
 
   const { data: entry, isLoading, error } = useQuery<JournalEntryFull>({
     queryKey: ['entry', entryId],
     queryFn: () => getEntry(entryId),
   });
 
-  // Collect all card IDs from all readings for navigation in the modal
-  const allCardIds = useMemo(() => {
-    if (!entry) return [];
+  // Collect all card IDs and their deck IDs from all readings for navigation/editing
+  const { allCardIds, cardToDeckMap } = useMemo(() => {
+    if (!entry) return { allCardIds: [], cardToDeckMap: new Map<number, number>() };
     const ids: number[] = [];
+    const deckMap = new Map<number, number>();
     for (const reading of entry.readings) {
       for (const card of reading.cards_used || []) {
         if (card.card_id && !ids.includes(card.card_id)) {
           ids.push(card.card_id);
+          if (card.deck_id) {
+            deckMap.set(card.card_id, card.deck_id);
+          }
         }
       }
     }
-    return ids;
+    return { allCardIds: ids, cardToDeckMap: deckMap };
   }, [entry]);
 
   const handleDelete = async () => {
@@ -165,6 +171,22 @@ export default function EntryViewer({ entryId, onEdit, onDeleted }: EntryViewerP
           cardIds={allCardIds}
           onClose={() => setViewingCardId(null)}
           onNavigate={setViewingCardId}
+          onEdit={(id) => {
+            setViewingCardId(null);
+            setEditingCardId(id);
+          }}
+        />
+      )}
+
+      {/* Card Edit Modal */}
+      {editingCardId !== null && (
+        <CardEditModal
+          cardId={editingCardId}
+          deckId={cardToDeckMap.get(editingCardId) ?? null}
+          cardIds={allCardIds}
+          onClose={() => setEditingCardId(null)}
+          onSaved={() => {}}
+          onNavigate={setEditingCardId}
         />
       )}
     </div>
