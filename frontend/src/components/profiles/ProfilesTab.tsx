@@ -24,6 +24,7 @@ export default function ProfilesTab() {
   const [birthTime, setBirthTime] = useState('');
   const [birthPlaceName, setBirthPlaceName] = useState('');
   const [querentOnly, setQuerentOnly] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   const { data: profiles = [], isLoading } = useQuery<Profile[]>({
     queryKey: ['profiles'],
@@ -41,6 +42,7 @@ export default function ProfilesTab() {
       setBirthTime(selectedProfile.birth_time || '');
       setBirthPlaceName(selectedProfile.birth_place_name || '');
       setQuerentOnly(selectedProfile.querent_only || false);
+      setHidden(selectedProfile.hidden || false);
     }
   }, [selectedProfile, isNew]);
 
@@ -58,6 +60,7 @@ export default function ProfilesTab() {
     setBirthTime('');
     setBirthPlaceName('');
     setQuerentOnly(false);
+    setHidden(false);
   };
 
   const handleSave = async () => {
@@ -72,6 +75,7 @@ export default function ProfilesTab() {
         birth_time: birthTime || null,
         birth_place_name: birthPlaceName.trim() || null,
         querent_only: querentOnly,
+        hidden: hidden,
       };
 
       if (isNew) {
@@ -205,6 +209,17 @@ export default function ProfilesTab() {
                       onChange={(e) => setQuerentOnly(e.target.checked)}
                     />
                     <span>Querent Only</span>
+                  </label>
+                </div>
+
+                <div className="profiles-tab__field profiles-tab__checkbox-field">
+                  <label className="profiles-tab__checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={hidden}
+                      onChange={(e) => setHidden(e.target.checked)}
+                    />
+                    <span>Hide from dropdowns</span>
                   </label>
                 </div>
               </div>

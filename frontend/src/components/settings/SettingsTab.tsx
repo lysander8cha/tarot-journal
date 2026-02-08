@@ -294,7 +294,7 @@ export default function SettingsTab() {
               >
                 <option value="">None</option>
                 {profiles
-                  .filter((p) => !p.querent_only)
+                  .filter((p) => !p.querent_only && (!p.hidden || p.id === defaults?.default_reader))
                   .map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
@@ -309,9 +309,11 @@ export default function SettingsTab() {
                 disabled={defaults?.default_querent_same_as_reader}
               >
                 <option value="">None</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
+                {profiles
+                  .filter((p) => !p.hidden || p.id === defaults?.default_querent)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
               </select>
             </div>
 

@@ -20,6 +20,7 @@ export async function createProfile(data: {
   birth_place_lat?: number | null;
   birth_place_lon?: number | null;
   querent_only?: boolean;
+  hidden?: boolean;
 }): Promise<{ id: number }> {
   const res = await api.post('/api/profiles', data);
   return res.data;
@@ -34,6 +35,7 @@ export async function updateProfile(profileId: number, data: {
   birth_place_lat?: number | null;
   birth_place_lon?: number | null;
   querent_only?: boolean;
+  hidden?: boolean;
 }): Promise<void> {
   await api.put(`/api/profiles/${profileId}`, data);
 }

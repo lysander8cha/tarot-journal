@@ -460,9 +460,11 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
                           }}
                         >
                           <option value="">Select a profile...</option>
-                          {profiles.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
+                          {profiles
+                            .filter((p) => !p.hidden || p.id === qId)
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
                         </select>
                         <button
                           type="button"
@@ -485,7 +487,7 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
                 >
                   <option value="">None</option>
                   {profiles
-                    .filter((p) => !p.querent_only)
+                    .filter((p) => !p.querent_only && (!p.hidden || p.id === readerId))
                     .map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
