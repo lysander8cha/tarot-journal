@@ -48,11 +48,6 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
     }
   };
 
-  const sortIndicator = (col: string) => {
-    if (sortBy !== col) return '';
-    return sortAsc ? ' \u25B2' : ' \u25BC';
-  };
-
   return (
     <div className="deck-list">
       <div className="deck-list__header">
@@ -72,16 +67,18 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
         )}
       </div>
 
-      <div className="deck-list__table-header">
-        <span className="deck-list__col deck-list__col--name" onClick={() => handleHeaderClick('name')}>
-          Name{sortIndicator('name')}
-        </span>
-        <span className="deck-list__col deck-list__col--type" onClick={() => handleHeaderClick('type')}>
-          Type{sortIndicator('type')}
-        </span>
-        <span className="deck-list__col deck-list__col--cards" onClick={() => handleHeaderClick('cards')}>
-          Cards{sortIndicator('cards')}
-        </span>
+      <div className="deck-list__sort-bar">
+        <span className="deck-list__sort-label">Sort:</span>
+        {(['name', 'type', 'cards'] as const).map((col) => (
+          <button
+            key={col}
+            className={`deck-list__sort-btn ${sortBy === col ? 'deck-list__sort-btn--active' : ''}`}
+            onClick={() => handleHeaderClick(col)}
+          >
+            {col === 'cards' ? '#' : col.charAt(0).toUpperCase() + col.slice(1)}
+            {sortBy === col && (sortAsc ? ' \u25B2' : ' \u25BC')}
+          </button>
+        ))}
       </div>
 
       <div className="deck-list__rows">
@@ -93,23 +90,27 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
             onClick={() => onSelectDeck(deck)}
             onDoubleClick={() => onEditDeck?.(deck.id)}
           >
-            <span className="deck-list__col deck-list__col--name">
-              {deck.name}
-              {deck.tags && deck.tags.length > 0 && (
-                <span className="deck-list__tags">
-                  {deck.tags.map(t => (
-                    <span
-                      key={t.id}
-                      className="deck-list__tag-dot"
-                      style={{ backgroundColor: t.color }}
-                      title={t.name}
-                    />
-                  ))}
-                </span>
-              )}
-            </span>
-            <span className="deck-list__col deck-list__col--type">{deck.cartomancy_type || ''}</span>
-            <span className="deck-list__col deck-list__col--cards">{deck.card_count ?? ''}</span>
+            <div className="deck-list__row-content">
+              <span className="deck-list__name">
+                {deck.name}
+                {deck.tags && deck.tags.length > 0 && (
+                  <span className="deck-list__tags">
+                    {deck.tags.map(t => (
+                      <span
+                        key={t.id}
+                        className="deck-list__tag-dot"
+                        style={{ backgroundColor: t.color }}
+                        title={t.name}
+                      />
+                    ))}
+                  </span>
+                )}
+              </span>
+              <span className="deck-list__subtitle">
+                {deck.cartomancy_type || 'Untyped'}
+                {deck.card_count != null && ` \u00B7 ${deck.card_count} cards`}
+              </span>
+            </div>
             {onEditDeck && (
               <button
                 className="deck-list__edit-btn"

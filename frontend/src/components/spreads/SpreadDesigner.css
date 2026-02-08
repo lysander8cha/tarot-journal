@@ -266,3 +266,12 @@ g:hover > .designer__resize-handle {
   background: var(--bg-tertiary);
   color: var(--text-primary);
 }
+
+/* Read-only mode */
+.designer--readonly .designer__position {
+  cursor: default;
+}
+
+.designer--readonly .designer__position:hover {
+  stroke-width: 1.5;
+}

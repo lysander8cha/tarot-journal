@@ -6,7 +6,25 @@ import SpreadList from './SpreadList';
 import SpreadDesigner from './SpreadDesigner';
 import SpreadProperties from './SpreadProperties';
 import PositionLegend from './PositionLegend';
+import RichTextViewer from '../common/RichTextViewer';
 import type { Spread, SpreadPosition, DeckSlot } from '../../types';
+
+/** Check if a description string has meaningful content (handles both plain text and HTML). */
+function hasDescriptionContent(desc: string | null | undefined): boolean {
+  if (!desc) return false;
+  // Strip HTML tags and check for non-whitespace
+  return desc.replace(/<[^>]*>/g, '').trim().length > 0;
+}
+
+/** Convert plain text (with newlines) to HTML paragraphs if needed. */
+function ensureHtml(text: string): string {
+  if (!text) return '';
+  if (/<[a-z][\s\S]*>/i.test(text)) return text;
+  return text
+    .split('\n')
+    .map((line) => `<p>${line || '<br>'}</p>`)
+    .join('');
+}
 import './SpreadsTab.css';
 
 export default function SpreadsTab() {
@@ -15,6 +33,7 @@ export default function SpreadsTab() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [isNew, setIsNew] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
 
   // Local editing state
@@ -24,6 +43,7 @@ export default function SpreadsTab() {
   const [allowedDeckTypes, setAllowedDeckTypes] = useState<string[]>([]);
   const [defaultDeckId, setDefaultDeckId] = useState<number | null>(null);
   const [deckSlots, setDeckSlots] = useState<DeckSlot[]>([]);
+  const [viewerShowLabels, setViewerShowLabels] = useState(false);
 
   // Populate form when a spread is selected
   useEffect(() => {
@@ -59,11 +79,13 @@ export default function SpreadsTab() {
   const handleSelect = (spread: Spread) => {
     setSelectedSpread(spread);
     setIsNew(false);
+    setEditing(false);
   };
 
   const handleNew = () => {
     setSelectedSpread(null);
     setIsNew(true);
+    setEditing(true);
     setName('');
     setDescription('');
     setPositions([]);
@@ -81,7 +103,6 @@ export default function SpreadsTab() {
       const result = await cloneSpread(selectedSpread.id);
       queryClient.invalidateQueries({ queryKey: ['spreads'] });
       // Select the cloned spread after list refreshes
-      // We'll set isNew=false and wait for the list to include it
       setSelectedSpread({
         ...selectedSpread,
         id: result.id,
@@ -89,6 +110,7 @@ export default function SpreadsTab() {
       });
       setName(`Copy of ${selectedSpread.name}`);
       setIsNew(false);
+      setEditing(false);
     } catch (err) {
       console.error('Failed to clone spread:', err);
       setError('Failed to clone spread. Please try again.');
@@ -104,6 +126,7 @@ export default function SpreadsTab() {
       queryClient.invalidateQueries({ queryKey: ['spreads'] });
       setSelectedSpread(null);
       setIsNew(false);
+      setEditing(false);
     } catch (err) {
       console.error('Failed to delete spread:', err);
       setError('Failed to delete spread. Please try again.');
@@ -126,7 +149,7 @@ export default function SpreadsTab() {
         });
         setIsNew(false);
         // Re-select the newly created spread
-        setSelectedSpread({
+        const newSpread: Spread = {
           id: result.id,
           name: name.trim(),
           description,
@@ -136,7 +159,8 @@ export default function SpreadsTab() {
           default_deck_id: defaultDeckId,
           deck_slots: deckSlots,
           created_at: new Date().toISOString(),
-        });
+        };
+        setSelectedSpread(newSpread);
       } else if (selectedSpread) {
         await updateSpread(selectedSpread.id, {
           name: name.trim(),
@@ -158,6 +182,7 @@ export default function SpreadsTab() {
         });
       }
       queryClient.invalidateQueries({ queryKey: ['spreads'] });
+      setEditing(false);
     } catch (err) {
       console.error('Failed to save spread:', err);
       setError('Failed to save spread. Please try again.');
@@ -166,7 +191,136 @@ export default function SpreadsTab() {
     }
   };
 
+  const handleCancelEdit = () => {
+    if (isNew) {
+      // Cancel creating a new spread entirely
+      setIsNew(false);
+      setEditing(false);
+      return;
+    }
+    // Revert to saved data
+    if (selectedSpread) {
+      setName(selectedSpread.name);
+      setDescription(selectedSpread.description || '');
+      setPositions(
+        Array.isArray(selectedSpread.positions) ? selectedSpread.positions : [],
+      );
+    }
+    setEditing(false);
+  };
+
   const hasSelection = selectedSpread !== null || isNew;
+
+  // View-mode content for selected spread
+  const renderViewer = () => {
+    if (!selectedSpread) return null;
+    return (
+      <div className="spreads-tab__viewer">
+        {error && <div className="spreads-tab__error">{error}</div>}
+        <div className="spreads-tab__viewer-scroll">
+          <h2 className="spreads-tab__viewer-name">{selectedSpread.name}</h2>
+          {hasDescriptionContent(selectedSpread.description) ? (
+            <RichTextViewer content={ensureHtml(selectedSpread.description!)} className="spreads-tab__viewer-description" />
+          ) : (
+            <p className="spreads-tab__viewer-description spreads-tab__viewer-description--empty">No description</p>
+          )}
+
+          <div className="spreads-tab__viewer-canvas">
+            <label className="spreads-tab__viewer-label-toggle">
+              <input
+                type="checkbox"
+                checked={viewerShowLabels}
+                onChange={(e) => setViewerShowLabels(e.target.checked)}
+              />
+              <span>Show Labels</span>
+            </label>
+            <SpreadDesigner
+              positions={positions}
+              onChange={setPositions}
+              selectedIndex={null}
+              onSelectIndex={() => {}}
+              deckSlots={deckSlots}
+              readOnly
+              showLabels={viewerShowLabels}
+            />
+          </div>
+
+          <div className="spreads-tab__viewer-legend">
+            <PositionLegend
+              positions={positions}
+              selectedIndex={null}
+              onSelectIndex={() => {}}
+            />
+          </div>
+        </div>
+
+        <div className="spreads-tab__footer">
+          <button
+            className="spreads-tab__edit-btn"
+            onClick={() => setEditing(true)}
+          >
+            Edit Spread
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Edit-mode content
+  const renderEditor = () => (
+    <div className="spreads-tab__editor">
+      {error && <div className="spreads-tab__error">{error}</div>}
+      <div className="spreads-tab__editor-scroll">
+        <div className="spreads-tab__props-section">
+          <SpreadProperties
+            name={name}
+            description={description}
+            deckSlots={deckSlots}
+            onNameChange={setName}
+            onDescriptionChange={setDescription}
+            onDeckSlotsChange={setDeckSlots}
+          />
+        </div>
+
+        <div className="spreads-tab__designer-section">
+          <h3 className="spreads-tab__section-title">Designer</h3>
+          <SpreadDesigner
+            positions={positions}
+            onChange={setPositions}
+            selectedIndex={selectedIndex}
+            onSelectIndex={setSelectedIndex}
+            deckSlots={deckSlots}
+          />
+        </div>
+
+        <div className="spreads-tab__legend-section">
+          <PositionLegend
+            positions={positions}
+            selectedIndex={selectedIndex}
+            onSelectIndex={setSelectedIndex}
+          />
+        </div>
+      </div>
+
+      <div className="spreads-tab__footer">
+        {!isNew && (
+          <button
+            className="spreads-tab__cancel-btn"
+            onClick={handleCancelEdit}
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          className="spreads-tab__save-btn"
+          onClick={handleSave}
+          disabled={saving || !name.trim()}
+        >
+          {saving ? 'Saving...' : isNew ? 'Create Spread' : 'Save Spread'}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="spreads-tab">
@@ -183,50 +337,7 @@ export default function SpreadsTab() {
         <Separator className="resize-handle" />
         <Panel minSize="30%">
           {hasSelection ? (
-            <div className="spreads-tab__editor">
-              {error && <div className="spreads-tab__error">{error}</div>}
-              <div className="spreads-tab__editor-scroll">
-                <div className="spreads-tab__props-section">
-                  <SpreadProperties
-                    name={name}
-                    description={description}
-                    deckSlots={deckSlots}
-                    onNameChange={setName}
-                    onDescriptionChange={setDescription}
-                    onDeckSlotsChange={setDeckSlots}
-                  />
-                </div>
-
-                <div className="spreads-tab__designer-section">
-                  <h3 className="spreads-tab__section-title">Designer</h3>
-                  <SpreadDesigner
-                    positions={positions}
-                    onChange={setPositions}
-                    selectedIndex={selectedIndex}
-                    onSelectIndex={setSelectedIndex}
-                    deckSlots={deckSlots}
-                  />
-                </div>
-
-                <div className="spreads-tab__legend-section">
-                  <PositionLegend
-                    positions={positions}
-                    selectedIndex={selectedIndex}
-                    onSelectIndex={setSelectedIndex}
-                  />
-                </div>
-              </div>
-
-              <div className="spreads-tab__footer">
-                <button
-                  className="spreads-tab__save-btn"
-                  onClick={handleSave}
-                  disabled={saving || !name.trim()}
-                >
-                  {saving ? 'Saving...' : isNew ? 'Create Spread' : 'Save Spread'}
-                </button>
-              </div>
-            </div>
+            editing ? renderEditor() : renderViewer()
           ) : (
             <div className="spreads-tab__empty">
               Select a spread from the list, or click "New" to create one.

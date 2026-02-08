@@ -17,6 +17,8 @@ interface SpreadDesignerProps {
   selectedIndex: number | null;
   onSelectIndex: (index: number | null) => void;
   deckSlots: DeckSlot[];
+  readOnly?: boolean;
+  showLabels?: boolean;
 }
 
 export default function SpreadDesigner({
@@ -25,6 +27,8 @@ export default function SpreadDesigner({
   selectedIndex,
   onSelectIndex,
   deckSlots,
+  readOnly = false,
+  showLabels,
 }: SpreadDesignerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [gridEnabled, setGridEnabled] = useState(true);
@@ -295,27 +299,29 @@ export default function SpreadDesigner({
   }
 
   return (
-    <div className="designer">
-      <div className="designer__toolbar">
-        <button onClick={handleAddPosition}>+ Add Position</button>
-        <button onClick={handleClearAll} disabled={positions.length === 0}>Clear All</button>
-        <label className="designer__grid-toggle">
-          <input
-            type="checkbox"
-            checked={gridEnabled}
-            onChange={(e) => setGridEnabled(e.target.checked)}
-          />
-          <span>Snap to Grid</span>
-        </label>
-        <label className="designer__grid-toggle">
-          <input
-            type="checkbox"
-            checked={showLabelsOnPositions}
-            onChange={(e) => setShowLabelsOnPositions(e.target.checked)}
-          />
-          <span>Show Labels</span>
-        </label>
-      </div>
+    <div className={`designer ${readOnly ? 'designer--readonly' : ''}`}>
+      {!readOnly && (
+        <div className="designer__toolbar">
+          <button onClick={handleAddPosition}>+ Add Position</button>
+          <button onClick={handleClearAll} disabled={positions.length === 0}>Clear All</button>
+          <label className="designer__grid-toggle">
+            <input
+              type="checkbox"
+              checked={gridEnabled}
+              onChange={(e) => setGridEnabled(e.target.checked)}
+            />
+            <span>Snap to Grid</span>
+          </label>
+          <label className="designer__grid-toggle">
+            <input
+              type="checkbox"
+              checked={showLabelsOnPositions}
+              onChange={(e) => setShowLabelsOnPositions(e.target.checked)}
+            />
+            <span>Show Labels</span>
+          </label>
+        </div>
+      )}
 
       <div className="designer__canvas-wrapper">
         <svg
@@ -323,20 +329,20 @@ export default function SpreadDesigner({
           className="designer__canvas"
           viewBox={`0 0 ${canvasDimensions.width} ${canvasDimensions.height}`}
           style={{ aspectRatio: `${canvasDimensions.width} / ${canvasDimensions.height}` }}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onClick={handleCanvasClick}
+          onMouseMove={readOnly ? undefined : handleMouseMove}
+          onMouseUp={readOnly ? undefined : handleMouseUp}
+          onMouseLeave={readOnly ? undefined : handleMouseUp}
+          onClick={readOnly ? undefined : handleCanvasClick}
         >
           {/* Background */}
           <rect width={canvasDimensions.width} height={canvasDimensions.height} className="designer__bg" />
 
-          {/* Grid */}
-          {gridLines}
+          {/* Grid (hidden in read-only mode) */}
+          {!readOnly && gridLines}
 
           {/* Positions */}
           {positions.map((pos, idx) => {
-            const isSelected = idx === selectedIndex;
+            const isSelected = !readOnly && idx === selectedIndex;
             return (
               <g key={idx}>
                 {/* Card rectangle */}
@@ -346,9 +352,9 @@ export default function SpreadDesigner({
                   width={pos.width}
                   height={pos.height}
                   className={`designer__position ${isSelected ? 'designer__position--selected' : ''}`}
-                  onMouseDown={(e) => handlePositionMouseDown(e, idx)}
-                  onContextMenu={(e) => handleContextMenu(e, idx)}
-                  style={{ cursor: dragging ? 'grabbing' : 'grab' }}
+                  onMouseDown={readOnly ? undefined : (e) => handlePositionMouseDown(e, idx)}
+                  onContextMenu={readOnly ? undefined : (e) => handleContextMenu(e, idx)}
+                  style={{ cursor: readOnly ? 'default' : dragging ? 'grabbing' : 'grab' }}
                 />
 
                 {/* Key badge (top-left corner) */}
@@ -357,24 +363,21 @@ export default function SpreadDesigner({
                   cy={pos.y + 12}
                   r={9}
                   className="designer__key-bg"
-                  onMouseDown={(e) => handlePositionMouseDown(e, idx)}
                 />
                 <text
                   x={pos.x + 12}
                   y={pos.y + 16}
                   className="designer__key-text"
-                  onMouseDown={(e) => handlePositionMouseDown(e, idx)}
                 >
                   {pos.key || idx + 1}
                 </text>
 
-                {/* Label (center) - only shown when toggle is enabled */}
-                {showLabelsOnPositions && (
+                {/* Label (center) - respect showLabels prop if provided, otherwise use internal toggle */}
+                {(showLabels !== undefined ? showLabels : (readOnly || showLabelsOnPositions)) && (
                   <text
                     x={pos.x + pos.width / 2}
                     y={pos.y + pos.height / 2 + 4}
                     className="designer__label-text"
-                    onMouseDown={(e) => handlePositionMouseDown(e, idx)}
                   >
                     {pos.label}
                   </text>
@@ -386,7 +389,6 @@ export default function SpreadDesigner({
                     x={pos.x + pos.width - 14}
                     y={pos.y + 15}
                     className="designer__rotated-icon"
-                    onMouseDown={(e) => handlePositionMouseDown(e, idx)}
                   >
                     ↺
                   </text>
@@ -398,30 +400,30 @@ export default function SpreadDesigner({
                     x={pos.x + pos.width / 2}
                     y={pos.y + pos.height - 6}
                     className="designer__slot-text"
-                    onMouseDown={(e) => handlePositionMouseDown(e, idx)}
                   >
                     {pos.deck_slot || deckSlots[0]?.key || 'A'}
                   </text>
                 )}
 
-                {/* Resize handle - rendered INSIDE each position's group, AFTER other elements
-                    so it's on top in z-order. Visible on hover via CSS. */}
-                <rect
-                  x={pos.x + pos.width - HANDLE_SIZE}
-                  y={pos.y + pos.height - HANDLE_SIZE}
-                  width={HANDLE_SIZE}
-                  height={HANDLE_SIZE}
-                  className={`designer__resize-handle ${isSelected ? 'designer__resize-handle--visible' : ''}`}
-                  onMouseDown={(e) => handleResizeMouseDown(e, idx)}
-                />
+                {/* Resize handle (hidden in read-only mode) */}
+                {!readOnly && (
+                  <rect
+                    x={pos.x + pos.width - HANDLE_SIZE}
+                    y={pos.y + pos.height - HANDLE_SIZE}
+                    width={HANDLE_SIZE}
+                    height={HANDLE_SIZE}
+                    className={`designer__resize-handle ${isSelected ? 'designer__resize-handle--visible' : ''}`}
+                    onMouseDown={(e) => handleResizeMouseDown(e, idx)}
+                  />
+                )}
               </g>
             );
           })}
         </svg>
       </div>
 
-      {/* Context menu */}
-      {contextMenu && (
+      {/* Context menu (hidden in read-only mode) */}
+      {!readOnly && contextMenu && (
         <>
           <div className="designer__menu-overlay" onClick={() => { setContextMenu(null); setShowSlotMenu(false); setEditMode(false); }} />
           <div

@@ -1,7 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { getCartomancyTypes } from '../../api/decks';
+import RichTextEditor from '../common/RichTextEditor';
 import type { DeckSlot } from '../../types';
 import './SpreadProperties.css';
+
+/** Convert plain text (with newlines) to HTML paragraphs if it doesn't already contain HTML tags. */
+function ensureHtml(text: string): string {
+  if (!text) return '';
+  // If it already contains HTML tags, return as-is
+  if (/<[a-z][\s\S]*>/i.test(text)) return text;
+  // Convert plain text: split on newlines, wrap each line in <p>
+  return text
+    .split('\n')
+    .map((line) => `<p>${line || '<br>'}</p>`)
+    .join('');
+}
 
 interface SpreadPropertiesProps {
   name: string;
@@ -72,11 +85,11 @@ export default function SpreadProperties({
 
       <div className="spread-props__field">
         <label className="spread-props__label">Description</label>
-        <textarea
-          value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-          rows={3}
+        <RichTextEditor
+          content={ensureHtml(description)}
+          onChange={onDescriptionChange}
           placeholder="Describe the spread..."
+          minHeight={160}
         />
       </div>
 
