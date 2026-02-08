@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import {
@@ -15,6 +15,7 @@ export default function ProfilesTab() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [error, setError] = useState('');
 
   // Form state
@@ -26,6 +27,10 @@ export default function ProfilesTab() {
   const [querentOnly, setQuerentOnly] = useState(false);
   const [hidden, setHidden] = useState(false);
 
+  // Track whether form was just populated (to skip auto-save on initial load)
+  const populatingRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { data: profiles = [], isLoading } = useQuery<Profile[]>({
     queryKey: ['profiles'],
     queryFn: getProfiles,
@@ -36,6 +41,7 @@ export default function ProfilesTab() {
   // Populate form when selection changes
   useEffect(() => {
     if (selectedProfile && !isNew) {
+      populatingRef.current = true;
       setName(selectedProfile.name);
       setGender(selectedProfile.gender || '');
       setBirthDate(selectedProfile.birth_date || '');
@@ -43,15 +49,68 @@ export default function ProfilesTab() {
       setBirthPlaceName(selectedProfile.birth_place_name || '');
       setQuerentOnly(selectedProfile.querent_only || false);
       setHidden(selectedProfile.hidden || false);
+      setSaveStatus('idle');
+      setError('');
+      // Allow the state updates to flush before re-enabling auto-save
+      requestAnimationFrame(() => { populatingRef.current = false; });
     }
   }, [selectedProfile, isNew]);
 
+  // Auto-save for existing profiles
+  const doAutoSave = useCallback(async () => {
+    if (!selectedId || isNew || !name.trim()) return;
+    setSaveStatus('saving');
+    setError('');
+    try {
+      await updateProfile(selectedId, {
+        name: name.trim(),
+        gender: gender.trim() || null,
+        birth_date: birthDate || null,
+        birth_time: birthTime || null,
+        birth_place_name: birthPlaceName.trim() || null,
+        querent_only: querentOnly,
+        hidden: hidden,
+      });
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      setSaveStatus('saved');
+    } catch (err) {
+      console.error('Failed to save profile:', err);
+      setError('Failed to save profile.');
+      setSaveStatus('idle');
+    }
+  }, [selectedId, isNew, name, gender, birthDate, birthTime, birthPlaceName, querentOnly, hidden, queryClient]);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (populatingRef.current || isNew || !selectedId) return;
+    if (!name.trim()) return;
+
+    setSaveStatus('idle');
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      doAutoSave();
+    }, 600);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [name, gender, birthDate, birthTime, birthPlaceName, querentOnly, hidden, selectedId, isNew, doAutoSave]);
+
   const handleSelect = (profile: Profile) => {
+    // Flush any pending auto-save immediately
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
     setSelectedId(profile.id);
     setIsNew(false);
   };
 
   const handleNew = () => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
     setSelectedId(null);
     setIsNew(true);
     setName('');
@@ -61,9 +120,10 @@ export default function ProfilesTab() {
     setBirthPlaceName('');
     setQuerentOnly(false);
     setHidden(false);
+    setSaveStatus('idle');
   };
 
-  const handleSave = async () => {
+  const handleCreate = async () => {
     if (!name.trim()) return;
     setSaving(true);
     setError('');
@@ -77,19 +137,13 @@ export default function ProfilesTab() {
         querent_only: querentOnly,
         hidden: hidden,
       };
-
-      if (isNew) {
-        const result = await createProfile(data);
-        setSelectedId(result.id);
-        setIsNew(false);
-      } else if (selectedId) {
-        await updateProfile(selectedId, data);
-      }
-
+      const result = await createProfile(data);
+      setSelectedId(result.id);
+      setIsNew(false);
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
     } catch (err) {
-      console.error('Failed to save profile:', err);
-      setError('Failed to save profile. Please try again.');
+      console.error('Failed to create profile:', err);
+      setError('Failed to create profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -98,6 +152,10 @@ export default function ProfilesTab() {
   const handleDelete = async () => {
     if (!selectedId) return;
     if (!window.confirm(`Delete "${selectedProfile?.name}"? Journal entries referencing this profile will have their querent/reader cleared.`)) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
     setError('');
     try {
       await deleteProfile(selectedId);
@@ -230,13 +288,19 @@ export default function ProfilesTab() {
                     Delete
                   </button>
                 )}
-                <button
-                  className="profiles-tab__save-btn"
-                  onClick={handleSave}
-                  disabled={saving || !name.trim()}
-                >
-                  {saving ? 'Saving...' : isNew ? 'Create' : 'Save'}
-                </button>
+                {isNew ? (
+                  <button
+                    className="profiles-tab__save-btn"
+                    onClick={handleCreate}
+                    disabled={saving || !name.trim()}
+                  >
+                    {saving ? 'Creating...' : 'Create'}
+                  </button>
+                ) : (
+                  <span className={`profiles-tab__status ${saveStatus !== 'idle' ? 'profiles-tab__status--visible' : ''}`}>
+                    {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
+                  </span>
+                )}
               </div>
             </div>
           ) : (

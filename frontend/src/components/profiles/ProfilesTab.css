@@ -144,6 +144,17 @@
   cursor: default;
 }
 
+.profiles-tab__status {
+  font-size: var(--font-size-small);
+  color: var(--text-dim);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.profiles-tab__status--visible {
+  opacity: 1;
+}
+
 .profiles-tab__empty-panel {
   display: flex;
   align-items: center;
