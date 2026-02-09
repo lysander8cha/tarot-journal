@@ -10,7 +10,20 @@ import { deckBackUrl } from '../../api/images';
 import { exportDeckUrl } from '../../api/importExport';
 import type { Deck, Tag, DeckCustomField } from '../../types';
 import Modal from '../common/Modal';
+import RichTextEditor from '../common/RichTextEditor';
 import './DeckEditModal.css';
+
+/** Convert plain text (with newlines) to HTML paragraphs if it doesn't already contain HTML tags. */
+function ensureHtml(text: string): string {
+  if (!text) return '';
+  // If it already contains HTML tags, return as-is
+  if (/<[a-z][\s\S]*>/i.test(text)) return text;
+  // Convert plain text: split on newlines, wrap each line in <p>
+  return text
+    .split('\n')
+    .map((line) => `<p>${line || '<br>'}</p>`)
+    .join('');
+}
 
 interface InitialDeckFormState {
   name: string;
@@ -387,23 +400,23 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
 
             <div className="deck-edit__section">
               <h3 className="deck-edit__section-title">Notes</h3>
-              <textarea
-                className="deck-edit__notes"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                rows={4}
+              <RichTextEditor
+                key={`notes-${deckId}`}
+                content={ensureHtml(notes)}
+                onChange={setNotes}
                 placeholder="Deck notes..."
+                minHeight={100}
               />
             </div>
 
             <div className="deck-edit__section">
               <h3 className="deck-edit__section-title">Booklet Info</h3>
-              <textarea
-                className="deck-edit__notes"
-                value={bookletInfo}
-                onChange={e => setBookletInfo(e.target.value)}
-                rows={3}
+              <RichTextEditor
+                key={`booklet-${deckId}`}
+                content={ensureHtml(bookletInfo)}
+                onChange={setBookletInfo}
                 placeholder="Info from the included booklet..."
+                minHeight={100}
               />
             </div>
 
