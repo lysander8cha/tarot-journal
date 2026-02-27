@@ -128,7 +128,7 @@ class Database(CoreMixin, DecksMixin, CardsMixin, CardGroupsMixin,
 | `decks` | Deck metadata, image folder, suit/court names |
 | `cards` | Individual cards per deck |
 | `spreads` | Saved spread layouts with 2D positions |
-| `profiles` | Querent/reader data |
+| `profiles` | Querent/reader data (supports `hidden` flag to exclude from dropdowns) |
 | `journal_entries` | Journal entries (title, content, timestamps) |
 | `entry_readings` | Links entries to spreads, decks, cards used |
 | `follow_up_notes` | Additional notes added after entry creation |
@@ -160,7 +160,7 @@ class Database(CoreMixin, DecksMixin, CardsMixin, CardGroupsMixin,
 | `tags/` | Tag management |
 | `stats/` | Statistics dashboard with visualizations |
 | `settings/` | App settings |
-| `common/` | Shared components (Modal, RichText) |
+| `common/` | Shared components (Modal, RichTextEditor, RichTextViewer) |
 
 ### Key Components
 
@@ -171,8 +171,11 @@ class Database(CoreMixin, DecksMixin, CardsMixin, CardGroupsMixin,
 | `JournalTab.tsx` | Journal main view |
 | `EntryEditorModal.tsx` | Create/edit journal entries |
 | `ReadingEditor.tsx` | Complex multi-deck reading editor |
-| `SpreadDesigner.tsx` | Visual spread layout editor |
+| `SpreadDesigner.tsx` | Visual spread layout editor (supports read-only viewer mode) |
+| `SpreadsTab.tsx` | Spreads management with separate view/edit modes |
 | `CardEditModal.tsx` | Edit individual card details |
+| `DeckEditModal.tsx` | Edit deck metadata, rich text notes/booklet info |
+| `ProfilesTab.tsx` | Profile management with debounced auto-save |
 | `StatsTab.tsx` | Statistics dashboard with charts |
 
 ### State Management
@@ -222,6 +225,15 @@ Each file corresponds to a backend domain:
 {
   id, title, content, created_at, updated_at,
   reading_datetime, location_name, querent_id, reader_id
+}
+```
+
+### Profile
+```typescript
+{
+  id, name, gender, birth_date, birth_time,
+  birth_place_name, birth_place_lat, birth_place_lon,
+  querent_only, hidden, created_at
 }
 ```
 
@@ -282,6 +294,8 @@ npm run lint         # ESLint check
 - **React Query** for server state + caching
 - **CSS variables** for runtime theming
 - **Modal pattern** for edit dialogs
+- **`ensureHtml()` pattern** for backwards-compatible rich text: detects plain text with `\n` newlines and converts to HTML `<p>` tags before passing to TipTap editors/viewers (used in spreads, deck edit)
+- **Debounced auto-save** with `useRef` timers and population guards (used in profiles)
 
 ---
 
@@ -293,3 +307,7 @@ Based on recent commits:
 3. Timeline charts showing entries and readings over time
 4. Preserved card_id in journal entries for accurate tracking
 5. N+1 query elimination and transaction safety
+6. **Rich text editors** for spread descriptions, deck notes, and booklet info (TipTap)
+7. **Spreads tab view/edit mode split** with read-only viewer and label toggle
+8. **Hidden profiles** feature to exclude rarely-used profiles from journal entry dropdowns
+9. **Auto-save on profiles** with debounced saving and status indicator
