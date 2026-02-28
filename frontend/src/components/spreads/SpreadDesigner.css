@@ -165,6 +165,12 @@ g:hover > .designer__resize-handle {
   background: var(--accent-dim);
 }
 
+.designer__menu-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
 .designer__menu-danger {
   color: var(--danger) !important;
 }

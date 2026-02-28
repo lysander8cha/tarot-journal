@@ -85,6 +85,7 @@ function PositionedLayout({
                   top: `${topPct}%`,
                   width: `${widthPct}%`,
                   height: `${heightPct}%`,
+                  zIndex: pos.z_index ?? idx,
                 }}
                 title={`${pos.label || `Position ${idx + 1}`}${card ? `: ${card.current_name || card.name}${card.reversed ? ' (R)' : ''}` : ''}`}
               >

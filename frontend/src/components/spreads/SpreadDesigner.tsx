@@ -59,6 +59,14 @@ export default function SpreadDesigner({
   const [editLabel, setEditLabel] = useState('');
   const [editKey, setEditKey] = useState('');
 
+  // Build a render-order list: positions sorted by z_index (lower draws first = behind)
+  // while preserving original array indices for data operations
+  const renderOrder = useMemo(() => {
+    return positions
+      .map((pos, idx) => ({ pos, idx }))
+      .sort((a, b) => (a.pos.z_index ?? a.idx) - (b.pos.z_index ?? b.idx));
+  }, [positions]);
+
   // Calculate dynamic canvas dimensions based on position bounding box
   const canvasDimensions = useMemo(() => {
     if (positions.length === 0) {
@@ -102,9 +110,11 @@ export default function SpreadDesigner({
     const newIndex = positions.length;
     const defaultLabel = `Position ${newIndex + 1}`;
     const defaultKey = String(newIndex + 1);
+    // Place new position on top of the stack
+    const maxZ = positions.reduce((max, p, i) => Math.max(max, p.z_index ?? i), -1);
     onChange([
       ...positions,
-      { x: cx, y: cy, width: DEFAULT_W, height: DEFAULT_H, label: defaultLabel, key: defaultKey },
+      { x: cx, y: cy, width: DEFAULT_W, height: DEFAULT_H, label: defaultLabel, key: defaultKey, z_index: maxZ + 1 },
     ]);
     onSelectIndex(newIndex);
     // Open context menu for the new position so user can edit
@@ -282,6 +292,72 @@ export default function SpreadDesigner({
     setContextMenu(null);
   };
 
+  // ── Layer ordering ──
+
+  const handleBringToFront = () => {
+    if (contextMenu === null) return;
+    const maxZ = positions.reduce((max, p, i) => Math.max(max, p.z_index ?? i), 0);
+    const current = positions[contextMenu.index].z_index ?? contextMenu.index;
+    if (current >= maxZ) { setContextMenu(null); return; }
+    const updated = [...positions];
+    updated[contextMenu.index] = { ...updated[contextMenu.index], z_index: maxZ + 1 };
+    onChange(updated);
+    setContextMenu(null);
+  };
+
+  const handleSendToBack = () => {
+    if (contextMenu === null) return;
+    const minZ = positions.reduce((min, p, i) => Math.min(min, p.z_index ?? i), Infinity);
+    const current = positions[contextMenu.index].z_index ?? contextMenu.index;
+    if (current <= minZ) { setContextMenu(null); return; }
+    const updated = [...positions];
+    updated[contextMenu.index] = { ...updated[contextMenu.index], z_index: minZ - 1 };
+    onChange(updated);
+    setContextMenu(null);
+  };
+
+  const handleBringForward = () => {
+    if (contextMenu === null) return;
+    const currentZ = positions[contextMenu.index].z_index ?? contextMenu.index;
+    // Find the position with the next higher z_index
+    let nextZ = Infinity;
+    let nextIdx = -1;
+    positions.forEach((p, i) => {
+      const z = p.z_index ?? i;
+      if (z > currentZ && z < nextZ) {
+        nextZ = z;
+        nextIdx = i;
+      }
+    });
+    if (nextIdx === -1) { setContextMenu(null); return; }
+    const updated = [...positions];
+    updated[contextMenu.index] = { ...updated[contextMenu.index], z_index: nextZ };
+    updated[nextIdx] = { ...updated[nextIdx], z_index: currentZ };
+    onChange(updated);
+    setContextMenu(null);
+  };
+
+  const handleSendBackward = () => {
+    if (contextMenu === null) return;
+    const currentZ = positions[contextMenu.index].z_index ?? contextMenu.index;
+    // Find the position with the next lower z_index
+    let prevZ = -Infinity;
+    let prevIdx = -1;
+    positions.forEach((p, i) => {
+      const z = p.z_index ?? i;
+      if (z < currentZ && z > prevZ) {
+        prevZ = z;
+        prevIdx = i;
+      }
+    });
+    if (prevIdx === -1) { setContextMenu(null); return; }
+    const updated = [...positions];
+    updated[contextMenu.index] = { ...updated[contextMenu.index], z_index: prevZ };
+    updated[prevIdx] = { ...updated[prevIdx], z_index: currentZ };
+    onChange(updated);
+    setContextMenu(null);
+  };
+
   // ── Grid lines ──
 
   const gridLines = [];
@@ -340,8 +416,8 @@ export default function SpreadDesigner({
           {/* Grid (hidden in read-only mode) */}
           {!readOnly && gridLines}
 
-          {/* Positions */}
-          {positions.map((pos, idx) => {
+          {/* Positions – rendered in z_index order (lowest first = behind) */}
+          {renderOrder.map(({ pos, idx }) => {
             const isSelected = !readOnly && idx === selectedIndex;
             return (
               <g key={idx}>
@@ -485,6 +561,12 @@ export default function SpreadDesigner({
                     )}
                   </>
                 )}
+                <div className="designer__menu-separator" />
+                <button onClick={handleBringToFront}>Bring to Front</button>
+                <button onClick={handleBringForward}>Bring Forward</button>
+                <button onClick={handleSendBackward}>Send Backward</button>
+                <button onClick={handleSendToBack}>Send to Back</button>
+                <div className="designer__menu-separator" />
                 <button onClick={handleDeletePosition} className="designer__menu-danger">Delete</button>
               </>
             )}

@@ -76,6 +76,8 @@ export interface SpreadPosition {
   rotated?: boolean;
   /** Which deck slot this position uses (references DeckSlot.key) */
   deck_slot?: string;
+  /** Controls visual stacking order (higher = on top). Defaults to array index. */
+  z_index?: number;
 }
 
 export interface JournalEntry {
