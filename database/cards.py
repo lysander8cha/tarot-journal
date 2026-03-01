@@ -581,8 +581,43 @@ class CardsMixin:
     def update_deck_custom_field(self, field_id: int, field_name: str = None,
                                  field_type: str = None, field_options: list = None,
                                  field_order: int = None):
-        """Update a deck custom field definition. Safe dynamic SQL: column names are hardcoded."""
+        """Update a deck custom field definition. Safe dynamic SQL: column names are hardcoded.
+        When field_name changes, cascades the rename to all card data in the deck."""
         cursor = self.conn.cursor()
+
+        # If renaming, cascade to card data before updating the definition
+        if field_name is not None:
+            cursor.execute('SELECT deck_id, field_name FROM deck_custom_fields WHERE id = ?', (field_id,))
+            row = cursor.fetchone()
+            if row and row['field_name'] != field_name:
+                deck_id, old_name = row['deck_id'], row['field_name']
+                old_lower = old_name.lower()
+
+                # Rename in card_custom_fields table (case-insensitive match)
+                cursor.execute('''
+                    UPDATE card_custom_fields SET field_name = ?
+                    WHERE LOWER(field_name) = ? AND card_id IN (
+                        SELECT id FROM cards WHERE deck_id = ?
+                    )
+                ''', (field_name, old_lower, deck_id))
+
+                # Rename key in legacy cards.custom_fields JSON blobs (case-insensitive)
+                read_cursor = self.conn.cursor()
+                read_cursor.execute(
+                    'SELECT id, custom_fields FROM cards WHERE deck_id = ? AND custom_fields IS NOT NULL',
+                    (deck_id,))
+                for card_row in read_cursor.fetchall():
+                    try:
+                        parsed = json.loads(card_row['custom_fields'])
+                        # Find the key case-insensitively
+                        matching_key = next((k for k in parsed if k.lower() == old_lower), None)
+                        if matching_key is not None:
+                            parsed[field_name] = parsed.pop(matching_key)
+                            cursor.execute('UPDATE cards SET custom_fields = ? WHERE id = ?',
+                                           (json.dumps(parsed), card_row['id']))
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
         updates = []
         params = []
 

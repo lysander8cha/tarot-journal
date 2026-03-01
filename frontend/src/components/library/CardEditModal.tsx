@@ -223,6 +223,11 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
         };
       });
 
+      // Deduplicate: if a field exists in both legacy JSON and the table,
+      // keep only the table version (it has a proper ID for updates)
+      const tableFieldNamesLower = new Set(tableFields.map(f => f.field_name.toLowerCase()));
+      legacyFields = legacyFields.filter(f => !tableFieldNamesLower.has(f.field_name.toLowerCase()));
+
       // Build a set of field names that already have values (from legacy or table)
       const existingFieldNames = new Set([
         ...legacyFields.map(f => f.field_name.toLowerCase()),

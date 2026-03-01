@@ -268,6 +268,12 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
   const handleUpdateCustomField = async (fieldId: number, updates: { field_name?: string; field_type?: string; field_options?: string[] }) => {
     await updateDeckCustomField(fieldId, updates);
     refetchCustomFields();
+    // If a field was renamed, the backend cascades the rename to all card data.
+    // Remove card caches so CardEditModal fetches fresh data with new field names.
+    if (updates.field_name) {
+      queryClient.removeQueries({ queryKey: ['card-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+    }
   };
 
   const handleDeleteCustomField = async (fieldId: number) => {
