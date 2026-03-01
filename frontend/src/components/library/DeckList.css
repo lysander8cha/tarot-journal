@@ -70,7 +70,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
   font-size: var(--font-size-small);
   color: var(--text-dim);
   cursor: pointer;

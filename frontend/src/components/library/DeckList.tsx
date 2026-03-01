@@ -66,6 +66,14 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
         {onImport && (
           <button className="deck-list__import-btn" onClick={onImport}>Import</button>
         )}
+        <label className="deck-list__tag-toggle">
+          <input
+            type="checkbox"
+            checked={showTags}
+            onChange={(e) => setShowTags(e.target.checked)}
+          />
+          <span>Tags</span>
+        </label>
       </div>
 
       <div className="deck-list__sort-bar">
@@ -80,14 +88,6 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
             {sortBy === col && (sortAsc ? ' \u25B2' : ' \u25BC')}
           </button>
         ))}
-        <label className="deck-list__tag-toggle">
-          <input
-            type="checkbox"
-            checked={showTags}
-            onChange={(e) => setShowTags(e.target.checked)}
-          />
-          <span>Tags</span>
-        </label>
       </div>
 
       <div className="deck-list__rows">
