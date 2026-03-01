@@ -17,6 +17,9 @@ import { getCartomancyTypes, getDecks } from '../../api/decks';
 import type { ThemeColors, Profile, Deck, CartomancyType } from '../../types';
 import './SettingsTab.css';
 
+// Base font sizes used to compute scale factor
+const BASE_SIZES = { size_title: 22, size_heading: 14, size_body: 12, size_small: 10 };
+
 const COLOR_LABELS: Record<string, string> = {
   bg_primary: 'Background',
   bg_secondary: 'Panels',
@@ -122,6 +125,37 @@ export default function SettingsTab() {
     setEditColors((prev) => ({ ...prev, [key]: value }));
     // Live preview
     setTheme({ ...theme, colors: { ...theme.colors, [key]: value } });
+  };
+
+  // Text size: derive current scale from body size vs default (12px)
+  const textScale = Math.round((theme.fonts.size_body / BASE_SIZES.size_body) * 100);
+
+  const applyTextScale = (percent: number) => {
+    const factor = percent / 100;
+    const fonts = {
+      ...theme.fonts,
+      size_title: Math.round(BASE_SIZES.size_title * factor),
+      size_heading: Math.round(BASE_SIZES.size_heading * factor),
+      size_body: Math.round(BASE_SIZES.size_body * factor),
+      size_small: Math.round(BASE_SIZES.size_small * factor),
+    };
+    setTheme({ ...theme, fonts });
+  };
+
+  const handleTextScaleSave = async (percent: number) => {
+    const factor = percent / 100;
+    const fonts = {
+      ...theme.fonts,
+      size_title: Math.round(BASE_SIZES.size_title * factor),
+      size_heading: Math.round(BASE_SIZES.size_heading * factor),
+      size_body: Math.round(BASE_SIZES.size_body * factor),
+      size_small: Math.round(BASE_SIZES.size_small * factor),
+    };
+    try {
+      await updateTheme({ fonts });
+    } catch {
+      showMsg('Failed to save text size', 'error');
+    }
   };
 
   const handleDefaultChange = async (field: string, value: number | null | boolean) => {
@@ -237,6 +271,25 @@ export default function SettingsTab() {
                 {name}
               </button>
             ))}
+          </div>
+
+          <div className="settings-tab__text-size">
+            <label className="settings-tab__text-size-label">Text Size</label>
+            <div className="settings-tab__text-size-row">
+              <span className="settings-tab__text-size-hint">A</span>
+              <input
+                type="range"
+                min={75}
+                max={200}
+                step={5}
+                value={textScale}
+                onChange={(e) => applyTextScale(Number(e.target.value))}
+                onMouseUp={(e) => handleTextScaleSave(Number((e.target as HTMLInputElement).value))}
+                className="settings-tab__text-size-slider"
+              />
+              <span className="settings-tab__text-size-hint settings-tab__text-size-hint--large">A</span>
+              <span className="settings-tab__text-size-value">{textScale}%</span>
+            </div>
           </div>
 
           <button

@@ -87,6 +87,50 @@
   color: var(--text-primary);
 }
 
+/* Text Size */
+.settings-tab__text-size {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tab__text-size-label {
+  display: block;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.settings-tab__text-size-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-tab__text-size-hint {
+  color: var(--text-dim);
+  font-size: 11px;
+  user-select: none;
+}
+
+.settings-tab__text-size-hint--large {
+  font-size: 18px;
+}
+
+.settings-tab__text-size-slider {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.settings-tab__text-size-value {
+  min-width: 40px;
+  text-align: right;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
 /* Color Editor */
 .settings-tab__color-editor {
   margin-top: 12px;
