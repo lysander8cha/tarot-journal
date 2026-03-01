@@ -66,6 +66,22 @@
   color: var(--text-primary);
 }
 
+.deck-list__tag-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: var(--font-size-small);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.deck-list__tag-toggle input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--accent);
+}
+
 .deck-list__rows {
   flex: 1;
   overflow-y: auto;

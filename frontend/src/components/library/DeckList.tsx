@@ -16,6 +16,7 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
   const [filterTypeId, setFilterTypeId] = useState<number | undefined>(undefined);
   const [sortBy, setSortBy] = useState<'name' | 'type' | 'cards'>('name');
   const [sortAsc, setSortAsc] = useState(true);
+  const [showTags, setShowTags] = useState(false);
 
   const { data: types = [] } = useQuery({
     queryKey: ['cartomancy-types'],
@@ -79,6 +80,14 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
             {sortBy === col && (sortAsc ? ' \u25B2' : ' \u25BC')}
           </button>
         ))}
+        <label className="deck-list__tag-toggle">
+          <input
+            type="checkbox"
+            checked={showTags}
+            onChange={(e) => setShowTags(e.target.checked)}
+          />
+          <span>Tags</span>
+        </label>
       </div>
 
       <div className="deck-list__rows">
@@ -93,7 +102,7 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
             <div className="deck-list__row-content">
               <span className="deck-list__name">
                 {deck.name}
-                {deck.tags && deck.tags.length > 0 && (
+                {showTags && deck.tags && deck.tags.length > 0 && (
                   <span className="deck-list__tags">
                     {deck.tags.map(t => (
                       <span
