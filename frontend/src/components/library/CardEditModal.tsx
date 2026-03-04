@@ -257,7 +257,14 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
           };
         });
 
-      const allFields = [...legacyFields, ...tableFields, ...deckDefinedFields];
+      const deckFieldOrder = new Map(
+        deckCustomFields.map((def, idx) => [def.field_name.toLowerCase(), idx])
+      );
+      const allFields = [...legacyFields, ...tableFields, ...deckDefinedFields].sort((a, b) => {
+        const aIdx = deckFieldOrder.get(a.field_name.toLowerCase()) ?? Infinity;
+        const bIdx = deckFieldOrder.get(b.field_name.toLowerCase()) ?? Infinity;
+        return aIdx - bIdx;
+      });
       setCustomFields(allFields);
 
       // Store initial state for dirty checking

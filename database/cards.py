@@ -647,12 +647,15 @@ class CardsMixin:
 
     # === Card Custom Fields ===
     def get_card_custom_fields(self, card_id: int):
-        """Get custom fields for a specific card"""
+        """Get custom fields for a specific card, ordered by the deck's field_order"""
         cursor = self.conn.cursor()
         cursor.execute('''
-            SELECT * FROM card_custom_fields
-            WHERE card_id = ?
-            ORDER BY field_order, id
+            SELECT ccf.* FROM card_custom_fields ccf
+            JOIN cards c ON c.id = ccf.card_id
+            LEFT JOIN deck_custom_fields dcf
+                ON dcf.deck_id = c.deck_id AND dcf.field_name = ccf.field_name
+            WHERE ccf.card_id = ?
+            ORDER BY COALESCE(dcf.field_order, ccf.field_order, 9999), ccf.id
         ''', (card_id,))
         return cursor.fetchall()
 

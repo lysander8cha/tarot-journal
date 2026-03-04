@@ -77,6 +77,12 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
     enabled: deckId !== null,
   });
 
+  // Local ordered copy for optimistic drag reordering
+  const [localFields, setLocalFields] = useState<DeckCustomField[]>([]);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
+  const draggingIdRef = useRef<number | null>(null);
+  const localFieldsRef = useRef<DeckCustomField[]>([]);
+
   const { data: deckTypeAssignments = [] } = useQuery<{ id: number; name: string }[]>({
     queryKey: ['deck-types', deckId],
     queryFn: () => getDeckTypes(deckId!),
@@ -208,6 +214,18 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
     initialStateRef.current = null;
   }, [deckId]);
 
+  // Sync local fields from server (but not while dragging)
+  useEffect(() => {
+    if (!draggingIdRef.current) {
+      setLocalFields([...customFields]);
+    }
+  }, [customFields]);
+
+  // Keep ref in sync so drag handlers always see current order
+  useEffect(() => {
+    localFieldsRef.current = localFields;
+  }, [localFields]);
+
   // Compute whether form has unsaved changes
   // NOTE: This must be before any early returns to comply with Rules of Hooks
   const isDirty = useMemo(() => {
@@ -280,6 +298,39 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
     if (!window.confirm('Delete this custom field? This will not remove existing values from cards.')) return;
     await deleteDeckCustomField(fieldId);
     refetchCustomFields();
+  };
+
+  const handleFieldDragStart = (fieldId: number) => {
+    draggingIdRef.current = fieldId;
+  };
+
+  const handleFieldDragOver = (e: React.DragEvent, overFieldId: number) => {
+    e.preventDefault();
+    setDragOverId(overFieldId);
+  };
+
+  const handleFieldDrop = (e: React.DragEvent, overFieldId: number) => {
+    e.preventDefault();
+    const fromId = draggingIdRef.current;
+    draggingIdRef.current = null;
+    setDragOverId(null);
+    if (!fromId || fromId === overFieldId) return;
+
+    const next = [...localFieldsRef.current];
+    const fromIdx = next.findIndex(f => f.id === fromId);
+    const toIdx = next.findIndex(f => f.id === overFieldId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    next.splice(toIdx, 0, next.splice(fromIdx, 1)[0]);
+    setLocalFields(next);
+
+    Promise.all(
+      next.map((field, idx) => updateDeckCustomField(field.id, { field_order: idx }))
+    ).then(() => refetchCustomFields());
+  };
+
+  const handleFieldDragEnd = () => {
+    setDragOverId(null);
+    draggingIdRef.current = null;
   };
 
   const handleSave = async () => {
@@ -536,11 +587,25 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
               <p className="deck-edit__section-hint">
                 Define extra fields that appear on each card in this deck.
               </p>
-              {customFields.length > 0 ? (
+              {localFields.length > 0 ? (
                 <div className="deck-edit__custom-fields">
-                  {customFields.map(field => (
-                    <div key={field.id} className="deck-edit__custom-field">
+                  {localFields.map(field => (
+                    <div
+                      key={field.id}
+                      className={`deck-edit__custom-field${dragOverId === field.id ? ' deck-edit__custom-field--drag-over' : ''}`}
+                      onDragOver={e => handleFieldDragOver(e, field.id)}
+                      onDrop={e => handleFieldDrop(e, field.id)}
+                    >
                       <div className="deck-edit__custom-field-row">
+                        <div
+                          className="deck-edit__drag-handle"
+                          draggable
+                          onDragStart={() => handleFieldDragStart(field.id)}
+                          onDragEnd={handleFieldDragEnd}
+                          title="Drag to reorder"
+                        >
+                          ⠿
+                        </div>
                         <input
                           className="deck-edit__custom-field-name"
                           type="text"
@@ -596,11 +661,11 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : customFields.length === 0 ? (
                 <div className="deck-edit__custom-fields-empty">
                   No custom fields defined.
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
