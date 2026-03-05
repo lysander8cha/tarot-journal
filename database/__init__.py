@@ -49,8 +49,9 @@ def create_default_spreads(db: Database):
     """Create some common tarot and lenormand spreads"""
     spreads = db.get_spreads()
     if len(spreads) == 0:
-        # Card dimensions - smaller for better fit
-        cw, ch = 60, 90  # card width, height
+        # Card dimensions matching the spread designer defaults,
+        # snapped to the 20px grid
+        cw, ch = 80, 120
 
         # === TAROT SPREADS ===
 
@@ -58,33 +59,33 @@ def create_default_spreads(db: Database):
         db.add_spread(
             "Daily Draw",
             [
-                {"x": 200, "y": 100, "label": "Card of the Day", "width": cw, "height": ch}
+                {"x": 200, "y": 80, "label": "Card of the Day", "width": cw, "height": ch}
             ],
             "A single card for daily reflection",
             "Tarot"
         )
 
-        # Three card spread (line)
+        # Three card spread (line) — 20px gaps between cards
         db.add_spread(
             "Three Card Line",
             [
-                {"x": 80, "y": 100, "label": "Past", "width": cw, "height": ch},
-                {"x": 160, "y": 100, "label": "Present", "width": cw, "height": ch},
-                {"x": 240, "y": 100, "label": "Future", "width": cw, "height": ch}
+                {"x": 60, "y": 80, "label": "Past", "width": cw, "height": ch},
+                {"x": 160, "y": 80, "label": "Present", "width": cw, "height": ch},
+                {"x": 260, "y": 80, "label": "Future", "width": cw, "height": ch}
             ],
             "A simple past-present-future reading",
             "Tarot"
         )
 
-        # Five card spread (line)
+        # Five card spread (line) — 20px gaps between cards
         db.add_spread(
             "Five Card Line",
             [
-                {"x": 40, "y": 100, "label": "1", "width": cw, "height": ch},
-                {"x": 110, "y": 100, "label": "2", "width": cw, "height": ch},
-                {"x": 180, "y": 100, "label": "3", "width": cw, "height": ch},
-                {"x": 250, "y": 100, "label": "4", "width": cw, "height": ch},
-                {"x": 320, "y": 100, "label": "5", "width": cw, "height": ch}
+                {"x": 20, "y": 80, "label": "1", "width": cw, "height": ch},
+                {"x": 120, "y": 80, "label": "2", "width": cw, "height": ch},
+                {"x": 220, "y": 80, "label": "3", "width": cw, "height": ch},
+                {"x": 320, "y": 80, "label": "4", "width": cw, "height": ch},
+                {"x": 420, "y": 80, "label": "5", "width": cw, "height": ch}
             ],
             "A five card layout",
             "Tarot"
@@ -94,16 +95,16 @@ def create_default_spreads(db: Database):
         db.add_spread(
             "Celtic Cross",
             [
-                {"x": 160, "y": 150, "label": "1. Present", "width": cw, "height": ch},
-                {"x": 160, "y": 150, "label": "2. Challenge", "width": cw, "height": ch, "rotation": 90},
-                {"x": 160, "y": 50, "label": "3. Above", "width": cw, "height": ch},
-                {"x": 160, "y": 250, "label": "4. Below", "width": cw, "height": ch},
-                {"x": 60, "y": 150, "label": "5. Past", "width": cw, "height": ch},
-                {"x": 260, "y": 150, "label": "6. Future", "width": cw, "height": ch},
-                {"x": 360, "y": 280, "label": "7. Self", "width": cw, "height": ch},
-                {"x": 360, "y": 190, "label": "8. Environment", "width": cw, "height": ch},
-                {"x": 360, "y": 100, "label": "9. Hopes/Fears", "width": cw, "height": ch},
-                {"x": 360, "y": 10, "label": "10. Outcome", "width": cw, "height": ch}
+                {"x": 160, "y": 180, "label": "1. Present", "width": cw, "height": ch},
+                {"x": 160, "y": 180, "label": "2. Challenge", "width": cw, "height": ch, "rotation": 90},
+                {"x": 160, "y": 40, "label": "3. Above", "width": cw, "height": ch},
+                {"x": 160, "y": 320, "label": "4. Below", "width": cw, "height": ch},
+                {"x": 60, "y": 180, "label": "5. Past", "width": cw, "height": ch},
+                {"x": 260, "y": 180, "label": "6. Future", "width": cw, "height": ch},
+                {"x": 380, "y": 360, "label": "7. Self", "width": cw, "height": ch},
+                {"x": 380, "y": 240, "label": "8. Environment", "width": cw, "height": ch},
+                {"x": 380, "y": 120, "label": "9. Hopes/Fears", "width": cw, "height": ch},
+                {"x": 380, "y": 0, "label": "10. Outcome", "width": cw, "height": ch}
             ],
             "The classic 10-card Celtic Cross spread",
             "Tarot"
@@ -111,45 +112,45 @@ def create_default_spreads(db: Database):
 
         # === LENORMAND SPREADS ===
 
-        # Lenormand 3-card
+        # Lenormand 3-card — 20px gaps
         db.add_spread(
             "Lenormand Line of 3",
             [
-                {"x": 80, "y": 100, "label": "1", "width": cw, "height": ch},
-                {"x": 160, "y": 100, "label": "2", "width": cw, "height": ch},
-                {"x": 240, "y": 100, "label": "3", "width": cw, "height": ch}
+                {"x": 60, "y": 80, "label": "1", "width": cw, "height": ch},
+                {"x": 160, "y": 80, "label": "2", "width": cw, "height": ch},
+                {"x": 260, "y": 80, "label": "3", "width": cw, "height": ch}
             ],
             "A simple Lenormand three-card line",
             "Lenormand"
         )
 
-        # Lenormand 5-card
+        # Lenormand 5-card — 20px gaps
         db.add_spread(
             "Lenormand Line of 5",
             [
-                {"x": 40, "y": 100, "label": "1", "width": cw, "height": ch},
-                {"x": 110, "y": 100, "label": "2", "width": cw, "height": ch},
-                {"x": 180, "y": 100, "label": "3", "width": cw, "height": ch},
-                {"x": 250, "y": 100, "label": "4", "width": cw, "height": ch},
-                {"x": 320, "y": 100, "label": "5", "width": cw, "height": ch}
+                {"x": 20, "y": 80, "label": "1", "width": cw, "height": ch},
+                {"x": 120, "y": 80, "label": "2", "width": cw, "height": ch},
+                {"x": 220, "y": 80, "label": "3", "width": cw, "height": ch},
+                {"x": 320, "y": 80, "label": "4", "width": cw, "height": ch},
+                {"x": 420, "y": 80, "label": "5", "width": cw, "height": ch}
             ],
             "A five-card Lenormand line",
             "Lenormand"
         )
 
-        # Lenormand 9-card (3x3)
+        # Lenormand 9-card (3x3) — 20px gaps
         db.add_spread(
             "Lenormand Box of 9",
             [
-                {"x": 80, "y": 20, "label": "1", "width": cw, "height": ch},
+                {"x": 60, "y": 20, "label": "1", "width": cw, "height": ch},
                 {"x": 160, "y": 20, "label": "2", "width": cw, "height": ch},
-                {"x": 240, "y": 20, "label": "3", "width": cw, "height": ch},
-                {"x": 80, "y": 120, "label": "4", "width": cw, "height": ch},
-                {"x": 160, "y": 120, "label": "5", "width": cw, "height": ch},
-                {"x": 240, "y": 120, "label": "6", "width": cw, "height": ch},
-                {"x": 80, "y": 220, "label": "7", "width": cw, "height": ch},
-                {"x": 160, "y": 220, "label": "8", "width": cw, "height": ch},
-                {"x": 240, "y": 220, "label": "9", "width": cw, "height": ch}
+                {"x": 260, "y": 20, "label": "3", "width": cw, "height": ch},
+                {"x": 60, "y": 160, "label": "4", "width": cw, "height": ch},
+                {"x": 160, "y": 160, "label": "5", "width": cw, "height": ch},
+                {"x": 260, "y": 160, "label": "6", "width": cw, "height": ch},
+                {"x": 60, "y": 300, "label": "7", "width": cw, "height": ch},
+                {"x": 160, "y": 300, "label": "8", "width": cw, "height": ch},
+                {"x": 260, "y": 300, "label": "9", "width": cw, "height": ch}
             ],
             "A 3x3 Lenormand grid with card 5 as significator",
             "Lenormand"
