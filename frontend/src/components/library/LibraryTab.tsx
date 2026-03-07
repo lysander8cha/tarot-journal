@@ -105,6 +105,7 @@ export default function LibraryTab() {
         deckId={editingDeckId}
         onClose={() => setEditingDeckId(null)}
         onSaved={() => {}}
+        onDeleted={() => setSelectedDeck(null)}
       />
 
       {showBatchEdit && (

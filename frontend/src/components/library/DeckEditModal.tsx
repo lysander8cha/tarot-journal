@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  getDeck, updateDeck, getDeckTagAssignments, setDeckTags, getCartomancyTypes,
+  getDeck, updateDeck, deleteDeck, getDeckTagAssignments, setDeckTags, getCartomancyTypes,
   getDeckCustomFields, addDeckCustomField, updateDeckCustomField, deleteDeckCustomField,
   getDeckTypes, setDeckTypes, updateDeckSuitNames, updateDeckCourtNames,
 } from '../../api/decks';
@@ -42,9 +42,10 @@ interface DeckEditModalProps {
   deckId: number | null;
   onClose: () => void;
   onSaved: () => void;
+  onDeleted?: () => void;
 }
 
-export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModalProps) {
+export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: DeckEditModalProps) {
   const queryClient = useQueryClient();
 
   const { data: deck, isLoading } = useQuery<Deck>({
@@ -115,6 +116,8 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
   const [originalCourtNames, setOriginalCourtNames] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Track initial form state for dirty checking
   const initialStateRef = useRef<InitialDeckFormState | null>(null);
@@ -140,6 +143,10 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
 
   // Capitalize key for display label
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  useEffect(() => {
+    setConfirmingDelete(false);
+  }, [deckId]);
 
   useEffect(() => {
     if (deck) {
@@ -379,6 +386,24 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
       setError('Failed to save deck. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deck) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await deleteDeck(deck.id);
+      queryClient.invalidateQueries({ queryKey: ['decks'] });
+      onDeleted?.();
+      onClose();
+    } catch (err) {
+      console.error('Failed to delete deck:', err);
+      setError('Failed to delete deck. Please try again.');
+    } finally {
+      setDeleting(false);
+      setConfirmingDelete(false);
     }
   };
 
@@ -669,23 +694,54 @@ export default function DeckEditModal({ deckId, onClose, onSaved }: DeckEditModa
             </div>
           </div>
 
-          <div className="deck-edit__footer">
-            <a
-              className="deck-edit__export-link"
-              href={exportDeckUrl(deckId)}
-              download
-            >
-              Export JSON
-            </a>
-            <button onClick={onClose}>Cancel</button>
-            <button
-              className="deck-edit__save-btn"
-              onClick={handleSave}
-              disabled={saving || !name.trim()}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+          {confirmingDelete ? (
+            <div className="deck-edit__delete-confirm">
+              <p className="deck-edit__delete-warning">
+                Are you sure you want to delete <strong>{name || 'this deck'}</strong>?
+              </p>
+              <p className="deck-edit__delete-warning-detail">
+                This will permanently delete the deck, all its cards, custom fields, and tags.
+                This action cannot be undone.
+              </p>
+              <div className="deck-edit__delete-confirm-actions">
+                <button onClick={() => setConfirmingDelete(false)} disabled={deleting}>
+                  Cancel
+                </button>
+                <button
+                  className="deck-edit__delete-btn"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? 'Deleting...' : 'Yes, delete permanently'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="deck-edit__footer">
+              <a
+                className="deck-edit__export-link"
+                href={exportDeckUrl(deckId)}
+                download
+              >
+                Export JSON
+              </a>
+              <button
+                className="deck-edit__delete-trigger"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Delete Deck
+              </button>
+              <div className="deck-edit__footer-spacer" />
+              <button onClick={onClose}>Cancel</button>
+              <button
+                className="deck-edit__save-btn"
+                onClick={handleSave}
+                disabled={saving || !name.trim()}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
     </Modal>

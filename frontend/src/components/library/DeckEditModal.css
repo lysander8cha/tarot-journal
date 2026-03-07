@@ -140,7 +140,6 @@
 }
 
 .deck-edit__export-link {
-  margin-right: auto;
   color: var(--text-secondary);
   font-size: var(--font-size-small);
   text-decoration: underline;
@@ -149,6 +148,61 @@
 
 .deck-edit__export-link:hover {
   color: var(--text-primary);
+}
+
+.deck-edit__footer-spacer {
+  flex: 1;
+}
+
+.deck-edit__delete-trigger {
+  color: var(--danger) !important;
+  background: transparent !important;
+  border: 1px solid var(--danger) !important;
+  font-size: var(--font-size-small);
+  padding: 4px 10px;
+}
+
+.deck-edit__delete-trigger:hover {
+  background: var(--danger) !important;
+  color: #fff !important;
+}
+
+.deck-edit__delete-confirm {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+
+.deck-edit__delete-warning {
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+
+.deck-edit__delete-warning-detail {
+  color: var(--danger);
+  font-size: var(--font-size-small);
+  margin: 0 0 12px;
+}
+
+.deck-edit__delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.deck-edit__delete-btn {
+  background: var(--danger) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+.deck-edit__delete-btn:hover {
+  opacity: 0.9;
+}
+
+.deck-edit__delete-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .deck-edit__save-btn {

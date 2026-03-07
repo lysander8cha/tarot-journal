@@ -99,3 +99,7 @@ export async function getDeckTypes(deckId: number): Promise<{ id: number; name: 
 export async function setDeckTypes(deckId: number, typeIds: number[]) {
   await api.put(`/api/decks/${deckId}/types`, { type_ids: typeIds });
 }
+
+export async function deleteDeck(deckId: number) {
+  await api.delete(`/api/decks/${deckId}`);
+}
