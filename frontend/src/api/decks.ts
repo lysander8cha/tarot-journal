@@ -103,3 +103,24 @@ export async function setDeckTypes(deckId: number, typeIds: number[]) {
 export async function deleteDeck(deckId: number) {
   await api.delete(`/api/decks/${deckId}`);
 }
+
+// ── Card Groups ──
+
+export async function addDeckGroup(
+  deckId: number,
+  data: { name: string; color?: string },
+): Promise<{ id: number }> {
+  const res = await api.post(`/api/decks/${deckId}/groups`, data);
+  return res.data;
+}
+
+export async function updateDeckGroup(
+  groupId: number,
+  data: { name?: string; color?: string },
+) {
+  await api.put(`/api/groups/${groupId}`, data);
+}
+
+export async function deleteDeckGroup(groupId: number) {
+  await api.delete(`/api/groups/${groupId}`);
+}

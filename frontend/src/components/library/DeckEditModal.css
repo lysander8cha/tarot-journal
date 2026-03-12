@@ -290,6 +290,17 @@
   flex-shrink: 0;
 }
 
+.deck-edit__group-color {
+  width: 28px;
+  height: 28px;
+  padding: 1px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-input);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .deck-edit__custom-field-delete {
   width: 24px;
   height: 24px;

@@ -4,11 +4,12 @@ import {
   getDeck, updateDeck, deleteDeck, getDeckTagAssignments, setDeckTags, getCartomancyTypes,
   getDeckCustomFields, addDeckCustomField, updateDeckCustomField, deleteDeckCustomField,
   getDeckTypes, setDeckTypes, updateDeckSuitNames, updateDeckCourtNames,
+  getDeckGroups, addDeckGroup, updateDeckGroup, deleteDeckGroup,
 } from '../../api/decks';
 import { getDeckTags } from '../../api/tags';
 import { deckBackUrl } from '../../api/images';
 import { exportDeckUrl } from '../../api/importExport';
-import type { Deck, Tag, DeckCustomField } from '../../types';
+import type { Deck, Tag, DeckCustomField, CardGroup } from '../../types';
 import Modal from '../common/Modal';
 import RichTextEditor from '../common/RichTextEditor';
 import './DeckEditModal.css';
@@ -75,6 +76,12 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
   const { data: customFields = [], refetch: refetchCustomFields } = useQuery<DeckCustomField[]>({
     queryKey: ['deck-custom-fields', deckId],
     queryFn: () => getDeckCustomFields(deckId!),
+    enabled: deckId !== null,
+  });
+
+  const { data: groups = [], refetch: refetchGroups } = useQuery<CardGroup[]>({
+    queryKey: ['deck-groups', deckId],
+    queryFn: () => getDeckGroups(deckId!),
     enabled: deckId !== null,
   });
 
@@ -340,6 +347,34 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
     draggingIdRef.current = null;
   };
 
+  const handleAddGroup = async () => {
+    if (!deck) return;
+    try {
+      await addDeckGroup(deck.id, { name: 'New Group' });
+      refetchGroups();
+    } catch (err) {
+      console.error('Failed to add group:', err);
+    }
+  };
+
+  const handleUpdateGroup = async (groupId: number, data: { name?: string; color?: string }) => {
+    try {
+      await updateDeckGroup(groupId, data);
+      refetchGroups();
+    } catch (err) {
+      console.error('Failed to update group:', err);
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: number) => {
+    try {
+      await deleteDeckGroup(groupId);
+      refetchGroups();
+    } catch (err) {
+      console.error('Failed to delete group:', err);
+    }
+  };
+
   const handleSave = async () => {
     if (!deck) return;
     setSaving(true);
@@ -598,6 +633,61 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
                 </div>
               </div>
             )}
+
+            <div className="deck-edit__section">
+              <div className="deck-edit__section-header">
+                <h3 className="deck-edit__section-title">Groups</h3>
+                <button
+                  className="deck-edit__add-field-btn"
+                  onClick={handleAddGroup}
+                >
+                  + Add Group
+                </button>
+              </div>
+              <p className="deck-edit__section-hint">
+                Organize cards into groups (e.g. Major Arcana, Suit of Cups).
+              </p>
+              {groups.length > 0 ? (
+                <div className="deck-edit__custom-fields">
+                  {groups.map(group => (
+                    <div key={group.id} className="deck-edit__custom-field">
+                      <div className="deck-edit__custom-field-row">
+                        <input
+                          type="color"
+                          className="deck-edit__group-color"
+                          defaultValue={group.color}
+                          onChange={e => handleUpdateGroup(group.id, { color: e.target.value })}
+                          title="Group color"
+                        />
+                        <input
+                          className="deck-edit__custom-field-name"
+                          type="text"
+                          defaultValue={group.name}
+                          onBlur={e => {
+                            const val = e.target.value.trim();
+                            if (val && val !== group.name) {
+                              handleUpdateGroup(group.id, { name: val });
+                            }
+                          }}
+                          placeholder="Group name"
+                        />
+                        <button
+                          className="deck-edit__custom-field-delete"
+                          onClick={() => handleDeleteGroup(group.id)}
+                          title="Delete group"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="deck-edit__custom-fields-empty">
+                  No groups defined.
+                </div>
+              )}
+            </div>
 
             <div className="deck-edit__section">
               <div className="deck-edit__section-header">
