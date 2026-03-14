@@ -87,8 +87,14 @@ class DecksMixin:
             'INSERT INTO decks (name, cartomancy_type_id, image_folder, suit_names, court_names) VALUES (?, ?, ?, ?, ?)',
             (name, cartomancy_type_id, image_folder, suit_names_json, court_names_json)
         )
+        deck_id = cursor.lastrowid
+        # Also populate the junction table so type filtering works immediately
+        cursor.execute(
+            'INSERT OR IGNORE INTO deck_type_assignments (deck_id, type_id) VALUES (?, ?)',
+            (deck_id, cartomancy_type_id)
+        )
         self._commit()
-        return cursor.lastrowid
+        return deck_id
 
     def update_deck(self, deck_id: int, name: str = None, image_folder: str = None, suit_names: dict = None,
                     court_names: dict = None, date_published: str = None, publisher: str = None,
