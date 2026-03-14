@@ -53,16 +53,6 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
     <div className="deck-list">
       <div className="deck-list__header">
         <h2 className="deck-list__title">Decks</h2>
-        <select
-          className="deck-list__filter"
-          value={filterTypeId ?? ''}
-          onChange={(e) => setFilterTypeId(e.target.value ? Number(e.target.value) : undefined)}
-        >
-          <option value="">All Types</option>
-          {types.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
         {onImport && (
           <button className="deck-list__import-btn" onClick={onImport}>Import</button>
         )}
@@ -74,6 +64,18 @@ export default function DeckList({ selectedDeckId, onSelectDeck, onEditDeck, onI
           />
           <span>Tags</span>
         </label>
+      </div>
+      <div className="deck-list__filters">
+        <select
+          className="deck-list__filter"
+          value={filterTypeId ?? ''}
+          onChange={(e) => setFilterTypeId(e.target.value ? Number(e.target.value) : undefined)}
+        >
+          <option value="">All Types</option>
+          {types.map((t) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="deck-list__sort-bar">
