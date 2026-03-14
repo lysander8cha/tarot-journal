@@ -33,13 +33,8 @@ def get_decks():
 
         # Cartomancy types from bulk query
         types = all_types.get(deck_id, [])
-        if types:
-            deck['cartomancy_types'] = sort_types(types)
-            deck['cartomancy_type_names'] = ', '.join(t['name'] for t in types)
-        else:
-            # Fall back to primary type if no assignments exist
-            deck['cartomancy_types'] = [{'id': deck['cartomancy_type_id'], 'name': deck['cartomancy_type_name']}]
-            deck['cartomancy_type_names'] = deck['cartomancy_type_name']
+        deck['cartomancy_types'] = sort_types(types) if types else []
+        deck['cartomancy_type_names'] = ', '.join(t['name'] for t in types)
 
         # Normalize field name for frontend compatibility
         deck['cartomancy_type'] = deck['cartomancy_type_names']
@@ -65,13 +60,17 @@ def add_deck():
     if data is None:
         return jsonify({'error': 'Invalid or missing JSON body'}), 400
     name = data.get('name', '').strip()
-    cartomancy_type_id = data.get('cartomancy_type_id')
-    if not name or not cartomancy_type_id:
-        return jsonify({'error': 'name and cartomancy_type_id are required'}), 400
+    # Accept type_ids list or single cartomancy_type_id for backward compatibility
+    type_ids = data.get('type_ids')
+    if not type_ids:
+        cartomancy_type_id = data.get('cartomancy_type_id')
+        type_ids = [cartomancy_type_id] if cartomancy_type_id else []
+    if not name or not type_ids:
+        return jsonify({'error': 'name and type_ids (or cartomancy_type_id) are required'}), 400
 
     deck_id = db.add_deck(
         name=name,
-        cartomancy_type_id=cartomancy_type_id,
+        type_ids=type_ids,
         image_folder=data.get('image_folder'),
         suit_names=data.get('suit_names'),
         court_names=data.get('court_names'),
@@ -97,7 +96,6 @@ def update_deck(deck_id):
         notes=data.get('notes'),
         card_back_image=data.get('card_back_image'),
         booklet_info=data.get('booklet_info'),
-        cartomancy_type_id=data.get('cartomancy_type_id'),
     )
     return jsonify({'ok': True})
 

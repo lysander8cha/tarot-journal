@@ -390,7 +390,7 @@ class ImportExportMixin:
             # Create the deck
             deck_id = self.add_deck(
                 name=deck_data.get('name', 'Imported Deck'),
-                cartomancy_type_id=cart_type_id,
+                type_ids=[cart_type_id],
                 image_folder=deck_data.get('image_folder'),
                 suit_names=deck_data.get('suit_names')
             )

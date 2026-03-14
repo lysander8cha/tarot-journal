@@ -8,7 +8,7 @@ export interface CartomancyType {
 export interface Deck {
   id: number;
   name: string;
-  cartomancy_type_id: number;
+  cartomancy_type_id?: number;
   image_folder: string | null;
   suit_names: string | null;
   court_names: string | null;

@@ -115,7 +115,7 @@ def import_from_folder():
         # Create deck
         deck_id = db.add_deck(
             name=deck_name,
-            cartomancy_type_id=cartomancy_type_id,
+            type_ids=[cartomancy_type_id],
             image_folder=folder,
         )
 

@@ -38,73 +38,59 @@ class DecksMixin:
         if cartomancy_type_id:
             # Filter by type using junction table - find decks with ANY matching type
             cursor.execute('''
-                SELECT DISTINCT d.*, ct.name as cartomancy_type_name
+                SELECT DISTINCT d.*
                 FROM decks d
-                JOIN cartomancy_types ct ON d.cartomancy_type_id = ct.id
                 JOIN deck_type_assignments dta ON d.id = dta.deck_id
                 WHERE dta.type_id = ?
                 ORDER BY d.name
             ''', (cartomancy_type_id,))
         else:
             cursor.execute('''
-                SELECT d.*, ct.name as cartomancy_type_name
+                SELECT d.*
                 FROM decks d
-                JOIN cartomancy_types ct ON d.cartomancy_type_id = ct.id
-                ORDER BY ct.name, d.name
+                ORDER BY d.name
             ''')
         return [dict(row) for row in cursor.fetchall()]
 
     def get_deck(self, deck_id: int):
         cursor = self.conn.cursor()
-        # Get deck with primary type (for backward compatibility)
-        cursor.execute('''
-            SELECT d.*, ct.name as cartomancy_type_name
-            FROM decks d
-            JOIN cartomancy_types ct ON d.cartomancy_type_id = ct.id
-            WHERE d.id = ?
-        ''', (deck_id,))
+        cursor.execute('SELECT d.* FROM decks d WHERE d.id = ?', (deck_id,))
         row = cursor.fetchone()
         if row:
-            # Get all types from junction table
-            types = self.get_types_for_deck(deck_id)
-            if types:
-                type_names = ', '.join(t['name'] for t in types)
-            else:
-                type_names = row['cartomancy_type_name']
-            # Return as dict so we can add the extra field
             deck = dict(row)
+            types = self.get_types_for_deck(deck_id)
+            type_names = ', '.join(t['name'] for t in types) if types else ''
             deck['cartomancy_type_names'] = type_names
+            deck['cartomancy_type_name'] = types[0]['name'] if types else ''
             deck['cartomancy_types'] = types
             return deck
         return None
 
-    def add_deck(self, name: str, cartomancy_type_id: int, image_folder: str = None,
+    def add_deck(self, name: str, type_ids: List[int], image_folder: str = None,
                  suit_names: dict = None, court_names: dict = None):
         cursor = self.conn.cursor()
         suit_names_json = json.dumps(suit_names) if suit_names else None
         court_names_json = json.dumps(court_names) if court_names else None
         cursor.execute(
-            'INSERT INTO decks (name, cartomancy_type_id, image_folder, suit_names, court_names) VALUES (?, ?, ?, ?, ?)',
-            (name, cartomancy_type_id, image_folder, suit_names_json, court_names_json)
+            'INSERT INTO decks (name, image_folder, suit_names, court_names) VALUES (?, ?, ?, ?)',
+            (name, image_folder, suit_names_json, court_names_json)
         )
         deck_id = cursor.lastrowid
-        # Also populate the junction table so type filtering works immediately
-        cursor.execute(
-            'INSERT OR IGNORE INTO deck_type_assignments (deck_id, type_id) VALUES (?, ?)',
-            (deck_id, cartomancy_type_id)
-        )
+        for type_id in type_ids:
+            cursor.execute(
+                'INSERT OR IGNORE INTO deck_type_assignments (deck_id, type_id) VALUES (?, ?)',
+                (deck_id, type_id)
+            )
         self._commit()
         return deck_id
 
     def update_deck(self, deck_id: int, name: str = None, image_folder: str = None, suit_names: dict = None,
                     court_names: dict = None, date_published: str = None, publisher: str = None,
                     credits: str = None, notes: str = None, card_back_image: str = None,
-                    booklet_info: str = None, cartomancy_type_id: int = None):
+                    booklet_info: str = None):
         cursor = self.conn.cursor()
         if name:
             cursor.execute('UPDATE decks SET name = ? WHERE id = ?', (name, deck_id))
-        if cartomancy_type_id is not None:
-            cursor.execute('UPDATE decks SET cartomancy_type_id = ? WHERE id = ?', (cartomancy_type_id, deck_id))
         if image_folder:
             cursor.execute('UPDATE decks SET image_folder = ? WHERE id = ?', (image_folder, deck_id))
         if suit_names is not None:
@@ -151,9 +137,6 @@ class DecksMixin:
                 'INSERT INTO deck_type_assignments (deck_id, type_id) VALUES (?, ?)',
                 (deck_id, type_id)
             )
-        # Also update the legacy cartomancy_type_id (use first type for backward compatibility)
-        if type_ids:
-            cursor.execute('UPDATE decks SET cartomancy_type_id = ? WHERE id = ?', (type_ids[0], deck_id))
         self._commit()
 
     def add_type_to_deck(self, deck_id: int, type_id: int):

@@ -58,10 +58,13 @@ class CardsMixin:
 
         # Base query with JOINs for deck info
         sql = '''
-            SELECT c.*, d.name as deck_name, ct.name as cartomancy_type_name
+            SELECT c.*, d.name as deck_name,
+                (SELECT ct.name FROM deck_type_assignments dta
+                 JOIN cartomancy_types ct ON dta.type_id = ct.id
+                 WHERE dta.deck_id = d.id
+                 ORDER BY ct.name LIMIT 1) as cartomancy_type_name
             FROM cards c
             JOIN decks d ON c.deck_id = d.id
-            JOIN cartomancy_types ct ON d.cartomancy_type_id = ct.id
         '''
 
         conditions = []
@@ -74,7 +77,11 @@ class CardsMixin:
 
         # Deck type filter
         if deck_type:
-            conditions.append('ct.name = ?')
+            conditions.append('''EXISTS (
+                SELECT 1 FROM deck_type_assignments dta
+                JOIN cartomancy_types ct ON dta.type_id = ct.id
+                WHERE dta.deck_id = d.id AND ct.name = ?
+            )''')
             params.append(deck_type)
 
         # Text search across multiple fields
@@ -547,10 +554,12 @@ class CardsMixin:
         """Get a card with all its metadata"""
         cursor = self.conn.cursor()
         cursor.execute('''
-            SELECT c.*, d.cartomancy_type_id, ct.name as cartomancy_type_name
+            SELECT c.*,
+                (SELECT ct.name FROM deck_type_assignments dta
+                 JOIN cartomancy_types ct ON dta.type_id = ct.id
+                 WHERE dta.deck_id = c.deck_id
+                 ORDER BY ct.name LIMIT 1) as cartomancy_type_name
             FROM cards c
-            JOIN decks d ON c.deck_id = d.id
-            JOIN cartomancy_types ct ON d.cartomancy_type_id = ct.id
             WHERE c.id = ?
         ''', (card_id,))
         return cursor.fetchone()

@@ -87,12 +87,10 @@ class CoreMixin:
             CREATE TABLE IF NOT EXISTS decks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                cartomancy_type_id INTEGER NOT NULL,
                 image_folder TEXT,
                 suit_names TEXT,
                 court_names TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (cartomancy_type_id) REFERENCES cartomancy_types(id)
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
 
@@ -453,15 +451,50 @@ class CoreMixin:
                 (ct,)
             )
 
-        # Migrate existing deck types to junction table
-        cursor.execute('SELECT COUNT(*) FROM deck_type_assignments')
-        if cursor.fetchone()[0] == 0:
-            # Junction table is empty - populate from existing cartomancy_type_id
+        # Migration: populate junction table from legacy cartomancy_type_id, then drop column
+        cursor.execute("PRAGMA table_info(decks)")
+        deck_columns = [col[1] for col in cursor.fetchall()]
+        if 'cartomancy_type_id' in deck_columns:
+            # Ensure all decks have junction table entries before dropping
             cursor.execute('''
                 INSERT OR IGNORE INTO deck_type_assignments (deck_id, type_id)
                 SELECT id, cartomancy_type_id FROM decks
                 WHERE cartomancy_type_id IS NOT NULL
             ''')
+            # Can't use ALTER TABLE DROP COLUMN because the column has a FK constraint.
+            # Rebuild the table without the column instead.
+            cursor.execute('''
+                CREATE TABLE decks_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    image_folder TEXT,
+                    suit_names TEXT,
+                    court_names TEXT,
+                    date_published TEXT,
+                    publisher TEXT,
+                    credits TEXT,
+                    notes TEXT,
+                    card_back_image TEXT,
+                    booklet_info TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            # Copy all non-legacy columns
+            cursor.execute('''
+                INSERT INTO decks_new (id, name, image_folder, suit_names, court_names,
+                    date_published, publisher, credits, notes, card_back_image, booklet_info, created_at)
+                SELECT id, name, image_folder, suit_names, court_names,
+                    date_published, publisher, credits, notes, card_back_image, booklet_info, created_at
+                FROM decks
+            ''')
+            # Must disable FK checks to drop a table referenced by other tables.
+            # PRAGMA foreign_keys only takes effect outside transactions.
+            self.conn.commit()
+            self.conn.execute('PRAGMA foreign_keys = OFF')
+            cursor.execute('DROP TABLE decks')
+            cursor.execute('ALTER TABLE decks_new RENAME TO decks')
+            self.conn.commit()
+            self.conn.execute('PRAGMA foreign_keys = ON')
 
         # Seed card archetypes if table is empty
         cursor.execute('SELECT COUNT(*) FROM card_archetypes')

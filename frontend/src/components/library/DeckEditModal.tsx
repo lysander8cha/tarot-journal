@@ -380,12 +380,8 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
     setSaving(true);
     setError('');
     try {
-      // Use the first selected type as the primary cartomancy_type_id
-      const primaryTypeId = selectedTypeIds[0] || deck.cartomancy_type_id;
-
       await updateDeck(deck.id, {
         name,
-        cartomancy_type_id: primaryTypeId,
         date_published: datePublished || null,
         publisher: publisher || null,
         credits: credits || null,
