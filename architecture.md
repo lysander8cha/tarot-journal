@@ -89,7 +89,7 @@ tarot_journal/
 
 | Route File | Endpoints | Purpose |
 |------------|-----------|---------|
-| `decks.py` | `/api/decks` | Deck CRUD, metadata |
+| `decks.py` | `/api/decks` | Deck CRUD, metadata, groups |
 | `cards.py` | `/api/cards` | Card CRUD, custom fields |
 | `entries.py` | `/api/entries` | Journal entries, readings, search |
 | `spreads.py` | `/api/spreads` | Spread layout CRUD |
@@ -174,7 +174,7 @@ class Database(CoreMixin, DecksMixin, CardsMixin, CardGroupsMixin,
 | `SpreadDesigner.tsx` | Visual spread layout editor (supports read-only viewer mode) |
 | `SpreadsTab.tsx` | Spreads management with separate view/edit modes |
 | `CardEditModal.tsx` | Edit individual card details |
-| `DeckEditModal.tsx` | Edit deck metadata, rich text notes/booklet info |
+| `DeckEditModal.tsx` | Edit deck metadata, custom fields, groups, rich text notes/booklet info; deck deletion |
 | `ProfilesTab.tsx` | Profile management with debounced auto-save |
 | `StatsTab.tsx` | Statistics dashboard with charts |
 
@@ -311,3 +311,7 @@ Based on recent commits:
 7. **Spreads tab view/edit mode split** with read-only viewer and label toggle
 8. **Hidden profiles** feature to exclude rarely-used profiles from journal entry dropdowns
 9. **Auto-save on profiles** with debounced saving and status indicator
+10. **Drag-to-reorder custom fields** in deck edit modal (field order cascades to card view/edit)
+11. **Group management** in deck edit modal (add, rename, recolor, delete groups)
+12. **Deck deletion** with confirmation dialog from deck edit modal
+13. **Grid-aligned default spreads** using 80x120 card sizes snapped to 20px grid
