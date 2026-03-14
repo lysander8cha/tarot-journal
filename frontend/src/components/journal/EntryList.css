@@ -44,7 +44,7 @@
 }
 
 .entry-list__search-input {
-  width: 160px;
+  width: 275px;
 }
 
 /* ── Filters ── */
@@ -55,7 +55,7 @@
 }
 
 .entry-list__tag-filter {
-  width: 100%;
+  width: 345px;
 }
 
 /* ── Rows ── */
