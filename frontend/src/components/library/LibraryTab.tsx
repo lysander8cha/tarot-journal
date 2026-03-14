@@ -10,6 +10,7 @@ import DeckEditModal from './DeckEditModal';
 import BatchEditModal from './BatchEditModal';
 import ImportDeckModal from './ImportDeckModal';
 import { getCards, searchCards } from '../../api/cards';
+import { getDeck } from '../../api/decks';
 import type { Deck, Card } from '../../types';
 import './LibraryTab.css';
 
@@ -120,7 +121,10 @@ export default function LibraryTab() {
       {showImport && (
         <ImportDeckModal
           onClose={() => setShowImport(false)}
-          onImported={() => {}}
+          onImported={async (deckId) => {
+            const deck = await getDeck(deckId);
+            setSelectedDeck(deck);
+          }}
         />
       )}
     </div>
