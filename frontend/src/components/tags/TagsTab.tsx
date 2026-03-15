@@ -36,7 +36,7 @@ export default function TagsTab() {
         <div className="tags-tab__columns">
           <div className="tags-tab__column">
             <TagSection
-              title="Entry Tags"
+              title="Journal Entry Tags"
               tags={entryTags}
               loading={entryLoading}
               onAdd={async (name, color) => {
