@@ -26,6 +26,7 @@ export default function ProfilesTab() {
   const [birthPlaceName, setBirthPlaceName] = useState('');
   const [querentOnly, setQuerentOnly] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   // Track whether form was just populated (to skip auto-save on initial load)
   const populatingRef = useRef(false);
@@ -179,9 +180,17 @@ export default function ProfilesTab() {
               <h2 className="profiles-tab__list-title">Profiles</h2>
               <button onClick={handleNew}>+ New</button>
             </div>
+            <label className="profiles-tab__show-hidden">
+              <input
+                type="checkbox"
+                checked={showHidden}
+                onChange={(e) => setShowHidden(e.target.checked)}
+              />
+              <span>Show hidden profiles</span>
+            </label>
             <div className="profiles-tab__rows">
               {isLoading && <div className="profiles-tab__empty">Loading...</div>}
-              {profiles.map((profile) => (
+              {profiles.filter(p => showHidden || !p.hidden).map((profile) => (
                 <div
                   key={profile.id}
                   className={`profiles-tab__row ${profile.id === selectedId ? 'profiles-tab__row--selected' : ''}`}
@@ -277,7 +286,7 @@ export default function ProfilesTab() {
                       checked={hidden}
                       onChange={(e) => setHidden(e.target.checked)}
                     />
-                    <span>Hide from dropdowns</span>
+                    <span>Hide profile</span>
                   </label>
                 </div>
               </div>

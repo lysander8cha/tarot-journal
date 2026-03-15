@@ -234,6 +234,20 @@
   flex-shrink: 0;
 }
 
+.reading-editor__any-deck {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.reading-editor__any-deck input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
 /* ── Deck slots section ── */
 
 .reading-editor__slots {

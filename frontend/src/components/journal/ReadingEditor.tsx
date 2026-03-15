@@ -97,6 +97,7 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
 
   // Track deck assignments for each slot (derive from cards or use local state)
   const [slotDecks, setSlotDecks] = useState<SlotDeckMap>({});
+  const [useAnyDeck, setUseAnyDeck] = useState(false);
 
   // When spread changes, reset slot deck assignments and apply defaults.
   // NOTE: We intentionally use `decks.length` instead of `decks` in the dependency array.
@@ -316,7 +317,7 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
             >
               <option value="">Select Deck</option>
               {decks
-                .filter(d => !deckSlots[0] || deckMatchesType(d, deckSlots[0].cartomancy_type))
+                .filter(d => useAnyDeck || !deckSlots[0] || deckMatchesType(d, deckSlots[0].cartomancy_type))
                 .map((d) => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
@@ -324,6 +325,17 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
           </div>
         )}
       </div>
+
+      {value.spread_id && (
+        <label className="reading-editor__any-deck">
+          <input
+            type="checkbox"
+            checked={useAnyDeck}
+            onChange={(e) => setUseAnyDeck(e.target.checked)}
+          />
+          <span>Use any deck</span>
+        </label>
+      )}
 
       {/* Deck slot selectors for multi-deck spreads */}
       {hasMultipleSlots && (
@@ -341,7 +353,7 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
               >
                 <option value="">Select {slot.cartomancy_type} Deck</option>
                 {decks
-                  .filter(d => deckMatchesType(d, slot.cartomancy_type))
+                  .filter(d => useAnyDeck || deckMatchesType(d, slot.cartomancy_type))
                   .map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}

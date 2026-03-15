@@ -24,6 +24,20 @@
   margin: 0;
 }
 
+.profiles-tab__show-hidden {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 16px;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.profiles-tab__show-hidden input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
 .profiles-tab__rows {
   flex: 1;
   overflow-y: auto;
