@@ -112,11 +112,13 @@ def import_from_folder():
             archetype_mapping=archetype_mapping,
         )
 
-        # Create deck
+        # Create deck (save suit/court names so edit modal has correct initial values)
         deck_id = db.add_deck(
             name=deck_name,
             type_ids=[cartomancy_type_id],
             image_folder=folder,
+            suit_names=custom_suit_names,
+            court_names=custom_court_names,
         )
 
         # Find card back

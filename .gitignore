@@ -53,5 +53,8 @@ thumbnail_cache/
 app_config.json
 theme_config.json
 
+# App summary (for Claude context transfer, not code)
+APP_SUMMARY.md
+
 # Image folders (keep only Rider-Waite-Smith, Thoth, Blue Owl Lenormand, and PlayingCards)
 Hello Tarot/

@@ -560,7 +560,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
                       onClick={() => {
                         const defaults = { ...getDefaultSuits() };
                         setSuitNames(defaults);
-                        setOriginalSuitNames(defaults);
+                        setOriginalSuitNames({});
                       }}
                     >
                       Set Custom Suit Names
@@ -597,7 +597,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
                       onClick={() => {
                         const defaults = { ...COURT_CARD_DEFAULTS };
                         setCourtNames(defaults);
-                        setOriginalCourtNames(defaults);
+                        setOriginalCourtNames({});
                       }}
                     >
                       Set Custom Court Names

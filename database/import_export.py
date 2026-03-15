@@ -304,8 +304,9 @@ class ImportExportMixin:
 
         deck_dict = dict(deck)
 
-        # Get suit names
+        # Get suit and court names
         deck_dict['suit_names'] = self.get_deck_suit_names(deck_id)
+        deck_dict['court_names'] = self.get_deck_court_names(deck_id)
 
         # Get custom field definitions
         custom_fields = self.get_deck_custom_fields(deck_id)
@@ -392,7 +393,8 @@ class ImportExportMixin:
                 name=deck_data.get('name', 'Imported Deck'),
                 type_ids=[cart_type_id],
                 image_folder=deck_data.get('image_folder'),
-                suit_names=deck_data.get('suit_names')
+                suit_names=deck_data.get('suit_names'),
+                court_names=deck_data.get('court_names'),
             )
 
             # Import custom field definitions
