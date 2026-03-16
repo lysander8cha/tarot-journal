@@ -97,7 +97,11 @@ export default function LibraryTab() {
         cardId={editingCardId}
         deckId={deckId}
         cardIds={cardIds}
-        onClose={() => setEditingCardId(null)}
+        onClose={() => {
+          const id = editingCardId;
+          setEditingCardId(null);
+          if (id) setViewingCardId(id);
+        }}
         onSaved={() => {}}
         onNavigate={setEditingCardId}
       />
