@@ -480,7 +480,9 @@ export default function EntryEditorModal({ entryId, open, onClose, onSaved }: En
                 )}
               </div>
               <div className="entry-editor__field">
-                <label className="entry-editor__label">Reader</label>
+                <div className="entry-editor__querents-header">
+                  <label className="entry-editor__label">Reader</label>
+                </div>
                 <select
                   value={readerId ?? ''}
                   onChange={(e) => setReaderId(e.target.value ? Number(e.target.value) : null)}

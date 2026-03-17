@@ -41,20 +41,6 @@
   flex: 1;
 }
 
-/* Align Reader dropdown with Querent dropdowns when side-by-side.
-   The Querent header contains a button that's taller than the label,
-   so we match that height for proper alignment. */
-.entry-editor__row .entry-editor__field:not(.entry-editor__field--querents) {
-  gap: 0;
-}
-.entry-editor__row .entry-editor__field:not(.entry-editor__field--querents) .entry-editor__label {
-  /* Match height of querents-header (which contains label + button) */
-  min-height: 21px;
-  display: flex;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
 /* ── Date row ── */
 
 .entry-editor__date-row {
