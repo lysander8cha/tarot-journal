@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -17,6 +18,10 @@ export default function RichTextEditor({
   placeholder,
   minHeight = 120,
 }: RichTextEditorProps) {
+  // Track whether the last content change came from the user typing (internal)
+  // vs the parent passing new content (external), to avoid update loops.
+  const isInternalChange = useRef(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -34,9 +39,24 @@ export default function RichTextEditor({
     ],
     content,
     onUpdate: ({ editor }) => {
+      isInternalChange.current = true;
       onChange(editor.getHTML());
     },
   });
+
+  // Sync editor content when the prop changes externally (e.g. navigating between cards)
+  useEffect(() => {
+    if (!editor) return;
+    // Skip if this change originated from the user typing in the editor
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
+    // Only update if the editor's content actually differs from the prop
+    if (editor.getHTML() !== content) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   if (!editor) return null;
 

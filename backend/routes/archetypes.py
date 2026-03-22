@@ -24,4 +24,4 @@ def search_archetypes():
     query = request.args.get('query', '')
     ctype = request.args.get('cartomancy_type')
     rows = db.search_archetypes(query, cartomancy_type=ctype)
-    return jsonify([_row_to_dict(r) for r in rows])
+    return jsonify([row_to_dict(r) for r in rows])

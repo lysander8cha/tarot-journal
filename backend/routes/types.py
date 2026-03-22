@@ -20,6 +20,8 @@ def get_types():
 def add_type():
     db = current_app.config['DB']
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     name = data.get('name', '').strip()
     if not name:
         return jsonify({'error': 'Name is required'}), 400
