@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import RichTextEditor from '../common/RichTextEditor';
 import { ensureHtml, slotTypes } from '../../utils/formatting';
 import type { DeckSlot, ReferenceSource, Tag } from '../../types';
+import SearchCombobox from '../common/SearchCombobox';
 import './SpreadProperties.css';
 
 interface SpreadPropertiesProps {
@@ -179,16 +180,12 @@ export default function SpreadProperties({
           Attribute this spread to the reference source it comes from
           (manage sources in Settings → Reference Sources).
         </div>
-        <select
-          value={sourceId === null ? '' : String(sourceId)}
-          onChange={(e) =>
-            onSourceIdChange(e.target.value === '' ? null : Number(e.target.value))}
-        >
-          <option value="">No source</option>
-          {sources.map(s => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+        <SearchCombobox
+          options={sources.map(s => ({ id: s.id, label: s.name }))}
+          value={sourceId ?? undefined}
+          onSelect={(opt) => onSourceIdChange(opt ? opt.id : null)}
+          placeholder="No source"
+        />
       </div>
 
       <div className="spread-props__field">
