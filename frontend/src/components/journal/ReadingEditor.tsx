@@ -342,8 +342,31 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
   // committed selection advances focus to the next card row.
   const freeFormRefs = useRef<Array<SearchComboboxHandle | null>>([]);
 
+  // Same card placed more than once in this reading — physically
+  // impossible with one deck, so almost certainly a mis-click. Warn,
+  // never block (per-reading; reuse across readings is legitimate).
+  const duplicateNames = (() => {
+    const counts = new Map<string, { name: string; n: number }>();
+    for (const c of value.cards) {
+      if (!c.name) continue;
+      const key = c.card_id != null
+        ? `id:${c.deck_id ?? ''}:${c.card_id}`
+        : `nm:${c.deck_id ?? ''}:${c.name}`;
+      const bucket = counts.get(key) ?? { name: c.name, n: 0 };
+      bucket.n += 1;
+      counts.set(key, bucket);
+    }
+    return [...counts.values()].filter(b => b.n > 1).map(b => b.name);
+  })();
+
   return (
     <div className="reading-editor">
+      {duplicateNames.length > 0 && (
+        <div className="reading-editor__dup-warning" role="alert">
+          ⚠ {duplicateNames.join(', ')} appears more than once in this
+          reading — double-check the positions.
+        </div>
+      )}
       <div className="reading-editor__header">
         <span className="reading-editor__label">Reading {index + 1}</span>
         <span className="reading-editor__header-actions">

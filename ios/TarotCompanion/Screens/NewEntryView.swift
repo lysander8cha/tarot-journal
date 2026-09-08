@@ -42,6 +42,17 @@ struct NewEntryView: View {
         var chosenCards: [PickedCard?] {
             spread != nil ? cards : freeformCards
         }
+        /// Card names placed more than once in this reading — almost
+        /// certainly a mis-tap with a physical deck. Advisory only.
+        var duplicateNames: [String] {
+            var counts: [Int64: (name: String, n: Int)] = [:]
+            for case let card? in chosenCards {
+                var bucket = counts[card.cardId] ?? (card.name, 0)
+                bucket.n += 1
+                counts[card.cardId] = bucket
+            }
+            return counts.values.filter { $0.n > 1 }.map { $0.name }
+        }
         var isValid: Bool {
             deckId != nil && chosenCards.contains { $0 != nil }
         }
@@ -210,6 +221,14 @@ struct NewEntryView: View {
             }
             pickerRow("Spread", value: reading.spread?.name ?? "No spread") {
                 activePicker = .spread(index)
+            }
+
+            if !reading.duplicateNames.isEmpty {
+                Label(
+                    "\(reading.duplicateNames.joined(separator: ", ")) appears more than once in this reading",
+                    systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(TJ.textAccent)
             }
 
             if reading.deckId == nil {

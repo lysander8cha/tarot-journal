@@ -407,3 +407,14 @@
   letter-spacing: var(--tj-kicker-tracking);
   color: var(--tj-text-kicker);
 }
+
+/* Duplicate-card warning: advisory, never blocking */
+.reading-editor__dup-warning {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgb(var(--tj-accent-rgb) / 35%);
+  border-radius: var(--tj-radius-row);
+  background: var(--tj-tint);
+  color: var(--warning);
+  font-size: var(--font-size-small);
+}
