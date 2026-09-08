@@ -311,6 +311,7 @@ struct SpreadLayoutView: View {
     let positions: [SpreadPosition]?
     var onTapCard: ((ReadingCard) -> Void)?
     var onTapEmptySlot: ((Int) -> Void)?
+    var onLongPressCard: ((ReadingCard) -> Void)?
 
     var body: some View {
         if let positions, !positions.isEmpty {
@@ -365,6 +366,7 @@ struct SpreadLayoutView: View {
                     CardImageView(cardId: card.cardId,
                                   reversed: card.reversed ?? false)
                         .onTapGesture { onTapCard?(card) }
+                        .onLongPressGesture { onLongPressCard?(card) }
                 } else {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(TJ.well)

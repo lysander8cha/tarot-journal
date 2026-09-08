@@ -226,8 +226,17 @@ struct NewEntryView: View {
                                 pickingCard = (index, slot)
                             }
                         },
-                        onTapEmptySlot: { pickingCard = (index, $0) })
+                        onTapEmptySlot: { pickingCard = (index, $0) },
+                        onLongPressCard: { card in
+                            if let slot = card.positionIndex,
+                               readings[index].cards.indices.contains(slot) {
+                                readings[index].cards[slot]?.reversed.toggle()
+                            }
+                        })
                         .padding(.vertical, 6)
+                    Text("Tap a slot to set its card · long-press a card to reverse it")
+                        .font(.caption2)
+                        .foregroundStyle(TJ.textFaint)
                 }
                 ForEach(Array(spread.positionLabels.enumerated()),
                         id: \.offset) { slot, label in
@@ -310,11 +319,13 @@ struct NewEntryView: View {
                 }
             }
             Spacer()
-            if card != nil {
+            if let card {
                 Button(action: toggleReversed) {
                     Image(systemName: "arrow.up.arrow.down")
+                        .foregroundStyle(card.reversed ? TJ.accent : TJ.textFaint)
                 }
                 .buttonStyle(.borderless)
+                .accessibilityLabel(card.reversed ? "Mark upright" : "Mark reversed")
                 Button(action: clear) {
                     Image(systemName: "xmark.circle")
                 }
@@ -578,16 +589,34 @@ struct CardPickerView: View {
         NavigationStack {
             NocturneScreen {
                 List(filtered, id: \.id) { card in
-                    Button {
-                        onPick(.init(cardId: card.id, name: card.name))
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 10) {
-                            CardImageView(cardId: card.id)
-                                .frame(width: 30, height: 46)
-                                .clipShape(RoundedRectangle(cornerRadius: 3))
-                            Text(card.name).foregroundStyle(TJ.text)
+                    HStack(spacing: 10) {
+                        Button {
+                            onPick(.init(cardId: card.id, name: card.name))
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 10) {
+                                CardImageView(cardId: card.id)
+                                    .frame(width: 30, height: 46)
+                                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                                Text(card.name).foregroundStyle(TJ.text)
+                            }
                         }
+                        .buttonStyle(.borderless)
+                        Spacer()
+                        Button {
+                            onPick(.init(cardId: card.id, name: card.name,
+                                         reversed: true))
+                            dismiss()
+                        } label: {
+                            Text("⟲ rev")
+                                .font(.caption)
+                                .foregroundStyle(TJ.textAccent)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Capsule().fill(TJ.tint))
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Choose \(card.name) reversed")
                     }
                     .listRowBackground(TJ.panel)
                 }
