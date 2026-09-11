@@ -43,9 +43,9 @@ class DecksMixin:
         return out
 
     def rename_cartomancy_type(self, type_id: int, new_name: str):
-        """Rename a type everywhere: the types row plus every table
-        that stores the name as a string (mirrors the one-time rename
-        migrations in core.py, but discovered dynamically)."""
+        """Rename a type everywhere: the types row plus every stored
+        reference to the old name (plain columns, spreads' JSON,
+        typed entity-note keys)."""
         cursor = self.conn.cursor()
         row = cursor.execute(
             'SELECT name FROM cartomancy_types WHERE id = ?', (type_id,)
@@ -55,11 +55,64 @@ class DecksMixin:
         old_name = row[0] if not isinstance(row, dict) else row['name']
         cursor.execute('UPDATE cartomancy_types SET name = ? WHERE id = ?',
                        (new_name, type_id))
+        self._rename_type_name_references(cursor, old_name, new_name)
+        self._commit()
+
+    def _rename_type_name_references(self, cursor, old_name: str, new_name: str):
+        """Rewrite every stored occurrence of a type NAME (the types
+        row itself is the caller's job): plain cartomancy_type columns
+        on every table that has one, the JSON references inside
+        spreads (allowed_deck_types elements and deck_slots' per-slot
+        cartomancy_type), and typed entity-note keys ('Old::Clubs').
+        Matches are exact, so renaming 'Lenormand' can never touch
+        'Grand Jeu Lenormand'."""
         for table in self._tables_with_cartomancy_type_column():
             cursor.execute(
                 f'UPDATE {table} SET cartomancy_type = ? WHERE cartomancy_type = ?',
                 (new_name, old_name))
-        self._commit()
+
+        rows = cursor.execute(
+            'SELECT id, allowed_deck_types, deck_slots FROM spreads '
+            'WHERE allowed_deck_types IS NOT NULL OR deck_slots IS NOT NULL'
+        ).fetchall()
+        for spread in rows:
+            allowed = spread['allowed_deck_types']
+            slots_raw = spread['deck_slots']
+            changed = False
+            if allowed:
+                try:
+                    types = json.loads(allowed)
+                    renamed = [new_name if t == old_name else t for t in types]
+                    if renamed != types:
+                        allowed = json.dumps(renamed)
+                        changed = True
+                except (ValueError, TypeError):
+                    pass
+            if slots_raw:
+                try:
+                    slots = json.loads(slots_raw)
+                    slot_changed = False
+                    for slot in slots:
+                        if isinstance(slot, dict) and slot.get('cartomancy_type') == old_name:
+                            slot['cartomancy_type'] = new_name
+                            slot_changed = True
+                    if slot_changed:
+                        slots_raw = json.dumps(slots)
+                        changed = True
+                except (ValueError, TypeError):
+                    pass
+            if changed:
+                cursor.execute(
+                    'UPDATE spreads SET allowed_deck_types = ?, deck_slots = ? '
+                    'WHERE id = ?',
+                    (allowed, slots_raw, spread['id']))
+
+        # Suit/rank entity notes are keyed 'Type::Name'.
+        cursor.execute(
+            "UPDATE entity_source_notes "
+            "SET entity_key = ? || substr(entity_key, ?) "
+            "WHERE entity_key LIKE ? || '::%'",
+            (new_name, len(old_name) + 1, old_name))
 
     def delete_cartomancy_type(self, type_id: int):
         """Delete a type and its per-type data. The caller must have

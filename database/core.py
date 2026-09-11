@@ -1671,6 +1671,18 @@ class CoreMixin:
                 seed_i_ching_correspondences(cursor)
             self.set_setting('i_ching_default_seeded', 'true')
 
+        # One-time repair: the original Lenormand -> Petit Lenormand
+        # rename (above) worked from a hardcoded table list that
+        # missed entry_readings and never looked inside spreads' JSON
+        # columns (allowed_deck_types, deck_slots). Re-run the full
+        # reference rename once with the complete machinery; exact
+        # matching keeps 'Grand Jeu Lenormand' untouched, and on
+        # already-clean databases this is a no-op.
+        if self.get_setting('petit_lenormand_reference_repair_done') != 'true':
+            self._rename_type_name_references(
+                cursor, 'Lenormand', 'Petit Lenormand')
+            self.set_setting('petit_lenormand_reference_repair_done', 'true')
+
         # One-time migration: rename legacy source_group labels (remove "All " prefix)
         if self.get_setting('source_group_label_migration_done') != 'true':
             legacy_rename = {
