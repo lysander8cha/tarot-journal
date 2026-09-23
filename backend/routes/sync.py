@@ -354,6 +354,18 @@ def sync_source_entries():
 
 
 PHONE_TAG_NAME = 'logged on phone'
+PUSH_STAMP_KEY = 'last_phone_push_at'
+
+
+@sync_bp.route('/api/sync/push-activity')
+def push_activity():
+    """Loopback-only: when the last phone entry arrived. The desktop
+    frontend polls this cheaply and refreshes its journal cache when
+    it changes, so phone entries appear without a restart."""
+    if not is_loopback():
+        abort(403)
+    db = current_app.config['DB']
+    return jsonify({'last_push_at': db.get_setting(PUSH_STAMP_KEY)})
 
 
 @sync_bp.route('/api/sync/push-entry', methods=['POST'])
@@ -439,6 +451,10 @@ def push_entry(data):
          if t['name'].lower() == PHONE_TAG_NAME), None)
     tag_id = phone_tag['id'] if phone_tag else db.add_tag(PHONE_TAG_NAME)
     db.add_entry_tag(entry_id, tag_id)
+
+    # Signal the desktop UI (see /api/sync/push-activity).
+    from datetime import datetime
+    db.set_setting(PUSH_STAMP_KEY, datetime.now().isoformat())
 
     return jsonify({'id': entry_id}), 201
 

@@ -426,3 +426,18 @@ def test_push_entry_with_multiple_readings(client, db):
     assert [r['spread_name'] for r in readings] == ['Daily Draw', 'Clarifier']
     assert [r['position_order'] for r in readings] == [0, 1]
     assert readings[1]['deck_name'] == 'ZZ Second Deck'
+
+
+def test_push_entry_stamps_activity(client, db):
+    assert client.get('/api/sync/push-activity').get_json() == {
+        'last_push_at': None}
+    deck_id, card_id = make_deck_with_card(db)
+    token = _pair(client)
+    client.post('/api/sync/push-entry',
+                json=_push_payload(db, deck_id, card_id, uuid='zz-stamp'),
+                headers=_auth(token), environ_overrides=LAN)
+    stamp = client.get('/api/sync/push-activity').get_json()['last_push_at']
+    assert stamp  # set by the push
+    # The desktop-only endpoint is invisible from the LAN
+    assert client.get('/api/sync/push-activity',
+                      environ_overrides=LAN).status_code == 403

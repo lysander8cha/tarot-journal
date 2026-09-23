@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { ConfirmDialogHost } from './components/common/ConfirmDialog';
@@ -13,6 +13,7 @@ import GettingStartedPanel from './components/onboarding/GettingStartedPanel';
 import GuideOverlay from './components/onboarding/GuideOverlay';
 import { TOURS, type Tour } from './components/onboarding/tours';
 import { getOnboardingFlags } from './api/onboarding';
+import { getPushActivity } from './api/sync';
 import { getProfiles } from './api/profiles';
 import { getDecks } from './api/decks';
 import ShortcutsOverlay from './components/common/ShortcutsOverlay';
@@ -420,6 +421,7 @@ export default function App() {
             <ScribeLauncher open onClose={() => setScribeOpen(false)} />
           )}
           <OnboardingHost onGoTo={(tab) => { void navigate({ tab }); }} />
+          <PhonePushWatcher />
           <ConfirmDialogHost />
         </ToastProvider>
       </ThemeProvider>
@@ -469,4 +471,29 @@ function OnboardingHost({ onGoTo }: { onGoTo: (tab: TabId) => void }) {
       {tour && <GuideOverlay key={tour.id} tour={tour} onDone={() => setTour(null)} />}
     </>
   );
+}
+
+/** Polls the backend's last-phone-push stamp (a few bytes every 15s)
+ *  and refreshes the journal caches when it changes — so an entry
+ *  logged on the phone appears in the open desktop app within
+ *  seconds instead of after a restart. */
+function PhonePushWatcher() {
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ['phone-push-activity'],
+    queryFn: getPushActivity,
+    refetchInterval: 15_000,
+  });
+  const prev = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (data === undefined) return;
+    const stamp = data.last_push_at ?? null;
+    if (prev.current !== undefined && stamp !== prev.current) {
+      queryClient.invalidateQueries({ queryKey: ['entries'] });
+      queryClient.invalidateQueries({ queryKey: ['entry-search'] });
+      queryClient.invalidateQueries({ queryKey: ['entry-tags'] });
+    }
+    prev.current = stamp;
+  }, [data, queryClient]);
+  return null;
 }
