@@ -441,3 +441,19 @@ def test_push_entry_stamps_activity(client, db):
     # The desktop-only endpoint is invisible from the LAN
     assert client.get('/api/sync/push-activity',
                       environ_overrides=LAN).status_code == 403
+
+
+def test_push_entry_with_reader(client, db):
+    deck_id, card_id = make_deck_with_card(db)
+    reader_id = db.add_profile('ZZ Reader')
+    token = _pair(client)
+    payload = _push_payload(db, deck_id, card_id, uuid='zz-reader-uuid')
+    payload['reader_id'] = reader_id
+    res = client.post('/api/sync/push-entry', json=payload,
+                      headers=_auth(token), environ_overrides=LAN)
+    assert res.status_code == 201
+    entry = db.get_entry(res.get_json()['id'])
+    assert entry['reader_id'] == reader_id
+    # And the profiles snapshot carries the querent_only flag
+    rows = client.get('/api/sync/snapshot/profiles').get_json()['rows']
+    assert 'querent_only' in rows[0]

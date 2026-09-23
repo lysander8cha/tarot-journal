@@ -209,6 +209,14 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v7-reader") { db in
+            // Readers exclude querent-only profiles, so the flag
+            // syncs along for the composer's Reader picker.
+            try db.alter(table: "profiles") { t in
+                t.add(column: "querent_only", .integer)
+            }
+        }
+
         try migrator.migrate(writer)
     }
 

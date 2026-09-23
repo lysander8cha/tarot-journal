@@ -163,7 +163,7 @@ def unpair():
 SNAPSHOT_TABLES = {
     'spreads': ('SELECT id, name, description, positions, deck_slots, '
                 'allowed_deck_types, archived FROM spreads'),
-    'profiles': 'SELECT id, name, hidden FROM profiles',
+    'profiles': 'SELECT id, name, hidden, querent_only FROM profiles',
     'decks': ('SELECT id, name, favorite, correspondence_system_id '
               'FROM decks WHERE favorite = 1'),
     'cards': ('SELECT c.id, c.deck_id, c.name, c.archetype, c.rank, '
@@ -415,6 +415,7 @@ def push_entry(data):
         location_name=location_name,
         location_lat=location_lat,
         location_lon=location_lon,
+        reader_id=data.get('reader_id'),
     )
     cursor = db.conn.cursor()
     cursor.execute(

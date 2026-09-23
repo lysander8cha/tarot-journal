@@ -72,12 +72,14 @@ struct NewEntryView: View {
 
     enum ActivePicker: Identifiable {
         case querent
+        case reader
         case deck(Int)
         case spread(Int)
 
         var id: String {
             switch self {
             case .querent: return "querent"
+            case .reader: return "reader"
             case .deck(let i): return "deck-\(i)"
             case .spread(let i): return "spread-\(i)"
             }
@@ -87,11 +89,13 @@ struct NewEntryView: View {
     @State private var title = ""
     @State private var notes = ""
     @State private var querentIds: [Int64] = []
+    @State private var readerId: Int64?
     @State private var readingDate = Date()
     @State private var locationName = ""
     @State private var readings: [ComposedReading] = [ComposedReading()]
 
     @State private var profiles: [(id: Int64, name: String)] = []
+    @State private var readerOptions: [(id: Int64, name: String)] = []
     @State private var decks: [(id: Int64, name: String)] = []
     @State private var spreads: [SpreadOption] = []
     @State private var activePicker: ActivePicker?
@@ -171,6 +175,11 @@ struct NewEntryView: View {
                 title: "Querents",
                 options: profiles.map { ($0.id, $0.name) },
                 selection: $querentIds)
+        case .reader:
+            OptionPickerSheet(
+                title: "Reader",
+                options: readerOptions.map { ($0.id, $0.name) },
+                noneLabel: "None") { readerId = $0 }
         case .deck(let index):
             OptionPickerSheet(
                 title: "Deck",
@@ -222,6 +231,10 @@ struct NewEntryView: View {
 
             pickerRow("Querents", value: querentSummary) {
                 activePicker = .querent
+            }
+            pickerRow("Reader",
+                      value: readerOptions.first { $0.id == readerId }?.name ?? "None") {
+                activePicker = .reader
             }
 
             DatePicker("Date & time", selection: $readingDate)
@@ -471,6 +484,13 @@ struct NewEntryView: View {
             profiles = try Row.fetchAll(
                 db, sql: "SELECT id, name FROM profiles WHERE hidden IS NOT 1 ORDER BY name")
                 .map { ($0["id"], $0["name"]) }
+            readerOptions = try Row.fetchAll(
+                db, sql: """
+                    SELECT id, name FROM profiles
+                    WHERE hidden IS NOT 1 AND querent_only IS NOT 1
+                    ORDER BY name
+                    """)
+                .map { ($0["id"], $0["name"]) }
             decks = try Row.fetchAll(
                 db, sql: "SELECT id, name FROM decks ORDER BY name")
                 .map { ($0["id"], $0["name"]) }
@@ -546,6 +566,9 @@ struct NewEntryView: View {
             "querent_ids": querentIds,
             "readings": readingPayloads,
         ]
+        if let readerId {
+            payload["reader_id"] = readerId
+        }
         if !title.trimmingCharacters(in: .whitespaces).isEmpty {
             payload["title"] = title
         }
