@@ -30,14 +30,24 @@ struct NewEntryView: View {
         func hash(into hasher: inout Hasher) { hasher.combine(id) }
     }
 
+    /// An additional card beyond the spread's positions, optionally
+    /// clarifying one of them (the desktop's extra-card model).
+    struct ExtraCard: Identifiable {
+        let id = UUID()
+        var card: PickedCard
+        var clarifies: Int?
+    }
+
     /// One reading being composed: its deck, optional spread, and
-    /// cards (per-position slots, or a freeform list without one).
+    /// cards (per-position slots, or a freeform list without one),
+    /// plus extra/clarifier cards when a spread is set.
     struct ComposedReading: Identifiable {
         let id = UUID()
         var deckId: Int64?
         var spread: SpreadOption?
         var cards: [PickedCard?] = []
         var freeformCards: [PickedCard] = []
+        var extraCards: [ExtraCard] = []
 
         var chosenCards: [PickedCard?] {
             spread != nil ? cards : freeformCards
@@ -46,7 +56,8 @@ struct NewEntryView: View {
         /// certainly a mis-tap with a physical deck. Advisory only.
         var duplicateNames: [String] {
             var counts: [Int64: (name: String, n: Int)] = [:]
-            for case let card? in chosenCards {
+            let all = chosenCards.compactMap { $0 } + extraCards.map { $0.card }
+            for card in all {
                 var bucket = counts[card.cardId] ?? (card.name, 0)
                 bucket.n += 1
                 counts[card.cardId] = bucket
@@ -54,7 +65,8 @@ struct NewEntryView: View {
             return counts.values.filter { $0.n > 1 }.map { $0.name }
         }
         var isValid: Bool {
-            deckId != nil && chosenCards.contains { $0 != nil }
+            deckId != nil
+                && (chosenCards.contains { $0 != nil } || !extraCards.isEmpty)
         }
     }
 
@@ -184,13 +196,22 @@ struct NewEntryView: View {
 
     /// A reading's picked cards shaped for the live spread preview.
     private func previewCards(_ reading: ComposedReading) -> [ReadingCard] {
-        reading.cards.enumerated().compactMap { index, slot in
+        let base = reading.cards.enumerated().compactMap { index, slot -> ReadingCard? in
             guard let card = slot else { return nil }
             return ReadingCard(
                 name: card.name, reversed: card.reversed,
                 deckId: reading.deckId, deckName: nil,
                 positionIndex: index, cardId: card.cardId, clarifies: nil)
         }
+        let offset = reading.cards.count
+        let extras = reading.extraCards.enumerated().map { index, extra in
+            ReadingCard(
+                name: extra.card.name, reversed: extra.card.reversed,
+                deckId: reading.deckId, deckName: nil,
+                positionIndex: offset + index, cardId: extra.card.cardId,
+                clarifies: extra.clarifies)
+        }
+        return base + extras
     }
 
     // MARK: - Sections
@@ -273,6 +294,16 @@ struct NewEntryView: View {
                         }
                     }
                 }
+                ForEach(Array(reading.extraCards.enumerated()),
+                        id: \.element.id) { extraIndex, extra in
+                    extraCardRow(readingIndex: index, extraIndex: extraIndex,
+                                 extra: extra, spread: spread)
+                }
+                Button {
+                    pickingCard = (index, nil)
+                } label: {
+                    Label("Add extra card", systemImage: "plus")
+                }
             } else {
                 ForEach(Array(reading.freeformCards.enumerated()),
                         id: \.element.id) { cardIndex, card in
@@ -354,6 +385,61 @@ struct NewEntryView: View {
         }
     }
 
+    /// An extra/clarifier card row: name, which position it
+    /// clarifies (or none), reverse and remove.
+    private func extraCardRow(readingIndex: Int, extraIndex: Int,
+                              extra: ExtraCard,
+                              spread: SpreadOption) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(clarifiesLabel(extra, spread: spread))
+                    .font(.caption)
+                    .foregroundStyle(TJ.textMuted)
+                Text(extra.card.name + (extra.card.reversed ? "  ⟲ reversed" : ""))
+                    .foregroundStyle(TJ.text)
+            }
+            Spacer()
+            Menu {
+                Button("No position") {
+                    readings[readingIndex].extraCards[extraIndex].clarifies = nil
+                }
+                ForEach(Array(spread.positionLabels.enumerated()),
+                        id: \.offset) { slot, label in
+                    Button(label.isEmpty ? "Position \(slot + 1)" : label) {
+                        readings[readingIndex].extraCards[extraIndex].clarifies = slot
+                    }
+                }
+            } label: {
+                Image(systemName: "link")
+                    .foregroundStyle(extra.clarifies != nil ? TJ.accent : TJ.textFaint)
+            }
+            .accessibilityLabel("Choose which position this clarifies")
+            Button {
+                readings[readingIndex].extraCards[extraIndex].card.reversed.toggle()
+            } label: {
+                Image(systemName: "arrow.up.arrow.down")
+                    .foregroundStyle(extra.card.reversed ? TJ.accent : TJ.textFaint)
+            }
+            .buttonStyle(.borderless)
+            Button {
+                readings[readingIndex].extraCards.remove(at: extraIndex)
+            } label: {
+                Image(systemName: "xmark.circle")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(TJ.textFaint)
+        }
+    }
+
+    private func clarifiesLabel(_ extra: ExtraCard, spread: SpreadOption) -> String {
+        guard let slot = extra.clarifies,
+              spread.positionLabels.indices.contains(slot) else {
+            return "Extra card"
+        }
+        let label = spread.positionLabels[slot]
+        return "Clarifies \(label.isEmpty ? "position \(slot + 1)" : label)"
+    }
+
     private var notesSection: some View {
         Section("Notes") {
             TextEditor(text: $notes)
@@ -371,6 +457,9 @@ struct NewEntryView: View {
             if readings[picking.reading].cards.indices.contains(slot) {
                 readings[picking.reading].cards[slot] = picked
             }
+        } else if readings[picking.reading].spread != nil {
+            readings[picking.reading].extraCards.append(
+                ExtraCard(card: picked, clarifies: nil))
         } else {
             readings[picking.reading].freeformCards.append(picked)
         }
@@ -422,6 +511,21 @@ struct NewEntryView: View {
                     "deck_id": deckId,
                     "deck_name": deckName ?? "",
                 ])
+            }
+            let extraOffset = reading.chosenCards.count
+            for (index, extra) in reading.extraCards.enumerated() {
+                var payloadCard: [String: Any] = [
+                    "card_id": extra.card.cardId,
+                    "name": extra.card.name,
+                    "reversed": extra.card.reversed,
+                    "position_index": extraOffset + index,
+                    "deck_id": deckId,
+                    "deck_name": deckName ?? "",
+                ]
+                if let clarifies = extra.clarifies {
+                    payloadCard["clarifies"] = clarifies
+                }
+                cardsUsed.append(payloadCard)
             }
             readingPayloads.append([
                 "deck_id": deckId,
@@ -597,11 +701,17 @@ struct CardPickerView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
-    @State private var cards: [(id: Int64, name: String)] = []
+    @State private var cards: [(id: Int64, name: String, archetype: String?)] = []
 
-    var filtered: [(id: Int64, name: String)] {
+    var filtered: [(id: Int64, name: String, archetype: String?)] {
         guard !searchText.isEmpty else { return cards }
-        return cards.filter { $0.name.lowercased().contains(searchText.lowercased()) }
+        let q = searchText.lowercased()
+        // Deck-specific names AND archetype names both match, like the
+        // desktop ("Strength" finds a deck's renamed "La Force").
+        return cards.filter {
+            $0.name.lowercased().contains(q)
+                || ($0.archetype ?? "").lowercased().contains(q)
+        }
     }
 
     var body: some View {
@@ -617,7 +727,15 @@ struct CardPickerView: View {
                                 CardImageView(cardId: card.id)
                                     .frame(width: 30, height: 46)
                                     .clipShape(RoundedRectangle(cornerRadius: 3))
-                                Text(card.name).foregroundStyle(TJ.text)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(card.name).foregroundStyle(TJ.text)
+                                    if let archetype = card.archetype,
+                                       !archetype.isEmpty, archetype != card.name {
+                                        Text(archetype)
+                                            .font(.caption2)
+                                            .foregroundStyle(TJ.textFaint)
+                                    }
+                                }
                             }
                         }
                         .buttonStyle(.borderless)
@@ -647,8 +765,8 @@ struct CardPickerView: View {
         .task {
             cards = (try? appModel.database.writer.read { db in
                 try Row.fetchAll(
-                    db, sql: "SELECT id, name FROM cards WHERE deck_id = ? ORDER BY card_order, id",
-                    arguments: [deckId]).map { ($0["id"], $0["name"]) }
+                    db, sql: "SELECT id, name, archetype FROM cards WHERE deck_id = ? ORDER BY card_order, id",
+                    arguments: [deckId]).map { ($0["id"], $0["name"], $0["archetype"]) }
             }) ?? []
         }
     }
