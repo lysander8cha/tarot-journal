@@ -79,6 +79,7 @@ struct JournalListView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .accessibilityLabel("New entry")
                 }
                 if !querents.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {

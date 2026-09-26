@@ -111,17 +111,30 @@ final class SyncEngine: ObservableObject {
     @MainActor
     func submitEntry(_ payload: [String: Any]) async {
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
-              let jsonString = String(data: data, encoding: .utf8) else { return }
+              let jsonString = String(data: data, encoding: .utf8) else {
+            statusMessage = "Could not save the entry — please try again."
+            return
+        }
         let now = ISO8601DateFormatter().string(from: Date())
-        try? await database.writer.write { db in
-            try db.execute(
-                sql: "INSERT INTO pending_entries (payload_json, created_at) VALUES (?, ?)",
-                arguments: [jsonString, now])
+        do {
+            try await database.writer.write { db in
+                try db.execute(
+                    sql: "INSERT INTO pending_entries (payload_json, created_at) VALUES (?, ?)",
+                    arguments: [jsonString, now])
+            }
+        } catch {
+            statusMessage = "Could not save the entry: \(error.localizedDescription)"
+            return
         }
         await refreshPendingCount()
-        // Quick pass: deliver the entry and refresh the journal, but
-        // never make a save wait behind the image pre-download.
-        await syncNow(includeImages: false)
+        // The save itself is the local write above; delivery happens
+        // in the background. Awaiting the sync here froze the composer
+        // for a minute whenever the Mac was unreachable — a connection
+        // attempt to an absent host hangs until it times out, and the
+        // Save button looked simply broken. Offline, the entry waits
+        // safely in the outbox for the next successful sync.
+        // (Quick pass: skip the image pre-download either way.)
+        Task { await self.syncNow(includeImages: false) }
     }
 
     @MainActor

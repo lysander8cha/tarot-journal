@@ -220,6 +220,39 @@ struct AppDatabase {
         try migrator.migrate(writer)
     }
 
+    #if DEBUG
+    /// Deterministic "ZZ" fixtures for the composer UI test: a small
+    /// deck, a three-card spread, and two profiles replace whatever
+    /// synced data the simulator holds (the next normal launch just
+    /// re-syncs it). Never compiled into release builds.
+    func seedForComposerUITest() throws {
+        try writer.write { db in
+            try db.execute(sql: """
+                DELETE FROM pending_entries;
+                DELETE FROM decks;
+                DELETE FROM cards;
+                DELETE FROM spreads;
+                DELETE FROM profiles;
+                INSERT INTO decks (id, name, favorite)
+                    VALUES (9001, 'ZZ UITest Deck', 0);
+                INSERT INTO cards (id, deck_id, name, card_order) VALUES
+                    (9101, 9001, 'ZZ Card One', 1),
+                    (9102, 9001, 'ZZ Card Two', 2),
+                    (9103, 9001, 'ZZ Card Three', 3);
+                INSERT INTO spreads (id, name, positions, archived) VALUES (9201,
+                    'ZZ Three Card',
+                    '[{"x":0,"y":0,"width":100,"height":160,"label":"Past"},
+                      {"x":110,"y":0,"width":100,"height":160,"label":"Present"},
+                      {"x":220,"y":0,"width":100,"height":160,"label":"Future"}]',
+                    0);
+                INSERT INTO profiles (id, name, hidden, querent_only) VALUES
+                    (9301, 'ZZ Querent', 0, 1),
+                    (9302, 'ZZ Reader', 0, 0);
+                """)
+        }
+    }
+    #endif
+
     // MARK: - Sync-state helpers
 
     func syncState(_ key: String) throws -> String? {

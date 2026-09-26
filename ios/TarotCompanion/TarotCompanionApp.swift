@@ -63,16 +63,37 @@ final class AppModel: ObservableObject {
             .store(in: &cancellables)
 
         #if DEBUG && targetEnvironment(simulator)
-        // Development convenience: in the simulator, talk to the
-        // desktop app on this Mac without pairing (loopback is
-        // trusted by the desktop), and pull on every launch so the
-        // simulator always shows live data. Never compiled into
-        // device builds.
-        if engine.serverURL == nil {
+        if ProcessInfo.processInfo.arguments.contains("-seedComposerTest") {
+            // UI-test mode: plant fixtures and point sync at the UI
+            // test's tar-pit server (accepts connections, never
+            // replies — what an asleep Mac looks like from the
+            // phone), so saving must not wait on the network and
+            // nothing can touch the real desktop app.
+            try? database.seedForComposerUITest()
             try? database.setSyncState(
-                "server_url", "http://127.0.0.1:5678")
+                "server_url", "http://127.0.0.1:5998")
+        } else {
+            // Development convenience: in the simulator, talk to the
+            // desktop app on this Mac without pairing (loopback is
+            // trusted by the desktop), and pull on every launch so the
+            // simulator always shows live data. Never compiled into
+            // device builds.
+            if engine.serverURL == nil {
+                try? database.setSyncState(
+                    "server_url", "http://127.0.0.1:5678")
+            } else if engine.serverURL?.port == 5998 {
+                // A UI-test run left the tar-pit configured. Point the
+                // simulator back at the desktop app and drop the test
+                // outbox (only "ZZ" fixtures can be queued in that
+                // state — they must never push to the real journal).
+                try? database.setSyncState(
+                    "server_url", "http://127.0.0.1:5678")
+                try? database.writer.write { db in
+                    try db.execute(sql: "DELETE FROM pending_entries")
+                }
+            }
+            Task { await engine.syncNow() }
         }
-        Task { await engine.syncNow() }
         #endif
     }
 }

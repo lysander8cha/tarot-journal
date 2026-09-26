@@ -44,6 +44,15 @@ targets:
         DEVELOPMENT_TEAM: VLJJ5QWND9   # the user's personal Apple ID team
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1"
+  TarotCompanionUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [TarotCompanionUITests]
+    dependencies:
+      - target: TarotCompanion
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
   TarotCompanionTests:
     type: bundle.unit-test
     platform: iOS
@@ -66,3 +75,4 @@ schemes:
       config: Debug
       targets:
         - TarotCompanionTests
+        - TarotCompanionUITests

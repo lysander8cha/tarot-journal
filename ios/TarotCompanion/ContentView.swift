@@ -2,6 +2,11 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selectedTab = ContentView.initialTab()
+    #if DEBUG
+    // A real @State, not .constant — the routed screen must be able
+    // to dismiss itself (Cancel/Save in the composer, for instance).
+    @State private var debugRoute = DebugRoute.fromLaunchArguments()
+    #endif
 
     static func initialTab() -> Int {
         #if DEBUG
@@ -38,7 +43,7 @@ struct ContentView: View {
                 .tag(4)
         }
         #if DEBUG
-        .sheet(item: .constant(DebugRoute.fromLaunchArguments())) { route in
+        .sheet(item: $debugRoute) { route in
             // Launch-argument deep links so screens can be opened from
             // `simctl launch` during development, e.g.
             //   ... com.aslyon.TarotCompanion -openEntry 323
