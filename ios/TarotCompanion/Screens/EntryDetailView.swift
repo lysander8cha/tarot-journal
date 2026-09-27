@@ -315,7 +315,10 @@ struct SpreadLayoutView: View {
 
     var body: some View {
         if let positions, !positions.isEmpty {
-            positionedLayout(positions)
+            VStack(alignment: .leading, spacing: 0) {
+                positionedLayout(positions)
+                extrasSection(positions)
+            }
         } else {
             gridLayout
         }
@@ -330,28 +333,88 @@ struct SpreadLayoutView: View {
         let designWidth = max(maxX - minX, 1)
         let designHeight = max(maxY - minY, 1)
 
-        let mainCards = cards.filter { $0.clarifies == nil }
-        let clarifiers = cards.filter { $0.clarifies != nil }
-
         return GeometryReader { geo in
             let scale = geo.size.width / designWidth
             ZStack(alignment: .topLeading) {
+                // Only the spread's own slots; extra/clarifier cards
+                // (position_index beyond the layout) get their own
+                // rows beneath, one per clarified card, like the
+                // desktop journal.
                 ForEach(Array(positions.enumerated()), id: \.offset) { index, pos in
-                    let card = mainCards.first { ($0.positionIndex ?? -1) == index }
+                    let card = cards.first { ($0.positionIndex ?? -1) == index }
                     positionedCard(card, at: pos, index: index,
                                    minX: minX, minY: minY, scale: scale)
-                }
-                // Clarifiers ride on their target's corner.
-                ForEach(clarifiers) { card in
-                    if let target = card.clarifies, target < positions.count {
-                        let pos = positions[target]
-                        clarifierCard(card, on: pos,
-                                      minX: minX, minY: minY, scale: scale)
-                    }
                 }
             }
         }
         .aspectRatio(designWidth / designHeight, contentMode: .fit)
+    }
+
+    // MARK: Extra / clarifier rows
+
+    @ViewBuilder
+    private func extrasSection(_ positions: [SpreadPosition]) -> some View {
+        let extras = cards.filter { ($0.positionIndex ?? -1) >= positions.count }
+        if !extras.isEmpty {
+            let targets = Array(Set(extras.compactMap { card -> Int? in
+                guard let t = card.clarifies,
+                      t >= 0, t < positions.count else { return nil }
+                return t
+            })).sorted()
+            let unattached = extras.filter {
+                guard let t = $0.clarifies else { return true }
+                return t < 0 || t >= positions.count
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(targets, id: \.self) { target in
+                    extrasGroup(
+                        title: clarifyingTitle(target, positions: positions),
+                        groupCards: extras.filter { $0.clarifies == target })
+                }
+                if !unattached.isEmpty {
+                    extrasGroup(title: "Extra cards", groupCards: unattached)
+                }
+            }
+            .padding(.top, 12)
+        }
+    }
+
+    private func clarifyingTitle(_ target: Int,
+                                 positions: [SpreadPosition]) -> String {
+        let label = positions[target].label
+        let posLabel = (label?.isEmpty == false) ? label! : "position \(target + 1)"
+        if let clarified = cards.first(where: { $0.positionIndex == target }),
+           let name = clarified.name, !name.isEmpty {
+            return "↳ Clarifying \(name) (\(posLabel))"
+        }
+        return "↳ Clarifying \(posLabel)"
+    }
+
+    private func extrasGroup(title: String,
+                             groupCards: [ReadingCard]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(TJ.textMuted)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 8) {
+                    ForEach(groupCards) { card in
+                        VStack(spacing: 3) {
+                            CardImageView(cardId: card.cardId,
+                                          reversed: card.reversed ?? false)
+                                .frame(height: 90)
+                                .onTapGesture { onTapCard?(card) }
+                                .onLongPressGesture { onLongPressCard?(card) }
+                            Text(card.name ?? "")
+                                .font(.system(size: 9))
+                                .foregroundStyle(TJ.textFaint)
+                                .lineLimit(1)
+                                .frame(maxWidth: 70)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -391,20 +454,6 @@ struct SpreadLayoutView: View {
         }
         .offset(x: (pos.x - minX) * scale, y: (pos.y - minY) * scale)
         .zIndex(Double(pos.zIndex ?? 0))
-    }
-
-    private func clarifierCard(_ card: ReadingCard, on pos: SpreadPosition,
-                               minX: Double, minY: Double,
-                               scale: CGFloat) -> some View {
-        let w = pos.width * scale * 0.6
-        let h = pos.height * scale * 0.6
-        return CardImageView(cardId: card.cardId, reversed: card.reversed ?? false)
-            .onTapGesture { onTapCard?(card) }
-            .frame(width: w, height: h)
-            .shadow(radius: 3)
-            .offset(x: (pos.x - minX + pos.width * 0.55) * scale,
-                    y: (pos.y - minY + pos.height * 0.55) * scale)
-            .zIndex(10)
     }
 
     private var gridLayout: some View {

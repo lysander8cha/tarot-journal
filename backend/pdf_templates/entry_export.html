@@ -165,11 +165,12 @@
         </div>
 
         {# Extra cards pulled beyond the spread's positions
-           (clarifiers, variable-count pulls) #}
-        {% if reading.extra_cards %}
+           (clarifiers, variable-count pulls), one row per
+           clarified card #}
+        {% for group in reading.extra_groups %}
           <div class="card-row card-row--extras">
-            <div class="card-row__extras-title">Extra cards</div>
-            {% for card in reading.extra_cards %}
+            <div class="card-row__extras-title">{{ group.title }}</div>
+            {% for card in group.cards %}
               <div class="card-row__slot">
                 {% if card.image_uri %}
                   <img class="card-row__img {% if card.reversed %}card-row__img--reversed{% endif %}"
@@ -180,12 +181,11 @@
                 {% endif %}
                 <div class="card-row__label">
                   {{ card.name }}{% if card.reversed %} (R){% endif %}
-                  {% if card.clarifies_label %}<br/>↳ clarifies {{ card.clarifies_label }}{% endif %}
                 </div>
               </div>
             {% endfor %}
           </div>
-        {% endif %}
+        {% endfor %}
       {% elif reading.cards_used %}
         <div class="card-row">
           {% for card in reading.cards_used %}

@@ -301,21 +301,40 @@ def _hydrate_entry_for_pdf(db, entry_id: int, cache=None) -> dict | None:
         )
 
         # Extra cards (clarifiers / additional pulls beyond the
-        # spread's positions), labelled for the template. Identified
-        # by stored position_index since saved arrays are compacted.
-        extra_cards = []
+        # spread's positions), grouped one row per clarified card —
+        # matching the journal's on-screen display. Identified by
+        # stored position_index since saved arrays are compacted.
+        extra_groups = []
         if spread and spread.get('positions'):
-            poscount = len(spread['positions'])
+            positions = spread['positions']
+            poscount = len(positions)
+            by_target = {}
+            unattached = []
             for c in hydrated_cards:
                 pi = c.get('position_index')
-                if pi is not None and pi >= poscount:
-                    label = None
-                    ci = c.get('clarifies')
-                    if ci is not None and 0 <= ci < poscount:
-                        pos = spread['positions'][ci]
-                        label = pos.get('key') or str(ci + 1)
-                    extra_cards.append({**c, 'clarifies_label': label})
-        rd['extra_cards'] = extra_cards
+                if pi is None or pi < poscount:
+                    continue
+                ci = c.get('clarifies')
+                if ci is not None and 0 <= ci < poscount:
+                    by_target.setdefault(ci, []).append(c)
+                else:
+                    unattached.append(c)
+            for ci in sorted(by_target):
+                pos = positions[ci]
+                pos_label = (pos.get('label') or pos.get('key')
+                             or f'position {ci + 1}')
+                clarified = next(
+                    (c for c in hydrated_cards
+                     if c.get('position_index') == ci), None)
+                if clarified and clarified.get('name'):
+                    title = f"↳ Clarifying {clarified['name']} ({pos_label})"
+                else:
+                    title = f'↳ Clarifying {pos_label}'
+                extra_groups.append({'title': title, 'cards': by_target[ci]})
+            if unattached:
+                extra_groups.append(
+                    {'title': 'Extra cards', 'cards': unattached})
+        rd['extra_groups'] = extra_groups
         readings.append(rd)
     entry['readings'] = readings
 
