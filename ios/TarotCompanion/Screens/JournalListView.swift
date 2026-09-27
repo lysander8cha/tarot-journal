@@ -99,6 +99,7 @@ struct JournalListView: View {
             await appModel.sync.refreshPendingCount()
         }
         .onReceive(appModel.sync.$lastSyncDate) { _ in load() }
+        .onReceive(appModel.sync.$localJournalEdits) { _ in load() }
     }
 
     /// Sync activity where the user actually is — pending pushes,
@@ -107,10 +108,9 @@ struct JournalListView: View {
     @ViewBuilder
     private var statusStrip: some View {
         VStack(spacing: 4) {
-            if appModel.sync.pendingCount > 0 {
-                stripCapsule(
-                    "\(appModel.sync.pendingCount) entr\(appModel.sync.pendingCount == 1 ? "y" : "ies") waiting to reach the Mac")
-            }
+            // Phone-composed entries show in the journal immediately
+            // and deliver quietly when the Mac is reachable, so the
+            // outbox no longer announces itself here.
             if let progress = appModel.sync.imageProgress {
                 stripCapsule("Downloading card images — \(progress.done) of \(progress.total)")
             } else if appModel.sync.isSyncing {

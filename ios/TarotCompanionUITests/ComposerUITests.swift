@@ -109,6 +109,12 @@ final class ComposerUITests: XCTestCase {
         XCTAssertLessThan(
             elapsed, 5,
             "Save took \(elapsed)s to dismiss — it must not wait on the network")
+
+        // The entry shows in the journal at once, even with the Mac
+        // unreachable (its list row's subtitle names the deck).
+        XCTAssertTrue(
+            app.staticTexts["ZZ UITest Deck"].waitForExistence(timeout: 5),
+            "Saved entry should appear in the journal immediately")
     }
 
     func testSpreadSlotsAndExtraCardSave() throws {

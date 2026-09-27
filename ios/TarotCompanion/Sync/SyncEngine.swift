@@ -28,6 +28,10 @@ final class SyncEngine: ObservableObject {
     /// Entries composed on the phone, waiting to reach the Mac.
     @Published var pendingCount = 0
 
+    /// Bumped whenever a phone-composed entry lands in the local
+    /// journal, so list views refresh without waiting for a sync.
+    @Published var localJournalEdits = 0
+
     /// Set by AppModel after construction; used to pre-download all
     /// favorite-deck card images so the phone works fully offline.
     weak var imageStore: ImageStore?
@@ -116,25 +120,85 @@ final class SyncEngine: ObservableObject {
             return
         }
         let now = ISO8601DateFormatter().string(from: Date())
+        let naiveFormatter = DateFormatter()
+        naiveFormatter.locale = Locale(identifier: "en_US_POSIX")
+        naiveFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        let naiveNow = naiveFormatter.string(from: Date())
         do {
             try await database.writer.write { db in
                 try db.execute(
                     sql: "INSERT INTO pending_entries (payload_json, created_at) VALUES (?, ?)",
                     arguments: [jsonString, now])
+                // The entry appears in the phone's journal right
+                // away, as a provisional row keyed by a NEGATIVE id
+                // (desktop ids are positive, so no collision). Once
+                // the push succeeds, the next pull brings the real
+                // entry and the provisional twin — matched by
+                // sync_uuid — is removed.
+                try Self.insertProvisionalEntry(
+                    db, payload: payload,
+                    outboxId: db.lastInsertedRowID, now: naiveNow)
             }
         } catch {
             statusMessage = "Could not save the entry: \(error.localizedDescription)"
             return
         }
+        localJournalEdits += 1
         await refreshPendingCount()
         // The save itself is the local write above; delivery happens
         // in the background. Awaiting the sync here froze the composer
         // for a minute whenever the Mac was unreachable — a connection
         // attempt to an absent host hangs until it times out, and the
         // Save button looked simply broken. Offline, the entry waits
-        // safely in the outbox for the next successful sync.
+        // safely in the outbox for the next successful sync — quietly:
+        // an out-of-reach Mac is normal life, not an error to show.
         // (Quick pass: skip the image pre-download either way.)
-        Task { await self.syncNow(includeImages: false) }
+        Task { await self.syncNow(includeImages: false, quiet: true) }
+    }
+
+    /// A local stand-in for a phone-composed entry, shaped exactly
+    /// like a pulled desktop aggregate so every journal view renders
+    /// it unchanged.
+    private static func insertProvisionalEntry(
+        _ db: Database, payload: [String: Any],
+        outboxId: Int64, now: String) throws {
+        var readings: [[String: Any]] = []
+        for (index, r) in ((payload["readings"] as? [[String: Any]]) ?? []).enumerated() {
+            var reading = r
+            // The Reading decoder requires an id; any unique value works.
+            reading["id"] = Int64(index + 1)
+            readings.append(reading)
+        }
+        func jsonString(_ obj: Any) -> String {
+            guard JSONSerialization.isValidJSONObject(obj),
+                  let d = try? JSONSerialization.data(withJSONObject: obj),
+                  let s = String(data: d, encoding: .utf8) else { return "[]" }
+            return s
+        }
+        let querentIds = (payload["querent_ids"] as? [Int64]) ?? []
+        try db.execute(
+            sql: """
+                INSERT OR REPLACE INTO entries
+                (id, title, content, created_at, updated_at, reading_datetime,
+                 location_name, querent_id, reader_id, sync_uuid,
+                 readings_json, tag_ids_json, querent_ids_json, follow_ups_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+            arguments: [
+                -outboxId,
+                payload["title"] as? String,
+                payload["content"] as? String,
+                now, now,
+                payload["reading_datetime"] as? String,
+                payload["location_name"] as? String,
+                querentIds.first,
+                payload["reader_id"] as? Int64,
+                payload["sync_uuid"] as? String,
+                jsonString(readings),
+                "[]",
+                jsonString(querentIds),
+                "[]",
+            ])
     }
 
     @MainActor
@@ -174,11 +238,14 @@ final class SyncEngine: ObservableObject {
                 throw SyncError.unauthorized
             case 400:
                 // The Mac rejected this payload outright — retrying
-                // forever would wedge the queue behind it. Drop it and
-                // surface the loss instead of failing silently.
+                // forever would wedge the queue behind it. Drop it
+                // (and its provisional journal row) and surface the
+                // loss instead of failing silently.
                 try await database.writer.write { db in
                     try db.execute(sql: "DELETE FROM pending_entries WHERE id = ?",
                                    arguments: [rowId])
+                    try db.execute(sql: "DELETE FROM entries WHERE id = ?",
+                                   arguments: [-rowId])
                 }
                 statusMessage = "One phone entry was rejected by the Mac and could not be delivered."
             default:
@@ -190,10 +257,13 @@ final class SyncEngine: ObservableObject {
     // MARK: - The pull
 
     @MainActor
-    func syncNow(includeImages: Bool = true) async {
+    func syncNow(includeImages: Bool = true, quiet: Bool = false) async {
         guard !isSyncing else { return }
         isSyncing = true
-        statusMessage = "Syncing…"
+        // A quiet pass (after saving an entry) neither announces
+        // itself nor reports failure — an unreachable Mac is the
+        // outbox's normal case, and the entry already shows locally.
+        if !quiet { statusMessage = "Syncing…" }
         defer { isSyncing = false }
         do {
             // Push first, so an entry logged at the table shows up in
@@ -205,7 +275,9 @@ final class SyncEngine: ObservableObject {
             lastSyncDate = Date()
             statusMessage = nil
         } catch {
-            statusMessage = "Sync failed: \(error.localizedDescription)"
+            if !quiet {
+                statusMessage = "Sync failed: \(error.localizedDescription)"
+            }
             return
         }
         // Data is safely home; now pre-download any card images we
@@ -294,13 +366,15 @@ final class SyncEngine: ObservableObject {
         }
         let maxUpdated: String? = try await database.writer.write { db in
             var newest = since
-            // Prune local entries deleted on the desktop.
+            // Prune local entries deleted on the desktop. Negative
+            // ids are provisional phone-composed entries the desktop
+            // doesn't know about yet — never prune those.
             if ids.isEmpty {
-                try db.execute(sql: "DELETE FROM entries")
+                try db.execute(sql: "DELETE FROM entries WHERE id >= 0")
             } else {
                 let marks = ids.map { _ in "?" }.joined(separator: ",")
                 try db.execute(
-                    sql: "DELETE FROM entries WHERE id NOT IN (\(marks))",
+                    sql: "DELETE FROM entries WHERE id >= 0 AND id NOT IN (\(marks))",
                     arguments: StatementArguments(ids))
             }
             for e in changed {
@@ -309,6 +383,13 @@ final class SyncEngine: ObservableObject {
                     newest = u
                 }
             }
+            // A provisional entry whose real, desktop-assigned twin
+            // has arrived (same sync_uuid) is now redundant.
+            try db.execute(sql: """
+                DELETE FROM entries WHERE id < 0 AND sync_uuid IN
+                    (SELECT sync_uuid FROM entries
+                     WHERE id >= 0 AND sync_uuid IS NOT NULL)
+                """)
             return newest
         }
         if let maxUpdated { try database.setSyncState("entries_since", maxUpdated) }
