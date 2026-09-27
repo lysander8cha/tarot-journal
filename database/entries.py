@@ -112,6 +112,24 @@ class EntriesMixin:
         cursor.execute('SELECT * FROM journal_entries WHERE id = ?', (entry_id,))
         return cursor.fetchone()
 
+    def get_recent_locations(self, limit: int = 8):
+        """Distinct locations from past entries, most recently used
+        first, each with the coordinates of its latest use — so
+        re-picking a known place needs no fresh geocode lookup."""
+        cursor = self.conn.cursor()
+        # SQLite's bare-column rule: with MAX() in the select, the
+        # other columns come from the row that holds the maximum.
+        cursor.execute('''
+            SELECT location_name, location_lat, location_lon,
+                   MAX(COALESCE(reading_datetime, created_at)) AS last_used
+            FROM journal_entries
+            WHERE location_name IS NOT NULL AND TRIM(location_name) != ''
+            GROUP BY location_name
+            ORDER BY last_used DESC
+            LIMIT ?
+        ''', (limit,))
+        return cursor.fetchall()
+
     def search_entries(self, query: str = None, tag_ids: list = None,
                       deck_id: int = None, spread_id: int = None,
                       cartomancy_type: str = None, card_name: str = None,

@@ -233,6 +233,15 @@ struct AppDatabase {
                 DELETE FROM cards;
                 DELETE FROM spreads;
                 DELETE FROM profiles;
+                DELETE FROM entries;
+                INSERT INTO entries (id, title, created_at, updated_at,
+                                     reading_datetime, location_name) VALUES
+                    (9401, 'ZZ Recent Entry', '2026-09-02T10:00:00',
+                     '2026-09-02T10:00:00', '2026-09-02T10:00:00',
+                     'ZZ Moonlit Porch'),
+                    (9402, 'ZZ Older Entry', '2026-09-01T10:00:00',
+                     '2026-09-01T10:00:00', '2026-09-01T10:00:00',
+                     'ZZ Hotel Lobby');
                 INSERT INTO decks (id, name, favorite)
                     VALUES (9001, 'ZZ UITest Deck', 0);
                 INSERT INTO cards (id, deck_id, name, card_order) VALUES

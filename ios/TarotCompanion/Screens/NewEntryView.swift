@@ -98,6 +98,7 @@ struct NewEntryView: View {
     @State private var readerOptions: [(id: Int64, name: String)] = []
     @State private var decks: [(id: Int64, name: String)] = []
     @State private var spreads: [SpreadOption] = []
+    @State private var recentLocations: [String] = []
     @State private var activePicker: ActivePicker?
     /// The slot the card picker is filling: (reading index, position
     /// index) — position nil means "append freeform".
@@ -242,6 +243,29 @@ struct NewEntryView: View {
 
             TextField("Location (optional)", text: $locationName)
                 .autocorrectionDisabled()
+
+            // One-tap recent locations while the field is empty.
+            if locationName.trimmingCharacters(in: .whitespaces).isEmpty,
+               !recentLocations.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(recentLocations, id: \.self) { name in
+                            Button {
+                                locationName = name
+                            } label: {
+                                Text(name)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                    .foregroundStyle(TJ.textAccent)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Capsule().fill(TJ.tint))
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -510,6 +534,18 @@ struct NewEntryView: View {
                     return SpreadOption(id: row["id"], name: row["name"],
                                         positions: positions)
                 }
+            // Last, so a failure here can't take the pickers down
+            // with it (this whole block shares one try).
+            recentLocations = try String.fetchAll(
+                db, sql: """
+                    SELECT location_name
+                    FROM entries
+                    WHERE location_name IS NOT NULL
+                        AND TRIM(location_name) <> ''
+                    GROUP BY location_name
+                    ORDER BY MAX(COALESCE(reading_datetime, created_at)) DESC
+                    LIMIT 5
+                    """)
         }
     }
 

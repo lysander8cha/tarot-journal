@@ -8,6 +8,8 @@ import {
   setEntryTags,
   setEntryQuerents,
   getProfiles,
+  getRecentLocations,
+  type RecentLocation,
 } from '../../api/entries';
 import { getEntryTags as getAllEntryTags } from '../../api/tags';
 import { getDefaults, type AppDefaults } from '../../api/settings';
@@ -124,6 +126,12 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
   const { data: defaults } = useQuery<AppDefaults>({
     queryKey: ['defaults'],
     queryFn: getDefaults,
+    enabled: open,
+  });
+
+  const { data: recentLocations = [] } = useQuery<RecentLocation[]>({
+    queryKey: ['recent-locations'],
+    queryFn: getRecentLocations,
     enabled: open,
   });
 
@@ -592,6 +600,27 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
             {locationLat != null && locationLon != null && (
               <div className="entry-editor__place-coords">
                 {locationLat.toFixed(3)}, {locationLon.toFixed(3)}
+              </div>
+            )}
+            {/* One-tap recent locations, shown while the field is
+                empty; picking one reuses its saved coordinates. */}
+            {locationName.trim() === '' && recentLocations.length > 0 && (
+              <div className="entry-editor__recent-locations">
+                {recentLocations.slice(0, 5).map((loc) => (
+                  <button
+                    key={loc.location_name}
+                    type="button"
+                    className="entry-editor__recent-location-chip"
+                    title={loc.location_name}
+                    onClick={() => {
+                      setLocationName(loc.location_name);
+                      setLocationLat(loc.location_lat);
+                      setLocationLon(loc.location_lon);
+                    }}
+                  >
+                    {loc.location_name}
+                  </button>
+                ))}
               </div>
             )}
           </div>

@@ -22,6 +22,17 @@ export async function getEntry(entryId: number): Promise<JournalEntryFull> {
   return res.data;
 }
 
+export interface RecentLocation {
+  location_name: string;
+  location_lat: number | null;
+  location_lon: number | null;
+}
+
+export async function getRecentLocations(): Promise<RecentLocation[]> {
+  const res = await api.get('/api/entries/recent-locations');
+  return res.data;
+}
+
 export async function searchEntries(params: {
   query?: string;
   tag_ids?: number[];

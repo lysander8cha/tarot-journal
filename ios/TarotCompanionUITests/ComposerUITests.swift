@@ -48,6 +48,21 @@ final class ComposerUITests: XCTestCase {
         return navBar
     }
 
+    func testRecentLocationChipFillsField() throws {
+        _ = openComposer()
+        // Chips come from the seeded entries, most recent first.
+        let chip = app.buttons["ZZ Moonlit Porch"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 5),
+                      "Recent-location chip missing")
+        chip.tap()
+        let field = app.textFields["Location (optional)"]
+        XCTAssertEqual(field.value as? String, "ZZ Moonlit Porch",
+                       "Tapping the chip should fill the location field")
+        // A filled field hides the chips again.
+        XCTAssertFalse(app.buttons["ZZ Hotel Lobby"].exists,
+                       "Chips should hide once a location is set")
+    }
+
     func testFreeformSaveDismissesQuickly() throws {
         let navBar = openComposer()
 
@@ -115,8 +130,10 @@ final class ComposerUITests: XCTestCase {
                       "Seeded spread missing from the spread picker")
         spreadRow.tap()
 
-        // Fill the first slot.
+        // Fill the first slot. The form builds rows lazily, so rows
+        // below the fold need a scroll before they exist at all.
         let chooseCard = app.buttons["Choose card…"].firstMatch
+        scrollUntilHittable(chooseCard)
         XCTAssertTrue(chooseCard.waitForExistence(timeout: 5),
                       "No empty slot rows after choosing a spread")
         chooseCard.tap()
@@ -126,6 +143,7 @@ final class ComposerUITests: XCTestCase {
 
         // Add an extra/clarifier card.
         let addExtra = app.buttons["Add extra card"]
+        scrollUntilHittable(addExtra)
         XCTAssertTrue(addExtra.waitForExistence(timeout: 5),
                       "'Add extra card' row missing in spread mode")
         addExtra.tap()
@@ -142,6 +160,17 @@ final class ComposerUITests: XCTestCase {
 }
 
 private extension ComposerUITests {
+    /// Swipe up until the element is on screen and tappable. Form
+    /// rows are created lazily, so rows below the fold don't even
+    /// exist in the hierarchy before scrolling.
+    func scrollUntilHittable(_ element: XCUIElement, attempts: Int = 4) {
+        var tries = 0
+        while !(element.exists && element.isHittable) && tries < attempts {
+            app.swipeUp()
+            tries += 1
+        }
+    }
+
     /// The composer's Deck picker row. Matched by its exact combined
     /// accessibility label — a loose BEGINSWITH 'Deck' predicate also
     /// catches the Decks tab behind the sheet.

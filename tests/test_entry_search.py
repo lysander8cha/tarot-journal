@@ -60,3 +60,33 @@ def test_entries_sort_by_reading_vs_created(db):
     s_created = [r["title"] for r in db.search_entries(query="reading", sort_by="created")]
     assert s_reading == by_reading
     assert s_created == by_created
+
+
+def test_recent_locations_dedupe_and_order(db):
+    """The entry editor's recent-location chips: distinct names,
+    most recently used first, coordinates from the latest use."""
+    db.add_entry(title="a", reading_datetime="2026-09-01T10:00:00",
+                 location_name="Home", location_lat=1.0, location_lon=2.0)
+    db.add_entry(title="b", reading_datetime="2026-09-05T10:00:00",
+                 location_name="Cafe", location_lat=3.0, location_lon=4.0)
+    db.add_entry(title="c", reading_datetime="2026-09-10T10:00:00",
+                 location_name="Home", location_lat=5.0, location_lon=6.0)
+    db.add_entry(title="no location")
+    db.add_entry(title="blank location", location_name="   ")
+
+    rows = db.get_recent_locations()
+    names = [r["location_name"] for r in rows]
+    assert names == ["Home", "Cafe"]
+    # Coordinates come from the most recent visit to each place.
+    assert rows[0]["location_lat"] == 5.0
+    assert rows[0]["location_lon"] == 6.0
+
+
+def test_recent_locations_respects_limit(db):
+    for i in range(10):
+        db.add_entry(title=f"e{i}",
+                     reading_datetime=f"2026-09-{i + 1:02d}T10:00:00",
+                     location_name=f"Place {i}")
+    rows = db.get_recent_locations(limit=3)
+    assert [r["location_name"] for r in rows] == [
+        "Place 9", "Place 8", "Place 7"]

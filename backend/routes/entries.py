@@ -124,6 +124,22 @@ def list_entries():
     return jsonify([row_to_dict(r) for r in rows])
 
 
+@entries_bp.route('/api/entries/recent-locations')
+def recent_locations():
+    """Distinct recently used locations (name + coords) so the entry
+    editor can offer them as one-click suggestions."""
+    db = current_app.config['DB']
+    rows = db.get_recent_locations()
+    return jsonify([
+        {
+            'location_name': r['location_name'],
+            'location_lat': r['location_lat'],
+            'location_lon': r['location_lon'],
+        }
+        for r in rows
+    ])
+
+
 @entries_bp.route('/api/entries/search')
 def search_entries():
     db = current_app.config['DB']
