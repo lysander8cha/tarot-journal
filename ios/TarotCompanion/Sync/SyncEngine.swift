@@ -283,12 +283,16 @@ final class SyncEngine: ObservableObject {
         // outbox's normal case, and the entry already shows locally.
         if !quiet { statusMessage = "Syncing…" }
         do {
-            // Push first, so an entry logged at the table shows up in
-            // the pulled journal below in the same pass.
-            try await pushPending()
-            try await pullSnapshots()
-            try await pullEntries()
-            try await pullSourceEntries()
+            do {
+                try await runSyncPass()
+            } catch {
+                // The Mac's address changes with every network setup —
+                // home Wi-Fi, Personal Hotspot, USB tethering all give
+                // it a different one. Ask Bonjour where it is now, and
+                // if a fresh address answers, retry once.
+                guard await rediscoverServer() else { throw error }
+                try await runSyncPass()
+            }
             lastSyncDate = Date()
             statusMessage = nil
             // Release the lock BEFORE the image pre-download below:
@@ -312,6 +316,45 @@ final class SyncEngine: ObservableObject {
         if includeImages {
             await prefetchImages()
         }
+    }
+
+    /// One full data exchange: push first, so an entry logged at the
+    /// table shows up in the pulled journal below in the same pass.
+    @MainActor
+    private func runSyncPass() async throws {
+        try await pushPending()
+        try await pullSnapshots()
+        try await pullEntries()
+        try await pullSourceEntries()
+    }
+
+    /// The stored address stopped answering — browse Bonjour for the
+    /// Mac's advertisement (it lists one address per interface) and
+    /// adopt the first one that actually responds. The pairing token
+    /// stays valid; only the address moves.
+    @MainActor
+    private func rediscoverServer() async -> Bool {
+        guard isPaired else { return false }
+        let candidates = await ServerDiscovery().findServerURLs()
+        let failing = serverURL
+        for url in candidates where url != failing {
+            if await respondsToProbe(url) {
+                try? setServer(url: url)
+                return true
+            }
+        }
+        return false
+    }
+
+    private func respondsToProbe(_ url: URL) async -> Bool {
+        var req = URLRequest(url: url.appendingPathComponent("api/sync/manifest"))
+        req.timeoutInterval = 4
+        guard let (_, response) = try? await Self.dataSession.data(for: req) else {
+            return false
+        }
+        // Any HTTP answer proves the Mac is there (401 just means
+        // this probe carried no token).
+        return response is HTTPURLResponse
     }
 
     @MainActor

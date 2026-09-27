@@ -18,7 +18,7 @@ final class ServerDiscovery: NSObject, ObservableObject {
     @Published var servers: [FoundServer] = []
     private var browser: NWBrowser?
     private var resolvingService: NetService?
-    private var resolveCompletion: ((URL?) -> Void)?
+    private var resolveCompletion: (([URL]) -> Void)?
     private var resolveTimeout: Task<Void, Never>?
 
     func start() {
@@ -53,9 +53,17 @@ final class ServerDiscovery: NSObject, ObservableObject {
         resolveCompletion = nil
     }
 
-    /// Resolve a discovered service to a plain http URL the sync
-    /// engine can use. Completion fires once, on the main actor.
+    /// Resolve a discovered service to a plain http URL the pairing
+    /// screen can use. Completion fires once, on the main actor.
     func resolve(_ server: FoundServer, completion: @escaping (URL?) -> Void) {
+        resolveAll(server) { completion($0.first) }
+    }
+
+    /// Resolve a discovered service to EVERY address it advertises —
+    /// the Mac announces one per interface (Wi-Fi, hotspot, USB
+    /// tether), and only probing tells which one the phone can reach.
+    func resolveAll(_ server: FoundServer,
+                    completion: @escaping ([URL]) -> Void) {
         cancelResolve()
         let service = NetService(domain: "local.",
                                  type: "_tarotjournal._tcp.",
@@ -67,20 +75,37 @@ final class ServerDiscovery: NSObject, ObservableObject {
         resolveTimeout = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(9))
             guard let self, self.resolveCompletion != nil else { return }
-            self.finishResolve(url: nil)
+            self.finishResolve(urls: [])
         }
     }
 
-    private func finishResolve(url: URL?) {
-        let completion = resolveCompletion
-        cancelResolve()
-        completion?(url)
+    /// Browse briefly and return every candidate URL for the first
+    /// Mac found. Used for automatic re-discovery when the stored
+    /// address stops answering.
+    func findServerURLs(browseDeadline: TimeInterval = 4) async -> [URL] {
+        start()
+        defer { stop() }
+        let began = Date()
+        while servers.isEmpty
+                && Date().timeIntervalSince(began) < browseDeadline {
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        guard let first = servers.first else { return [] }
+        return await withCheckedContinuation { continuation in
+            resolveAll(first) { continuation.resume(returning: $0) }
+        }
     }
 
-    /// Pick a usable address from the resolved records, IPv4 first.
-    nonisolated private static func url(from service: NetService) -> URL? {
-        var v4: String?
-        var v6: String?
+    private func finishResolve(urls: [URL]) {
+        let completion = resolveCompletion
+        cancelResolve()
+        completion?(urls)
+    }
+
+    /// All usable addresses from the resolved records, IPv4 first.
+    nonisolated private static func urls(from service: NetService) -> [URL] {
+        var v4s: [String] = []
+        var v6s: [String] = []
         for data in service.addresses ?? [] {
             data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
                 guard let base = raw.baseAddress else { return }
@@ -93,31 +118,33 @@ final class ServerDiscovery: NSObject, ObservableObject {
                     nil, 0, NI_NUMERICHOST) == 0
                 guard ok else { return }
                 let ip = String(cString: host)
-                if family == sa_family_t(AF_INET), v4 == nil {
-                    v4 = ip
-                } else if family == sa_family_t(AF_INET6), v6 == nil {
-                    v6 = ip
+                if family == sa_family_t(AF_INET) {
+                    v4s.append(ip)
+                } else if family == sa_family_t(AF_INET6) {
+                    v6s.append(ip)
                 }
             }
         }
-        if let v4 { return URL(string: "http://\(v4):\(service.port)") }
-        if let v6 {
+        var urls = v4s.compactMap {
+            URL(string: "http://\($0):\(service.port)")
+        }
+        urls += v6s.compactMap { v6 -> URL? in
             // Scoped link-local addresses need the zone percent-encoded.
             let escaped = v6.replacingOccurrences(of: "%", with: "%25")
             return URL(string: "http://[\(escaped)]:\(service.port)")
         }
-        return nil
+        return urls
     }
 }
 
 extension ServerDiscovery: NetServiceDelegate {
     nonisolated func netServiceDidResolveAddress(_ sender: NetService) {
-        let url = Self.url(from: sender)
-        Task { @MainActor in self.finishResolve(url: url) }
+        let urls = Self.urls(from: sender)
+        Task { @MainActor in self.finishResolve(urls: urls) }
     }
 
     nonisolated func netService(_ sender: NetService,
                                 didNotResolve errorDict: [String: NSNumber]) {
-        Task { @MainActor in self.finishResolve(url: nil) }
+        Task { @MainActor in self.finishResolve(urls: []) }
     }
 }

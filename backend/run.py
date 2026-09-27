@@ -37,21 +37,57 @@ def _phone_sync_enabled() -> bool:
 def _advertise_bonjour(port):
     """Advertise the sync service over Bonjour/mDNS so the phone can
     find the Mac without a typed IP. Optional: silently skipped if the
-    zeroconf package is missing or the network refuses."""
+    zeroconf package is missing or the network refuses.
+
+    Advertises ALL of the Mac's current IPv4 addresses — the phone may
+    reach it over Wi-Fi, a Personal Hotspot, or USB tethering, each on
+    its own address — and keeps the advertisement fresh as interfaces
+    come and go (plugging the phone in AFTER launch creates a new
+    interface that must join the advertisement)."""
     try:
         import socket
-        from zeroconf import ServiceInfo, Zeroconf
+        import threading
+        import time
+        from zeroconf import ServiceInfo, Zeroconf, get_all_addresses
 
-        host_ip = socket.gethostbyname(socket.gethostname())
-        info = ServiceInfo(
-            '_tarotjournal._tcp.local.',
-            'Tarot Journal._tarotjournal._tcp.local.',
-            addresses=[socket.inet_aton(host_ip)],
-            port=port,
-            properties={'protocol': '1'},
-        )
+        def current_addresses():
+            try:
+                addrs = sorted(
+                    a for a in get_all_addresses()
+                    if a != '127.0.0.1' and not a.startswith('169.254.'))
+                if addrs:
+                    return addrs
+            except Exception:
+                pass
+            return [socket.gethostbyname(socket.gethostname())]
+
+        def make_info(addresses):
+            return ServiceInfo(
+                '_tarotjournal._tcp.local.',
+                'Tarot Journal._tarotjournal._tcp.local.',
+                addresses=[socket.inet_aton(a) for a in addresses],
+                port=port,
+                properties={'protocol': '1'},
+            )
+
         zc = Zeroconf()
-        zc.register_service(info)
+        addresses = current_addresses()
+        zc.register_service(make_info(addresses))
+
+        def refresh():
+            nonlocal addresses
+            while True:
+                time.sleep(20)
+                try:
+                    now = current_addresses()
+                    if now != addresses:
+                        zc.update_service(make_info(now))
+                        addresses = now
+                except Exception:
+                    pass  # transient network churn; retry next tick
+
+        threading.Thread(target=refresh, daemon=True,
+                         name='bonjour-refresh').start()
         return zc
     except Exception as exc:
         print(f"Bonjour advertisement unavailable: {exc}")
