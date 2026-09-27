@@ -36,6 +36,24 @@ final class SyncEngine: ObservableObject {
     /// favorite-deck card images so the phone works fully offline.
     weak var imageStore: ImageStore?
 
+    /// Guards the image pre-download separately from `isSyncing` —
+    /// a long download must never block data syncs.
+    private var isPrefetching = false
+
+    /// Data requests on a short leash: on the home LAN the Mac
+    /// answers in well under a second, so a stalled connection
+    /// should fail within seconds and let the outbox retry later —
+    /// not hang for Apple's default minute-plus. The request timeout
+    /// is between-bytes idle time, so a slow-but-moving transfer
+    /// (a big first pull over a hotspot) still completes within the
+    /// resource limit.
+    static let dataSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 180
+        return URLSession(configuration: config)
+    }()
+
     /// The tables mirrored wholesale each sync, in dependency-free order.
     static let snapshotTables = [
         "decks", "cards", "spreads", "profiles", "tags",
@@ -73,7 +91,7 @@ final class SyncEngine: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder().encode(
             ["code": code, "device_name": deviceName])
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await Self.dataSession.data(for: req)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             throw SyncError.pairingRejected
         }
@@ -99,7 +117,7 @@ final class SyncEngine: ObservableObject {
         if let token = Keychain.token {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await Self.dataSession.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw SyncError.network }
         switch http.statusCode {
         case 200: return data
@@ -226,7 +244,7 @@ final class SyncEngine: ObservableObject {
                 req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
             req.httpBody = payload.data(using: .utf8)
-            let (_, response) = try await URLSession.shared.data(for: req)
+            let (_, response) = try await Self.dataSession.data(for: req)
             guard let http = response as? HTTPURLResponse else { throw SyncError.network }
             switch http.statusCode {
             case 200, 201:
@@ -264,7 +282,6 @@ final class SyncEngine: ObservableObject {
         // itself nor reports failure — an unreachable Mac is the
         // outbox's normal case, and the entry already shows locally.
         if !quiet { statusMessage = "Syncing…" }
-        defer { isSyncing = false }
         do {
             // Push first, so an entry logged at the table shows up in
             // the pulled journal below in the same pass.
@@ -274,7 +291,13 @@ final class SyncEngine: ObservableObject {
             try await pullSourceEntries()
             lastSyncDate = Date()
             statusMessage = nil
+            // Release the lock BEFORE the image pre-download below:
+            // a long download once held it for minutes, during which
+            // every other sync attempt (foreground, save, "Sync now")
+            // silently no-oped on the guard above.
+            isSyncing = false
         } catch {
+            isSyncing = false
             if !quiet {
                 statusMessage = "Sync failed: \(error.localizedDescription)"
             }
@@ -293,6 +316,9 @@ final class SyncEngine: ObservableObject {
 
     @MainActor
     private func prefetchImages() async {
+        guard !isPrefetching else { return }
+        isPrefetching = true
+        defer { isPrefetching = false }
         guard let store = imageStore else { return }
         let ids: [Int64] = (try? await database.writer.read { db in
             try Int64.fetchAll(db, sql: "SELECT id FROM cards ORDER BY deck_id, card_order")

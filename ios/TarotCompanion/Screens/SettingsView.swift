@@ -46,6 +46,13 @@ struct SettingsView: View {
                 LabeledContent("Last sync",
                                value: last.formatted(date: .omitted, time: .shortened))
             }
+            // The journal shows phone entries immediately and no
+            // longer announces the outbox; its state lives here.
+            if appModel.sync.pendingCount > 0 {
+                LabeledContent(
+                    "Entries waiting to reach the Mac",
+                    value: "\(appModel.sync.pendingCount)")
+            }
             if let status = appModel.sync.statusMessage {
                 Text(status).font(.caption).foregroundStyle(.secondary)
             }

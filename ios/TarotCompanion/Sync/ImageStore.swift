@@ -9,6 +9,16 @@ actor ImageStore {
     private let serverURL: @Sendable () -> URL?
     private var inFlight: [Int64: Task<UIImage?, Never>] = [:]
 
+    /// One image should arrive in seconds (the Mac may generate the
+    /// derivative on first request); a stalled connection must fail
+    /// fast rather than hold the pre-download queue for a minute.
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 60
+        return URLSession(configuration: config)
+    }()
+
     init(serverURL: @escaping @Sendable () -> URL?) {
         self.serverURL = serverURL
         let caches = FileManager.default.urls(
@@ -50,7 +60,7 @@ actor ImageStore {
         if let token = Keychain.token {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        guard let (data, response) = try? await URLSession.shared.data(for: req),
+        guard let (data, response) = try? await Self.session.data(for: req),
               let http = response as? HTTPURLResponse, http.statusCode == 200,
               let image = UIImage(data: data) else { return nil }
         try? data.write(to: localURL(for: cardId))
