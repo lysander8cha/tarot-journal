@@ -161,33 +161,60 @@ function PositionedLayout({
 
       {/* Extra cards (clarifiers / additional pulls beyond the
           spread's positions). Identified by stored position_index —
-          saved card arrays are compacted, so length alone is no guide. */}
-      {cards.some(c => (c.position_index ?? -1) >= positions.length) && (
-        <div className="spread-display__extras">
-          <div className="spread-display__extras-title">Extra cards</div>
+          saved card arrays are compacted, so length alone is no guide.
+          Clarifiers are grouped one row per clarified card, so a
+          reading with several clarified positions stays readable;
+          unattached extras keep their own row at the end. */}
+      {(() => {
+        const extras = cards.filter(c => (c.position_index ?? -1) >= positions.length);
+        if (extras.length === 0) return null;
+
+        const clarifiedIndexes = Array.from(new Set(
+          extras
+            .map(c => c.clarifies)
+            .filter((n): n is number => n != null && n >= 0 && n < positions.length),
+        )).sort((a, b) => a - b);
+        const unattached = extras.filter(
+          c => c.clarifies == null || c.clarifies < 0 || c.clarifies >= positions.length,
+        );
+
+        const renderRow = (rowCards: typeof extras) => (
           <div className="spread-display__card-row">
-            {cards.filter(c => (c.position_index ?? -1) >= positions.length).map((card, i) => {
-              const target = card.clarifies != null ? positions[card.clarifies] : undefined;
-              const targetLabel = target
-                ? (target.key || String((card.clarifies as number) + 1))
+            {rowCards.map((card, i) => (
+              <div key={i} className="spread-display__card-item">
+                <CardSlot card={card} onDoubleClick={onCardDoubleClick} birthLabel={birthLabelFor(card, birthLabels)} />
+              </div>
+            ))}
+          </div>
+        );
+
+        return (
+          <div className="spread-display__extras">
+            {clarifiedIndexes.map((posIdx) => {
+              const pos = positions[posIdx];
+              const posLabel = pos.label || pos.key || `position ${posIdx + 1}`;
+              const clarified = cards.find(c => c.position_index === posIdx);
+              const clarifiedName = clarified
+                ? (clarified.current_name || clarified.name)
                 : null;
               return (
-                <div key={i} className="spread-display__card-item">
-                  <CardSlot card={card} onDoubleClick={onCardDoubleClick} birthLabel={birthLabelFor(card, birthLabels)} />
-                  {targetLabel && (
-                    <span
-                      className="spread-display__clarifies-badge"
-                      title={`Clarifies ${target?.label || `position ${targetLabel}`}`}
-                    >
-                      ↳ clarifies {targetLabel}
-                    </span>
-                  )}
+                <div key={posIdx} className="spread-display__extras-group">
+                  <div className="spread-display__extras-title">
+                    ↳ Clarifying {clarifiedName ? `${clarifiedName} (${posLabel})` : posLabel}
+                  </div>
+                  {renderRow(extras.filter(c => c.clarifies === posIdx))}
                 </div>
               );
             })}
+            {unattached.length > 0 && (
+              <div className="spread-display__extras-group">
+                <div className="spread-display__extras-title">Extra cards</div>
+                {renderRow(unattached)}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Legend showing position labels and card names */}
       <div className="spread-display__legend">

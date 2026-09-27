@@ -234,6 +234,10 @@
   margin-top: 8px;
 }
 
+.spread-display__extras-group + .spread-display__extras-group {
+  margin-top: 10px;
+}
+
 .spread-display__extras-title {
   font-size: var(--font-size-small);
   font-weight: 600;
@@ -241,14 +245,6 @@
   letter-spacing: 0.05em;
   color: var(--text-dim);
   margin-bottom: 4px;
-}
-
-.spread-display__clarifies-badge {
-  display: block;
-  font-size: var(--font-size-small);
-  color: var(--text-dim);
-  text-align: center;
-  margin-top: 2px;
 }
 
 /* ── Birth & name card highlighting ("Indicate Birth Cards") ──
