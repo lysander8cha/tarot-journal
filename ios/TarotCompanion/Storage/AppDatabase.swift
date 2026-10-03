@@ -217,6 +217,21 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v8-card-field-table") { db in
+            // The desktop's newer per-card custom-field store. Most
+            // field values live here, not in the legacy
+            // cards.custom_fields blob the phone synced before —
+            // which is why the card screen showed "no custom fields"
+            // for nearly every card. The card screen merges the two.
+            try db.create(table: "card_custom_fields") { t in
+                t.primaryKey("id", .integer)
+                t.column("card_id", .integer).indexed()
+                t.column("field_name", .text)
+                t.column("field_value", .text)
+                t.column("field_order", .integer)
+            }
+        }
+
         try migrator.migrate(writer)
     }
 

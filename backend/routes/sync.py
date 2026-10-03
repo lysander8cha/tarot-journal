@@ -28,6 +28,7 @@ from __future__ import annotations
 import hashlib
 import json
 import secrets
+import sqlite3
 import time
 
 from flask import Blueprint, abort, current_app, jsonify, request, send_file
@@ -170,6 +171,15 @@ SNAPSHOT_TABLES = {
               'c.suit, c.card_order, c.notes, c.custom_fields '
               'FROM cards c '
               'JOIN decks d ON d.id = c.deck_id WHERE d.favorite = 1'),
+    # The newer per-card field store; the legacy cards.custom_fields
+    # blob syncs with the cards themselves, and the phone merges the
+    # two like the desktop's CardViewModal does.
+    'card_custom_fields': ('SELECT f.id, f.card_id, f.field_name, '
+                           'f.field_value, f.field_order '
+                           'FROM card_custom_fields f '
+                           'JOIN cards c ON c.id = f.card_id '
+                           'JOIN decks d ON d.id = c.deck_id '
+                           'WHERE d.favorite = 1'),
     'tags': 'SELECT id, name, color FROM tags',
     'reference_sources': ('SELECT id, name, cartomancy_type '
                           'FROM reference_sources'),
@@ -428,24 +438,35 @@ def push_entry(data):
     readings = data.get('readings')
     if not readings and data.get('reading'):
         readings = [data['reading']]
-    for order, reading in enumerate(readings or []):
-        deck_id = reading.get('deck_id')
-        deck = db.get_deck(deck_id) if deck_id else None
-        db.add_entry_reading(
-            entry_id,
-            spread_id=reading.get('spread_id'),
-            spread_name=reading.get('spread_name'),
-            deck_id=deck_id,
-            deck_name=(deck or {}).get('name') or reading.get('deck_name'),
-            cartomancy_type=(deck or {}).get('cartomancy_type_name'),
-            cards_used=reading.get('cards_used') or [],
-            position_order=order,
-            notes=reading.get('notes'),
-        )
+    try:
+        for order, reading in enumerate(readings or []):
+            deck_id = reading.get('deck_id')
+            deck = db.get_deck(deck_id) if deck_id else None
+            db.add_entry_reading(
+                entry_id,
+                spread_id=reading.get('spread_id'),
+                spread_name=reading.get('spread_name'),
+                deck_id=deck_id,
+                deck_name=(deck or {}).get('name') or reading.get('deck_name'),
+                cartomancy_type=(deck or {}).get('cartomancy_type_name'),
+                cards_used=reading.get('cards_used') or [],
+                position_order=order,
+                notes=reading.get('notes'),
+            )
 
-    querent_ids = [int(q) for q in (data.get('querent_ids') or [])]
-    if querent_ids:
-        db.set_entry_querents(entry_id, querent_ids)
+        querent_ids = [int(q) for q in (data.get('querent_ids') or [])]
+        if querent_ids:
+            db.set_entry_querents(entry_id, querent_ids)
+    except sqlite3.IntegrityError:
+        # The payload points at rows that no longer exist (a deck or
+        # profile deleted on the desktop after the phone composed the
+        # entry). A 500 would make the phone retry this forever and
+        # wedge its whole outbox behind it — reject it as permanent
+        # (400: the phone drops it and tells the user) and take the
+        # half-created entry back out.
+        db.delete_entry(entry_id)
+        return jsonify({'error': 'entry references a deck, spread or '
+                                 'profile that no longer exists'}), 400
 
     phone_tag = next(
         (t for t in db.get_tags()

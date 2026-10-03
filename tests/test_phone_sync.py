@@ -457,3 +457,39 @@ def test_push_entry_with_reader(client, db):
     # And the profiles snapshot carries the querent_only flag
     rows = client.get('/api/sync/snapshot/profiles').get_json()['rows']
     assert 'querent_only' in rows[0]
+
+
+def test_snapshot_card_custom_fields_favorites_only(client, db):
+    """The newer per-card field table syncs for favorite decks, so
+    the phone's card screen can show what the desktop shows."""
+    fav_id, fav_card = make_deck_with_card(db, deck_name='ZZ Field Fav')
+    other_id, other_card = make_deck_with_card(db, deck_name='ZZ Field Other')
+    db.update_deck(fav_id, favorite=True)
+    db.add_card_custom_field(fav_card, 'Card Meaning', 'text',
+                             field_value='Sudden change.')
+    db.add_card_custom_field(other_card, 'Card Meaning', 'text',
+                             field_value='Should not sync.')
+
+    rows = client.get('/api/sync/snapshot/card_custom_fields').get_json()['rows']
+    assert [r['card_id'] for r in rows] == [fav_card]
+    assert rows[0]['field_name'] == 'Card Meaning'
+    assert rows[0]['field_value'] == 'Sudden change.'
+    assert 'field_order' in rows[0]
+
+
+def test_push_entry_with_dead_references_rejected_not_wedged(client, db):
+    """A payload pointing at a deck deleted after the phone composed
+    it must come back 400 (permanent — the phone drops it) instead of
+    500 (the phone would retry forever, wedging its outbox), and must
+    not leave a half-created entry behind."""
+    token = _pair(client)
+    payload = _push_payload(db, deck_id=424242, card_id=434343,
+                            uuid='zz-dead-deck-uuid')
+    res = client.post('/api/sync/push-entry', json=payload,
+                      headers=_auth(token), environ_overrides=LAN)
+    assert res.status_code == 400
+    cursor = db.conn.cursor()
+    leftover = cursor.execute(
+        "SELECT COUNT(*) FROM journal_entries WHERE sync_uuid = ?",
+        ('zz-dead-deck-uuid',)).fetchone()[0]
+    assert leftover == 0

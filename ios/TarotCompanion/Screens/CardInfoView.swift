@@ -213,6 +213,24 @@ struct CardInfoView: View {
 
     // MARK: - Data
 
+    /// Field values may be small HTML snippets (the desktop's rich
+    /// editor saves "<p>…</p>"); show their text with paragraph
+    /// breaks preserved.
+    private static func plainText(_ html: String) -> String {
+        var text = html
+        for lineBreak in ["</p>", "<br>", "<br/>", "<br />"] {
+            text = text.replacingOccurrences(of: lineBreak, with: "\n")
+        }
+        text = text.replacingOccurrences(
+            of: "<[^>]+>", with: "", options: .regularExpression)
+        let entities = [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"),
+                        ("&nbsp;", " "), ("&#39;", "'"), ("&quot;", "\"")]
+        for (entity, plain) in entities {
+            text = text.replacingOccurrences(of: entity, with: plain)
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func load() {
         try? appModel.database.writer.read { db in
             var archetypeName: String? = fallbackName
@@ -233,16 +251,46 @@ struct CardInfoView: View {
                 notes = row["notes"]
                 deckName = row["deck_name"]
                 archetypeName = archetype ?? name
+                // Custom fields merge two desktop stores, matching
+                // the desktop's own rule: the newer per-field table
+                // wins over the legacy JSON blob on a name collision
+                // (case-insensitive); empty values and the I Ching
+                // language keys (shown elsewhere) are skipped.
+                var legacy: [(String, String)] = []
                 if let raw: String = row["custom_fields"],
                    let data = raw.data(using: .utf8),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    customFields = dict
+                    legacy = dict
                         .compactMap { key, value in
-                            let text = value as? String ?? ""
+                            let text = Self.plainText(value as? String ?? "")
                             return text.isEmpty ? nil : (key, text)
                         }
                         .sorted { $0.0 < $1.0 }
                 }
+                let tableRows: [(String, String)] = try Row.fetchAll(
+                    db, sql: """
+                        SELECT field_name, field_value FROM card_custom_fields
+                        WHERE card_id = ?
+                        ORDER BY COALESCE(field_order, 0), id
+                        """, arguments: [cardId])
+                    .compactMap { fieldRow in
+                        let name: String = fieldRow["field_name"] ?? ""
+                        let text = Self.plainText(fieldRow["field_value"] ?? "")
+                        return text.isEmpty ? nil : (name, text)
+                    }
+                let hidden: Set<String> = ["traditional_chinese", "simplified_chinese"]
+                let shadowed = Set(tableRows.map { $0.0.lowercased() })
+                var merged: [(name: String, value: String)] = []
+                for (fieldName, value) in legacy {
+                    let lower = fieldName.lowercased()
+                    guard !hidden.contains(lower), !shadowed.contains(lower) else { continue }
+                    merged.append((fieldName, value))
+                }
+                for (fieldName, value) in tableRows
+                where !hidden.contains(fieldName.lowercased()) {
+                    merged.append((fieldName, value))
+                }
+                customFields = merged
             }
             // Resolve the archetype (for correspondences and the
             // reference link). Names are matched as-is; when several
