@@ -289,7 +289,7 @@ STANDARD_KIPPER = {
     "33": "Gloomy Thoughts", "gloomythoughts": "Gloomy Thoughts", "sadness": "Gloomy Thoughts", "melancholy": "Gloomy Thoughts",
     "34": "Work", "work": "Work", "employment": "Work", "occupation": "Work", "labor": "Work",
     "35": "A Long Way", "longway": "A Long Way", "longroad": "A Long Way", "distance": "A Long Way",
-    "36": "Hope, Great Water", "hope": "Hope, Great Water", "greatwater": "Hope, Great Water", "water": "Hope, Great Water", "ocean": "Hope, Great Water",
+    "36": "Hope, Great Water", "greatwater": "Hope, Great Water", "water": "Hope, Great Water", "ocean": "Hope, Great Water",
 }
 
 # Pre-Golden Dawn Tarot (swaps Strength/Justice - 8 and 11)
