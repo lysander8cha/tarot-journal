@@ -120,21 +120,6 @@ export async function getProfileBirthCards(
   return res.data;
 }
 
-export async function getBirthCardsForDate(
-  date: string,
-  opts?: BirthCardOpts,
-): Promise<BirthCardProfile> {
-  const params = optsToParams(opts);
-  params.set('date', date);
-  const res = await api.get(`/api/birth-cards?${params.toString()}`);
-  return res.data;
-}
-
-export async function getBirthCardPrefs(): Promise<BirthCardPrefs> {
-  const res = await api.get('/api/birth-cards/prefs');
-  return res.data;
-}
-
 export async function setBirthCardPrefs(
   prefs: Partial<BirthCardPrefs>,
 ): Promise<BirthCardPrefs> {

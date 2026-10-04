@@ -150,55 +150,6 @@ class ImportExportMixin:
             'entries': entries_data
         }
 
-    def export_entries_to_file(self, filepath: str, entry_ids: List[int] = None):
-        """Export entries to a JSON file."""
-        data = self.export_entries_json(entry_ids)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        logger.info("Exported %d entries to %s", len(data.get('entries', [])), filepath)
-
-    def export_entries_to_zip(self, filepath: str, entry_ids: List[int] = None):
-        """
-        Export entries to a ZIP file containing JSON data and card images.
-        """
-        data = self.export_entries_json(entry_ids)
-
-        # Collect all unique deck_ids from readings first
-        deck_ids = set()
-        for entry in data['entries']:
-            for reading in entry.get('readings', []):
-                deck_id = reading.get('deck_id')
-                if deck_id:
-                    deck_ids.add(deck_id)
-
-        # Batch fetch all cards for all decks at once
-        image_paths = set()
-        if deck_ids:
-            placeholders = ','.join('?' * len(deck_ids))
-            cursor = self.conn.cursor()
-            cursor.execute(
-                f'SELECT image_path FROM cards WHERE deck_id IN ({placeholders}) AND image_path IS NOT NULL',
-                list(deck_ids)
-            )
-            for row in cursor.fetchall():
-                if row['image_path'] and os.path.exists(row['image_path']):
-                    image_paths.add(row['image_path'])
-
-        # Create ZIP file
-        with zipfile.ZipFile(filepath, 'w', zipfile.ZIP_DEFLATED) as zf:
-            # Add JSON data
-            zf.writestr('entries.json', json.dumps(data, indent=2, ensure_ascii=False))
-
-            # Add images
-            for img_path in image_paths:
-                if os.path.exists(img_path):
-                    # Store with relative path
-                    archive_path = f"images/{os.path.basename(img_path)}"
-                    zf.write(img_path, archive_path)
-
-        logger.info("Exported %d entries with %d images to %s",
-                    len(data.get('entries', [])), len(image_paths), filepath)
-
     def import_entries_from_json(self, data: dict, merge_tags: bool = True) -> dict:
         """
         Import entries from a JSON dictionary.
@@ -281,20 +232,6 @@ class ImportExportMixin:
             'follow_ups_imported': follow_ups_imported
         }
 
-    def import_entries_from_file(self, filepath: str, merge_tags: bool = True) -> dict:
-        """Import entries from a JSON file."""
-        with open(filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return self.import_entries_from_json(data, merge_tags)
-
-    def import_entries_from_zip(self, filepath: str, merge_tags: bool = True) -> dict:
-        """Import entries from a ZIP file."""
-        with zipfile.ZipFile(filepath, 'r') as zf:
-            # Read JSON data
-            with zf.open('entries.json') as f:
-                data = json.load(f)
-            return self.import_entries_from_json(data, merge_tags)
-
     # === Deck Export/Import with Metadata ===
     def export_deck_json(self, deck_id: int) -> dict:
         """Export a deck with all its cards and metadata to a JSON-serializable dictionary."""
@@ -356,95 +293,6 @@ class ImportExportMixin:
             'exported_at': datetime.now().isoformat(),
             'deck': deck_dict
         }
-
-    def export_deck_to_file(self, deck_id: int, filepath: str):
-        """Export a deck to a JSON file."""
-        data = self.export_deck_json(deck_id)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        logger.info("Exported deck '%s' (%d cards) to %s",
-                     data.get('deck', {}).get('name', '?'), len(data.get('cards', [])), filepath)
-
-    def import_deck_from_json(self, data: dict) -> dict:
-        """
-        Import a deck from a JSON dictionary.
-        Returns a summary of what was imported.
-        """
-        logger.info("Importing deck from JSON: '%s'", data.get('deck', {}).get('name', '?'))
-        if not isinstance(data, dict) or 'deck' not in data:
-            raise ValueError("Invalid deck import data format")
-
-        deck_data = data['deck']
-
-        with self.transaction():
-            # Find or create the cartomancy type
-            cart_type_name = deck_data.get('cartomancy_type_name', 'Tarot')
-            cart_types = self.get_cartomancy_types()
-            cart_type_id = None
-            for ct in cart_types:
-                if ct['name'] == cart_type_name:
-                    cart_type_id = ct['id']
-                    break
-            if not cart_type_id:
-                cart_type_id = 1  # Default to Tarot
-
-            # Create the deck
-            deck_id = self.add_deck(
-                name=deck_data.get('name', 'Imported Deck'),
-                type_ids=[cart_type_id],
-                image_folder=deck_data.get('image_folder'),
-                suit_names=deck_data.get('suit_names'),
-                court_names=deck_data.get('court_names'),
-            )
-
-            # Import custom field definitions
-            custom_field_map = {}  # Maps field_name to field_id for reference
-            for cf_def in deck_data.get('custom_field_definitions', []):
-                field_id = self.add_deck_custom_field(
-                    deck_id=deck_id,
-                    field_name=cf_def['field_name'],
-                    field_type=cf_def['field_type'],
-                    field_options=cf_def.get('field_options'),
-                    field_order=cf_def.get('field_order', 0)
-                )
-                custom_field_map[cf_def['field_name']] = field_id
-
-            # Import cards
-            cards_imported = 0
-            for card_data in deck_data.get('cards', []):
-                # Add the card
-                card_id = self.add_card(
-                    deck_id=deck_id,
-                    name=card_data['name'],
-                    image_path=card_data.get('image_path'),
-                    card_order=card_data.get('card_order', 0)
-                )
-
-                # Update metadata
-                self.update_card_metadata(
-                    card_id=card_id,
-                    archetype=card_data.get('archetype'),
-                    rank=card_data.get('rank'),
-                    suit=card_data.get('suit'),
-                    notes=card_data.get('notes'),
-                    custom_fields=card_data.get('custom_fields')
-                )
-
-                cards_imported += 1
-
-        return {
-            'deck_id': deck_id,
-            'deck_name': deck_data.get('name'),
-            'cards_imported': cards_imported,
-            'custom_fields_created': len(custom_field_map)
-        }
-
-    def import_deck_from_file(self, filepath: str) -> dict:
-        """Import a deck from a JSON file."""
-        logger.info("Importing deck from file: %s", filepath)
-        with open(filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return self.import_deck_from_json(data)
 
     # === Full Backup/Restore ===
     def _snapshot_db_to(self, dest_path: str) -> None:

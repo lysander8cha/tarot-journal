@@ -1,6 +1,8 @@
 """Startup migrations against legacy data shapes."""
 import json
 
+import pytest
+
 from conftest import make_deck_with_card
 
 from database.correspondence_migration import run_correspondence_migration
@@ -43,10 +45,15 @@ def test_correspondence_migration_handles_legacy_fields(db):
     assert count_after == count_before
 
 
-def test_lenormand_reference_repair(tmp_path):
-    """The historical Lenormand → Petit Lenormand rename missed
-    spreads' JSON columns and entry_readings; the repair migration
-    fixes them on reopen, with exact matching (Grand Jeu untouched)."""
+@pytest.mark.parametrize('flag', [
+    'petit_lenormand_rename_done',            # never-renamed old DB
+    'petit_lenormand_reference_repair_done',  # renamed by the old, gappy code
+])
+def test_lenormand_reference_repair(tmp_path, flag):
+    """Opening an old DB rewrites every Lenormand reference — spreads'
+    JSON columns, entry_readings, entity-note keys — via either the
+    rename migration or the later repair pass, with exact matching
+    (Grand Jeu untouched)."""
     from database import Database
 
     path = str(tmp_path / "repair.db")
@@ -71,7 +78,7 @@ def test_lenormand_reference_repair(tmp_path):
         "VALUES ('suit', 'Lenormand::Clubs', ?, 'x', '2026-01-01')",
         (src_id,))
     # Reset the flag so the repair reruns on next open
-    db.set_setting('petit_lenormand_reference_repair_done', 'false')
+    db.set_setting(flag, 'false')
     db.conn.commit()
     db.close()
 
@@ -119,3 +126,33 @@ def test_rename_cartomancy_type_covers_json_references(db):
     assert cur.execute(
         "SELECT COUNT(*) FROM entity_source_notes "
         "WHERE entity_key = 'ZZ Newname::Ace'").fetchone()[0] == 1
+
+
+def test_legacy_deck_type_column_upgrade_keeps_favorite(tmp_path):
+    """A very old backup (decks.cartomancy_type_id) upgrades: the type
+    moves to the junction table and the rebuilt decks table keeps the
+    favorite column that phone sync relies on."""
+    import sqlite3
+    from database import Database
+
+    path = str(tmp_path / "old.db")
+    c = sqlite3.connect(path)
+    c.executescript('''
+        CREATE TABLE cartomancy_types (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                       name TEXT UNIQUE NOT NULL);
+        INSERT INTO cartomancy_types (name) VALUES ('Tarot');
+        CREATE TABLE decks (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+                            image_folder TEXT,
+                            cartomancy_type_id INTEGER REFERENCES cartomancy_types(id),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+        INSERT INTO decks (name, cartomancy_type_id) VALUES ('Old Deck', 1);
+    ''')
+    c.commit()
+    c.close()
+
+    db = Database(db_path=path)
+    deck = db.get_decks()[0]
+    assert deck['name'] == 'Old Deck' and deck['favorite'] == 0
+    assert 'cartomancy_type_id' not in deck
+    assert [t['name'] for t in db.get_types_for_deck(deck['id'])] == ['Tarot']
+    db.close()

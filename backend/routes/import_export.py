@@ -12,7 +12,6 @@ from io import BytesIO
 from flask import Blueprint, jsonify, request, current_app, send_file
 
 from backend.security import is_valid_directory
-from backend.utils import row_to_dict
 
 logger = logging.getLogger(__name__)
 import_export_bp = Blueprint('import_export', __name__)
@@ -23,8 +22,8 @@ def get_preset_info():
     """Get info about a specific import preset (type, suit names, etc.)."""
     preset_name = request.args.get('preset_name', '')
 
-    from import_presets import ImportPresets
-    presets = ImportPresets()
+    from import_presets import get_presets
+    presets = get_presets()
 
     preset = presets.get_preset(preset_name)
     if not preset:
@@ -53,8 +52,8 @@ def scan_folder():
         logger.warning(f"Invalid folder path for scan: {folder}")
         return jsonify({'error': 'Invalid folder path'}), 400
 
-    from import_presets import ImportPresets
-    presets = ImportPresets()
+    from import_presets import get_presets
+    presets = get_presets()
 
     try:
         preview = presets.preview_import_with_metadata(
@@ -99,8 +98,8 @@ def import_from_folder():
     if not cartomancy_type_id:
         return jsonify({'error': 'Cartomancy type is required'}), 400
 
-    from import_presets import ImportPresets
-    presets = ImportPresets()
+    from import_presets import get_presets
+    presets = get_presets()
 
     try:
         # Get card metadata preview
@@ -299,16 +298,16 @@ def scan_new_cards():
 @import_export_bp.route('/api/import/presets')
 def get_import_presets():
     """Get available import preset names."""
-    from import_presets import ImportPresets
-    presets = ImportPresets()
+    from import_presets import get_presets
+    presets = get_presets()
     return jsonify(presets.get_preset_names())
 
 
 @import_export_bp.route('/api/import/presets/details')
 def get_import_presets_details():
     """Get all presets with full details (for settings UI)."""
-    from import_presets import ImportPresets, BUILTIN_PRESETS
-    presets = ImportPresets()
+    from import_presets import get_presets, BUILTIN_PRESETS
+    presets = get_presets()
     result = []
     for name in presets.get_preset_names():
         preset = presets.get_preset(name)
@@ -340,7 +339,7 @@ def get_import_presets_details():
 @import_export_bp.route('/api/import/presets', methods=['POST'])
 def save_import_preset():
     """Create or update a custom import preset."""
-    from import_presets import ImportPresets
+    from import_presets import get_presets
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Invalid JSON'}), 400
@@ -352,7 +351,7 @@ def save_import_preset():
     suit_names = data.get('suit_names', {})
     mappings = data.get('mappings')
 
-    presets = ImportPresets()
+    presets = get_presets()
     # If no mappings provided, preserve existing ones from the preset being edited
     if mappings is None:
         existing = presets.get_preset(name)
@@ -365,8 +364,8 @@ def save_import_preset():
 @import_export_bp.route('/api/import/presets/<path:name>', methods=['DELETE'])
 def delete_import_preset(name):
     """Delete a custom import preset."""
-    from import_presets import ImportPresets, BUILTIN_PRESETS
-    presets = ImportPresets()
+    from import_presets import get_presets, BUILTIN_PRESETS
+    presets = get_presets()
     clean_name = name.replace("Custom: ", "")
     # Can't delete a builtin unless it's been customized (in which case we revert it)
     if clean_name in BUILTIN_PRESETS and clean_name not in presets.custom_presets:
@@ -378,10 +377,10 @@ def delete_import_preset(name):
 @import_export_bp.route('/api/import/presets/<path:name>/reset', methods=['POST'])
 def reset_import_preset(name):
     """Reset a customized built-in preset back to its default."""
-    from import_presets import ImportPresets, BUILTIN_PRESETS
+    from import_presets import get_presets, BUILTIN_PRESETS
     if name not in BUILTIN_PRESETS:
         return jsonify({'error': 'Not a built-in preset'}), 400
-    presets = ImportPresets()
+    presets = get_presets()
     if name in presets.custom_presets:
         del presets.custom_presets[name]
         presets._save_presets()
@@ -415,17 +414,3 @@ def export_deck(deck_id):
     )
 
 
-@import_export_bp.route('/api/import/deck-json', methods=['POST'])
-def import_deck_json():
-    """Import a deck from JSON data."""
-    db = current_app.config['DB']
-    data = request.get_json()
-
-    if not data:
-        return jsonify({'error': 'No JSON data provided'}), 400
-
-    try:
-        result = db.import_deck_from_json(data)
-        return jsonify(result), 201
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500

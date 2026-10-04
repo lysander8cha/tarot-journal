@@ -8,7 +8,7 @@ import json
 import os
 import zipfile
 
-from flask import Blueprint, current_app, request, send_file, jsonify
+from flask import Blueprint, current_app, send_file, jsonify
 from backend.utils import require_json
 
 anki_export_bp = Blueprint('anki_export', __name__)

@@ -35,10 +35,6 @@ KEY_NUMBERS = {
     'W': 5, 'X': 6, 'Y': 7, 'Z': 8,
 }
 
-# Display metadata only — the elemental tags Greer gives the four
-# reduced letters.
-WXYZ_ELEMENTS = {'W': 'Fire', 'X': 'Earth', 'Y': 'Water', 'Z': 'Air'}
-
 # Paul Foster Case's musical attributions (Golden Dawn lineage).
 # Swappable by design — Greer invites substituting other systems.
 CASE_NOTES = {

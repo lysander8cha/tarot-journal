@@ -6,11 +6,6 @@ export async function getProfiles(): Promise<Profile[]> {
   return res.data;
 }
 
-export async function getProfile(profileId: number): Promise<Profile> {
-  const res = await api.get(`/api/profiles/${profileId}`);
-  return res.data;
-}
-
 export async function createProfile(data: {
   name: string;
   gender?: string | null;

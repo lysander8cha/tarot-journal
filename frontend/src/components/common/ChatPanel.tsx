@@ -3,11 +3,11 @@
  * presentational — the parent owns the conversation state and calls
  * the model; this renders whatever it's given and reports sends.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import './ChatPanel.css';
 
 export interface ChatDisplayMessage {
-  role: 'user' | 'assistant' | 'error';
+  role: 'user' | 'assistant' | 'error' | 'note';
   text: string;
 }
 
@@ -19,6 +19,12 @@ interface ChatPanelProps {
   /** Shown in the empty log before any messages arrive. */
   emptyHint?: string;
   busyLabel?: string;
+  /** Keep the input live while busy (the parent queues the message). */
+  allowSendWhileBusy?: boolean;
+  /** Placeholder shown while busy, when sending is still allowed. */
+  busyPlaceholder?: string;
+  /** Extras rendered at the end of the log (e.g. a resume button). */
+  children?: ReactNode;
 }
 
 export default function ChatPanel({
@@ -28,9 +34,13 @@ export default function ChatPanel({
   placeholder = 'Type a message… (Enter to send, Shift+Enter for a new line)',
   emptyHint,
   busyLabel = 'Working…',
+  allowSendWhileBusy = false,
+  busyPlaceholder,
+  children,
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const locked = busy && !allowSendWhileBusy;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -38,7 +48,7 @@ export default function ChatPanel({
 
   const send = () => {
     const text = input.trim();
-    if (!text || busy) return;
+    if (!text || locked) return;
     setInput('');
     onSend(text);
   };
@@ -59,20 +69,21 @@ export default function ChatPanel({
             {busyLabel}
           </div>
         )}
+        {children}
         <div ref={endRef} />
       </div>
       <div className="chat-panel__input">
         <textarea
           value={input}
-          placeholder={placeholder}
+          placeholder={busy && busyPlaceholder ? busyPlaceholder : placeholder}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
           }}
           rows={2}
-          disabled={busy}
+          disabled={locked}
         />
-        <button onClick={send} disabled={busy || !input.trim()}>Send</button>
+        <button onClick={send} disabled={locked || !input.trim()}>Send</button>
       </div>
     </div>
   );

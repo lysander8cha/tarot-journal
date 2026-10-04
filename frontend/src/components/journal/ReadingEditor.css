@@ -87,21 +87,6 @@
   gap: 4px;
 }
 
-.reading-editor__type-badge {
-  font-size: 9px;
-  padding: 1px 4px;
-  background: var(--tj-tint);
-  color: var(--accent);
-  border-radius: var(--tj-radius-row);
-  flex-shrink: 0;
-}
-
-.reading-editor__deck-select {
-  width: 120px;
-  flex-shrink: 0;
-}
-
-.reading-editor__card-select,
 .reading-editor__card-input {
   flex: 1;
   min-width: 0;
@@ -286,11 +271,6 @@
   flex-shrink: 0;
   font-size: var(--font-size-small);
   color: var(--text-secondary);
-}
-
-.reading-editor__slot-deck {
-  flex: 1;
-  min-width: 0;
 }
 
 .reading-editor__slot-badge {

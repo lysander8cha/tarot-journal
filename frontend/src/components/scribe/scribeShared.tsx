@@ -12,7 +12,7 @@
  * "combinations" / "entries"), so a merged prompt could combine them
  * without changing this module.
  */
-import type { ReactNode, RefObject } from 'react';
+import type { ReactNode } from 'react';
 import { extractSourceText, convertSourceImage } from '../../api/scribe';
 import type { LlmMessagePart } from '../../api/llm';
 import './ScribeModal.css';
@@ -321,51 +321,8 @@ export function ScribeMaterialsField({
   );
 }
 
-/** The chat pane: message log + input bar. The resume button and
- *  other log extras ride in as children. */
-export function ScribeChatPane({
-  messages,
-  busy,
-  chatInput,
-  onChatInput,
-  onSend,
-  endRef,
-  children,
-}: {
-  messages: { role: string; text: string }[];
-  busy: boolean;
-  chatInput: string;
-  onChatInput: (value: string) => void;
-  onSend: () => void;
-  endRef?: RefObject<HTMLDivElement | null>;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="scribe__chat">
-      <div className="scribe__chat-log">
-        {messages.map((m, i) => (
-          <div key={i} className={`scribe__msg scribe__msg--${m.role}`}>
-            {m.text}
-          </div>
-        ))}
-        {busy && <div className="scribe__msg scribe__msg--assistant scribe__msg--busy">Working…</div>}
-        {children}
-        <div ref={endRef} />
-      </div>
-      <div className="scribe__chat-input">
-        <textarea
-          value={chatInput}
-          placeholder={busy
-            ? 'Still working — messages sent now will guide the remaining parts…'
-            : 'Ask for corrections or changes… (Enter to send, Shift+Enter for a new line)'}
-          onChange={e => onChatInput(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); }
-          }}
-          rows={2}
-        />
-        <button onClick={onSend} disabled={!chatInput.trim()}>Send</button>
-      </div>
-    </div>
-  );
-}
+/** Chat input placeholders for the Scribe's ChatPanel. */
+export const SCRIBE_CHAT_PLACEHOLDER =
+  'Ask for corrections or changes… (Enter to send, Shift+Enter for a new line)';
+export const SCRIBE_CHAT_BUSY_PLACEHOLDER =
+  'Still working — messages sent now will guide the remaining parts…';

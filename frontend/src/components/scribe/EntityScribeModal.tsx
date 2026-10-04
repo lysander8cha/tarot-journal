@@ -32,7 +32,6 @@ import {
 } from './entityRosters';
 import type { ReferenceSource } from '../../types';
 import {
-  ScribeChatPane,
   ScribeMaterialsField,
   buildUnits,
   makePastedMaterial,
@@ -40,7 +39,9 @@ import {
   splitUnit,
   type ExtractionUnit,
   type Material,
+  SCRIBE_CHAT_PLACEHOLDER,
 } from './scribeShared';
+import ChatPanel, { type ChatDisplayMessage } from '../common/ChatPanel';
 import './ScribeModal.css';
 import './EntityScribeModal.css';
 
@@ -114,14 +115,12 @@ export default function EntityScribeModal({
 
   // ── Review state ──────────────────────────────────────────
   const [messages, setMessages] = useState<LlmMessage[]>([]);
-  const [display, setDisplay] = useState<{ role: string; text: string }[]>([]);
-  const [chatInput, setChatInput] = useState('');
+  const [display, setDisplay] = useState<ChatDisplayMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [applying, setApplying] = useState(false);
   const [proposals, setProposals] = useState<EntityProposal[]>([]);
   const proposalsRef = useRef<EntityProposal[]>([]);
   const systemPromptRef = useRef('');
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const updateProposals = (fn: (cur: EntityProposal[]) => EntityProposal[]) => {
     proposalsRef.current = fn(proposalsRef.current);
@@ -250,10 +249,8 @@ export default function EntityScribeModal({
     }
   };
 
-  const sendChat = async () => {
-    const text = chatInput.trim();
-    if (!text || busy) return;
-    setChatInput('');
+  const sendChat = async (text: string) => {
+    if (busy) return;
     setBusy(true);
     const userMsg: LlmMessage = { role: 'user', content: text };
     setDisplay(d => [...d, { role: 'user', text }]);
@@ -412,13 +409,11 @@ export default function EntityScribeModal({
 
       {stage === 'review' && (
         <div className="entity-scribe__review">
-          <ScribeChatPane
+          <ChatPanel
             messages={display}
             busy={busy}
-            chatInput={chatInput}
-            onChatInput={setChatInput}
             onSend={sendChat}
-            endRef={chatEndRef}
+            placeholder={SCRIBE_CHAT_PLACEHOLDER}
           />
 
           <div className="entity-scribe__panel">

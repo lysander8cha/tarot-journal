@@ -7,7 +7,7 @@ import os
 import re
 import tempfile
 from flask import Blueprint, jsonify, request, current_app
-from theme_config import get_theme, PRESET_THEMES
+from theme_config import get_theme
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -35,29 +35,6 @@ def update_theme():
     if fonts:
         for key, value in fonts.items():
             theme.set_font(key, value)
-    theme.save_theme()
-    return jsonify({
-        'colors': theme.get_colors(),
-        'fonts': theme.get_fonts(),
-    })
-
-
-@settings_bp.route('/api/theme/presets')
-def get_theme_presets():
-    return jsonify({
-        name: {'colors': preset['colors'], 'fonts': preset['fonts']}
-        for name, preset in PRESET_THEMES.items()
-    })
-
-
-@settings_bp.route('/api/theme/apply-preset', methods=['POST'])
-def apply_theme_preset():
-    theme = get_theme()
-    data = request.get_json()
-    preset_name = data.get('preset_name', '')
-    if preset_name not in PRESET_THEMES:
-        return jsonify({'error': f'Unknown preset: {preset_name}'}), 400
-    theme.apply_preset(preset_name)
     theme.save_theme()
     return jsonify({
         'colors': theme.get_colors(),
@@ -196,8 +173,7 @@ def restore_backup():
 
 @settings_bp.route('/api/cache/stats')
 def get_cache_stats():
-    from thumbnail_cache import get_cache
-    cache = get_cache()
+    cache = current_app.config['THUMB_CACHE']
     return jsonify({
         'count': cache.get_cache_count(),
         'size_bytes': cache.get_cache_size(),
@@ -206,8 +182,7 @@ def get_cache_stats():
 
 @settings_bp.route('/api/cache/clear', methods=['POST'])
 def clear_cache():
-    from thumbnail_cache import get_cache
-    cache = get_cache()
+    cache = current_app.config['THUMB_CACHE']
     cache.clear_cache()
     return jsonify({'ok': True})
 

@@ -13,8 +13,6 @@ module.exports = {
       /^\/node_modules\/(?!electron)/,
       /^\/\.thumbnail_cache/,
       /\.pyc$/,
-      /^\/mixin_/,
-      /^\/main\.py$/,
       /^\/ios/,
       /^\/tests/,
       /^\/out/,

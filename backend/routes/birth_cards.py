@@ -225,25 +225,6 @@ def profile_birth_cards(profile_id):
     return _compute_response(db, birth, birth_str)
 
 
-@birth_cards_bp.route('/api/birth-cards')
-def adhoc_birth_cards():
-    """Birth cards for an arbitrary date (no profile needed)."""
-    db = current_app.config['DB']
-    date_str = request.args.get('date', '')
-    try:
-        birth = date.fromisoformat(date_str)
-    except ValueError:
-        return jsonify({'error': 'date must be YYYY-MM-DD'}), 400
-    return _compute_response(db, birth, date_str)
-
-
-@birth_cards_bp.route('/api/birth-cards/prefs')
-def get_birth_card_prefs():
-    method, eight_eleven, court_system = _prefs(current_app.config['DB'])
-    return jsonify({'method': method, 'eight_eleven': eight_eleven,
-                    'court_system': court_system})
-
-
 @birth_cards_bp.route('/api/birth-cards/prefs', methods=['PUT'])
 @require_json
 def set_birth_card_prefs(data):

@@ -301,11 +301,12 @@ def test_api_full_name_persists_via_profile_routes(client):
     res = client.post('/api/profiles', json={
         'name': 'Display Name', 'full_name': 'Full Birth Name'})
     pid = res.get_json()['id']
-    res = client.get(f'/api/profiles/{pid}')
-    assert res.get_json()['full_name'] == 'Full Birth Name'
+    def full_name():
+        return next(p for p in client.get('/api/profiles').get_json()
+                    if p['id'] == pid)['full_name']
+    assert full_name() == 'Full Birth Name'
     client.put(f'/api/profiles/{pid}', json={'full_name': 'Changed Name'})
-    assert client.get(
-        f'/api/profiles/{pid}').get_json()['full_name'] == 'Changed Name'
+    assert full_name() == 'Changed Name'
 
 
 # === Profile PDF export ===

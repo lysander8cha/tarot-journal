@@ -461,22 +461,6 @@ class CorrespondencesMixin:
 
         self._commit()
 
-    def bulk_set_system_assignments(self, system_id: int,
-                                    assignments: list[dict],
-                                    source_group: str = None):
-        """Bulk set assignments. Each dict: {archetype_id, field_name, field_value}.
-
-        If source_group is provided, all assignments are tagged with it.
-        Otherwise they are treated as manual (NULL source).
-        """
-        for a in assignments:
-            if a['field_name'] not in CORRESPONDENCE_FIELDS:
-                continue
-            self.set_system_assignment(
-                system_id, a['archetype_id'], a['field_name'], a['field_value'],
-                source_group=source_group,
-            )
-
     def set_system_multi_assignment(self, system_id: int, archetype_id: int,
                                     field_name: str, values: list,
                                     source_group: str = None):
@@ -826,33 +810,7 @@ class CorrespondencesMixin:
 
         return result
 
-    def get_deck_correspondences(self, deck_id: int):
-        """Get resolved correspondences for all cards in a deck.
-
-        Returns a dict keyed by card_id, each value is a list of
-        resolved correspondence dicts.
-        """
-        cursor = self.conn.cursor()
-        cursor.execute('SELECT id FROM cards WHERE deck_id = ?', (deck_id,))
-        cards = cursor.fetchall()
-        result = {}
-        for card in cards:
-            result[card['id']] = self.get_card_correspondences(card['id'])
-        return result
-
     # === Cross-System Queries (for Reference tab) ===
-
-    def get_correspondences_by_archetype(self, archetype_id: int):
-        """Get all systems' assignments for a single archetype."""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT ca.*, cs.name AS system_name
-            FROM correspondence_assignments ca
-            JOIN correspondence_systems cs ON cs.id = ca.system_id
-            WHERE ca.archetype_id = ?
-            ORDER BY cs.name, ca.field_name
-        ''', (archetype_id,))
-        return cursor.fetchall()
 
     # === Stats / Insights Queries ===
 
@@ -932,80 +890,6 @@ class CorrespondencesMixin:
 
         result = [{'value': v, 'count': c} for v, c in value_counts.items()]
         result.sort(key=lambda x: x['count'], reverse=True)
-        return result
-
-    def get_correspondence_timeline(self, field_name: str, months: int = 12):
-        """Get monthly breakdown of correspondence field values across readings.
-
-        Returns: [{period, values: {value: count, ...}}] for each month.
-        """
-        if field_name not in CORRESPONDENCE_FIELDS:
-            return []
-
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT er.cards_used, er.deck_id,
-                   strftime('%Y-%m', je.created_at) as period
-            FROM entry_readings er
-            JOIN journal_entries je ON je.id = er.entry_id
-            WHERE er.cards_used IS NOT NULL
-              AND je.created_at >= date('now', ?)
-            ORDER BY je.created_at
-        ''', (f'-{months} months',))
-
-        import json
-        monthly = {}  # period -> {value -> count}
-        for row in cursor.fetchall():
-            try:
-                cards = json.loads(row['cards_used'])
-            except (json.JSONDecodeError, TypeError):
-                continue
-            deck_id = row['deck_id']
-            period = row['period']
-            if period not in monthly:
-                monthly[period] = {}
-
-            for card_entry in cards:
-                card_name = card_entry.get('name')
-                card_deck_id = card_entry.get('deck_id', deck_id)
-                if not card_name or not card_deck_id:
-                    continue
-
-                cursor.execute('''
-                    SELECT c.id, c.archetype, d.correspondence_system_id
-                    FROM cards c
-                    JOIN decks d ON d.id = c.deck_id
-                    WHERE c.name = ? AND c.deck_id = ?
-                    LIMIT 1
-                ''', (card_name, card_deck_id))
-                card_row = cursor.fetchone()
-                if not card_row:
-                    continue
-
-                values = []
-                cursor.execute('''
-                    SELECT field_value FROM card_correspondence_overrides
-                    WHERE card_id = ? AND field_name = ?
-                ''', (card_row['id'], field_name))
-                override = cursor.fetchone()
-                if override and override['field_value']:
-                    values = [override['field_value']]
-                elif card_row['correspondence_system_id'] and card_row['archetype']:
-                    cursor.execute('''
-                        SELECT DISTINCT ca.field_value
-                        FROM correspondence_assignments ca
-                        JOIN card_archetypes a ON a.id = ca.archetype_id
-                        WHERE ca.system_id = ?
-                          AND a.name = ?
-                          AND ca.field_name = ?
-                    ''', (card_row['correspondence_system_id'], card_row['archetype'], field_name))
-                    values = [r['field_value'] for r in cursor.fetchall()]
-
-                for v in values:
-                    if v:
-                        monthly[period][v] = monthly[period].get(v, 0) + 1
-
-        result = [{'period': p, 'values': v} for p, v in sorted(monthly.items())]
         return result
 
     def compare_correspondence_systems(self, system_ids: list[int]):

@@ -166,15 +166,9 @@ def test_snapshot_unknown_table_404(client):
     assert res.status_code == 404
 
 
-def test_manifest_shape(client, db):
-    make_deck_with_card(db)
+def test_manifest_shape(client):
     m = client.get('/api/sync/manifest').get_json()
-    assert m['protocol'] == 1
-    for table in ('spreads', 'profiles', 'decks', 'cards', 'tags',
-                  'reference_sources', 'source_fields', 'card_archetypes'):
-        assert 'count' in m['tables'][table]
-    assert 'max_updated_at' in m['tables']['entries']
-    assert 'max_updated_at' in m['tables']['source_entries']
+    assert m == {'app': 'tarot-journal', 'protocol': 1}
 
 
 def _make_entry(db, deck_id, card_id, title='ZZ Sync Entry'):
@@ -388,9 +382,6 @@ def test_reference_entity_catalog(client, db):
     for r in rows:
         if r['kind'] in ('suit', 'rank'):
             assert '::' in r['key']
-    # And the manifest counts it so the phone pulls it
-    m = client.get('/api/sync/manifest').get_json()
-    assert m['tables']['reference_entities']['count'] == len(rows)
 
 
 def test_combinations_and_entity_notes_snapshots(client, db):

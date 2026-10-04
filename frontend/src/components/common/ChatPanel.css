@@ -54,6 +54,15 @@
   background: var(--bg-primary);
 }
 
+.chat-panel__msg--note {
+  align-self: flex-end;
+  color: var(--text-dim);
+  font-size: var(--font-size-small);
+  font-style: italic;
+  background: none;
+  padding: 0 10px;
+}
+
 .chat-panel__msg--busy {
   color: var(--text-dim);
   font-style: italic;

@@ -57,11 +57,6 @@ export interface CardCustomField {
   field_order: number;
 }
 
-export async function getCardCustomFields(cardId: number): Promise<CardCustomField[]> {
-  const res = await api.get(`/api/cards/${cardId}/custom-fields`);
-  return res.data;
-}
-
 export async function addCardCustomField(
   cardId: number,
   data: { field_name: string; field_type?: string; field_value?: string; field_options?: string[]; field_order?: number },

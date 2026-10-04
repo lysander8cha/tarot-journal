@@ -32,25 +32,6 @@ def _mime_for(path):
     return _MIME_TYPES.get(ext, 'image/jpeg')
 
 
-@images_bp.route('/api/images/card/<int:card_id>')
-def card_image(card_id):
-    """Serve the full-size card image."""
-    db = current_app.config['DB']
-    card = db.get_card(card_id)
-    if not card or not card['image_path']:
-        abort(404)
-    path = card['image_path']
-
-    # Security: Validate the path is a real image file
-    if not is_valid_image_path(path):
-        logger.warning(f"Invalid image path requested for card {card_id}: {path}")
-        abort(404)
-
-    resp = send_file(path, mimetype=_mime_for(path))
-    resp.cache_control.max_age = 86400  # 24 hours
-    return resp
-
-
 @images_bp.route('/api/images/card/<int:card_id>/thumbnail')
 def card_thumbnail(card_id):
     """Serve a cached thumbnail (300x450) for a card."""

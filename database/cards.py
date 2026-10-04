@@ -382,26 +382,6 @@ class CardsMixin:
         self._commit()
         return created
 
-    def search_archetypes(self, query: str, cartomancy_type: str = None):
-        """Search archetypes by name for autocomplete"""
-        cursor = self.conn.cursor()
-        search_pattern = f'%{query}%'
-        if cartomancy_type:
-            cursor.execute('''
-                SELECT * FROM card_archetypes
-                WHERE cartomancy_type = ? AND name LIKE ?
-                ORDER BY name
-                LIMIT 20
-            ''', (cartomancy_type, search_pattern))
-        else:
-            cursor.execute('''
-                SELECT * FROM card_archetypes
-                WHERE name LIKE ?
-                ORDER BY cartomancy_type, name
-                LIMIT 20
-            ''', (search_pattern,))
-        return cursor.fetchall()
-
     def get_archetype_by_name(self, name: str, cartomancy_type: str):
         """Get a specific archetype by name and type"""
         cursor = self.conn.cursor()
@@ -533,103 +513,6 @@ class CardsMixin:
             if archetype or rank or suit:
                 self.update_card_metadata(card_id, archetype=archetype, rank=rank, suit=suit)
 
-    def auto_assign_deck_metadata(self, deck_id: int, overwrite: bool = False,
-                                   preset_name: str = None, use_sort_order: bool = False):
-        """
-        Automatically assign metadata to all cards in a deck.
-        If overwrite is False, only updates cards without existing archetype.
-        If preset_name is provided, uses ordering-aware metadata from import_presets.
-        If use_sort_order is True, assigns metadata based on card sort order (1, 2, 3...)
-        instead of parsing card names.
-        Returns the number of cards updated.
-        """
-        deck = self.get_deck(deck_id)
-        if not deck:
-            return 0
-
-        cartomancy_type = deck['cartomancy_type_name']
-        cards = self.get_cards(deck_id)
-        updated = 0
-
-        # Get custom suit names from deck if available
-        custom_suit_names = None
-        if deck['suit_names']:
-            try:
-                custom_suit_names = json.loads(deck['suit_names'])
-            except (json.JSONDecodeError, ValueError) as e:
-                logger.warning("Failed to parse suit_names for deck %s: %s", deck['id'], e)
-
-        # Get custom court names from deck if available
-        custom_court_names = None
-        if deck['court_names']:
-            try:
-                custom_court_names = json.loads(deck['court_names'])
-            except (json.JSONDecodeError, ValueError) as e:
-                logger.warning("Failed to parse court_names for deck %s: %s", deck['id'], e)
-
-        # Use import_presets if preset_name is provided
-        if preset_name:
-            from import_presets import get_presets
-            presets = get_presets()
-
-            # If using sort order, sort cards and assign metadata sequentially
-            if use_sort_order:
-                # Sort cards by their current card_order
-                sorted_cards = sorted(cards, key=lambda c: c['card_order'] if c['card_order'] else 999)
-                for idx, card in enumerate(sorted_cards):
-                    # Skip if already has archetype and not overwriting
-                    existing_archetype = card['archetype'] if 'archetype' in card.keys() else None
-                    if not overwrite and existing_archetype:
-                        continue
-
-                    # Use 1-based index as the sort order for metadata lookup
-                    sort_order = idx + 1
-                    metadata = presets.get_card_metadata_by_sort_order(sort_order, preset_name)
-
-                    if metadata:
-                        self.update_card_metadata(card['id'], archetype=metadata.get('archetype'),
-                                                 rank=metadata.get('rank'), suit=metadata.get('suit'),
-                                                 custom_fields=metadata.get('custom_fields'))
-                        # Update sort order to match
-                        self.update_card(card['id'], card_order=sort_order)
-                        updated += 1
-            else:
-                # Parse card names for metadata
-                for card in cards:
-                    # Skip if already has archetype and not overwriting
-                    existing_archetype = card['archetype'] if 'archetype' in card.keys() else None
-                    if not overwrite and existing_archetype:
-                        continue
-
-                    metadata = presets.get_card_metadata(card['name'], preset_name, custom_suit_names,
-                                                         custom_court_names)
-                    # Check if we have any metadata to update (including sort_order for Oracle decks)
-                    has_metadata = metadata.get('archetype') or metadata.get('rank') or metadata.get('suit')
-                    has_sort_order = metadata.get('sort_order') is not None and metadata.get('sort_order') != 999
-
-                    if has_metadata or has_sort_order:
-                        if has_metadata:
-                            self.update_card_metadata(card['id'], archetype=metadata.get('archetype'),
-                                                     rank=metadata.get('rank'), suit=metadata.get('suit'),
-                                                     custom_fields=metadata.get('custom_fields'))
-                        # Also update sort order
-                        if has_sort_order:
-                            self.update_card(card['id'], card_order=metadata.get('sort_order'))
-                        updated += 1
-        else:
-            # Fall back to legacy parsing (no preset ordering)
-            for card in cards:
-                existing_archetype = card['archetype'] if 'archetype' in card.keys() else None
-                if not overwrite and existing_archetype:
-                    continue
-
-                archetype, rank, suit = self.parse_card_name_for_archetype(card['name'], cartomancy_type)
-                if archetype or rank or suit:
-                    self.update_card_metadata(card['id'], archetype=archetype, rank=rank, suit=suit)
-                    updated += 1
-
-        return updated
-
     # === Card Metadata ===
     def update_card_metadata(self, card_id: int, archetype: str = None, rank: str = None,
                              suit: str = None, notes: str = None, custom_fields: dict = None):
@@ -663,20 +546,6 @@ class CardsMixin:
             params.append(card_id)
             cursor.execute(f'UPDATE cards SET {", ".join(updates)} WHERE id = ?', params)
             self._commit()
-
-    def get_card_with_metadata(self, card_id: int):
-        """Get a card with all its metadata"""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT c.*,
-                (SELECT ct.name FROM deck_type_assignments dta
-                 JOIN cartomancy_types ct ON dta.type_id = ct.id
-                 WHERE dta.deck_id = c.deck_id
-                 ORDER BY ct.name LIMIT 1) as cartomancy_type_name
-            FROM cards c
-            WHERE c.id = ?
-        ''', (card_id,))
-        return cursor.fetchone()
 
     def get_card_full(self, card_id: int):
         """Get a card with deck name, tags, groups, and custom fields in 4 queries.
@@ -943,41 +812,3 @@ class CardsMixin:
         cursor.execute('DELETE FROM card_custom_fields WHERE id = ?', (field_id,))
         self._commit()
 
-    def get_deck_card_custom_field_values(self, deck_id: int, field_name: str):
-        """Get all values for a deck-level custom field across all cards in the deck"""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT c.id as card_id, c.name as card_name, c.custom_fields
-            FROM cards c
-            WHERE c.deck_id = ?
-        ''', (deck_id,))
-        results = []
-        for row in cursor.fetchall():
-            custom_fields = {}
-            if row['custom_fields']:
-                try:
-                    custom_fields = json.loads(row['custom_fields'])
-                except (json.JSONDecodeError, ValueError) as e:
-                    logger.warning("Failed to parse custom_fields for card %s: %s", row['card_id'], e)
-            results.append({
-                'card_id': row['card_id'],
-                'card_name': row['card_name'],
-                'value': custom_fields.get(field_name)
-            })
-        return results
-
-    def set_card_deck_field_value(self, card_id: int, field_name: str, value):
-        """Set a deck-level custom field value for a specific card (stored in cards.custom_fields JSON)"""
-        cursor = self.conn.cursor()
-        cursor.execute('SELECT custom_fields FROM cards WHERE id = ?', (card_id,))
-        row = cursor.fetchone()
-        custom_fields = {}
-        if row and row['custom_fields']:
-            try:
-                custom_fields = json.loads(row['custom_fields'])
-            except (json.JSONDecodeError, ValueError) as e:
-                logger.warning("Failed to parse custom_fields for card %s, starting fresh: %s", card_id, e)
-        custom_fields[field_name] = value
-        cursor.execute('UPDATE cards SET custom_fields = ? WHERE id = ?',
-                       (json.dumps(custom_fields), card_id))
-        self._commit()

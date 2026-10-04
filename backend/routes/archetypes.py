@@ -108,11 +108,3 @@ def delete_archetype(archetype_id):
     return jsonify({'ok': True})
 
 
-@archetypes_bp.route('/api/archetypes/search')
-def search_archetypes():
-    """Search archetypes for autocomplete."""
-    db = current_app.config['DB']
-    query = request.args.get('query', '')
-    ctype = request.args.get('cartomancy_type')
-    rows = db.search_archetypes(query, cartomancy_type=ctype)
-    return jsonify([row_to_dict(r) for r in rows])

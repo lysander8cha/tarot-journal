@@ -47,30 +47,6 @@ export async function getSystemAssignments(
   return res.data;
 }
 
-export async function bulkSetAssignments(
-  systemId: number,
-  assignments: { archetype_id: number; field_name: string; field_value: string }[],
-  sourceGroup?: string,
-) {
-  await api.put(`/api/correspondence-systems/${systemId}/assignments`, {
-    assignments,
-    source_group: sourceGroup ?? null,
-  });
-}
-
-export async function setAssignment(
-  systemId: number,
-  archetypeId: number,
-  fieldName: string,
-  value: string,
-  sourceGroup?: string,
-) {
-  await api.put(`/api/correspondence-systems/${systemId}/assignments/${archetypeId}/${fieldName}`, {
-    value,
-    source_group: sourceGroup ?? null,
-  });
-}
-
 export async function setAssignmentValues(
   systemId: number,
   archetypeId: number,
@@ -123,10 +99,6 @@ export async function setCardOverrides(
   await api.put(`/api/cards/${cardId}/correspondences`, { overrides });
 }
 
-export async function deleteCardOverride(cardId: number, fieldName: string) {
-  await api.delete(`/api/cards/${cardId}/correspondences/${fieldName}`);
-}
-
 // === Deck-Level Overrides ===
 
 export interface DeckCorrespondenceOverride {
@@ -163,21 +135,6 @@ export async function setDeckCorrespondenceOverride(
   });
 }
 
-export async function deleteDeckCorrespondenceOverride(
-  deckId: number,
-  archetypeId: number,
-  fieldName: string,
-  options?: { sourceGroup?: string; all?: boolean },
-) {
-  const params = new URLSearchParams();
-  if (options?.sourceGroup) params.set('source_group', options.sourceGroup);
-  if (options?.all) params.set('all', 'true');
-  const qs = params.toString() ? `?${params}` : '';
-  await api.delete(
-    `/api/decks/${deckId}/correspondence-overrides/${archetypeId}/${fieldName}${qs}`,
-  );
-}
-
 export async function deleteDeckCorrespondenceGroup(
   deckId: number,
   sourceGroup: string,
@@ -189,11 +146,6 @@ export async function deleteDeckCorrespondenceGroup(
 }
 
 // === Cross-System Queries ===
-
-export async function getCorrespondencesByArchetype(archetypeId: number): Promise<CorrespondenceAssignment[]> {
-  const res = await api.get(`/api/correspondences/by-archetype/${archetypeId}`);
-  return res.data;
-}
 
 export async function compareCorrespondenceSystems(systemIds: number[]): Promise<CorrespondenceAssignment[]> {
   const res = await api.get('/api/correspondences/compare', {
@@ -255,19 +207,4 @@ export async function reorderFieldOptions(fieldName: string, orderedIds: number[
     field_name: fieldName,
     ordered_ids: orderedIds,
   });
-}
-
-// === Card Names (for Reference tab) ===
-
-export interface CardNameEntry {
-  field_name: string;
-  field_value: string;
-  archetype: string | null;
-  card_name: string;
-  deck_name: string;
-}
-
-export async function getCardNames(): Promise<CardNameEntry[]> {
-  const res = await api.get('/api/card-names');
-  return res.data;
 }

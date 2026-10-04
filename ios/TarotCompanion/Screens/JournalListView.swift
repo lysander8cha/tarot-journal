@@ -162,10 +162,8 @@ struct JournalListView: View {
                 FROM entries ORDER BY reading_datetime DESC
                 """).map { row -> EntryRow in
                 var subtitle: String?
-                if let raw: String = row["readings_json"],
-                   let data = raw.data(using: .utf8),
-                   let readings = try? decoder.decode([Reading].self, from: data),
-                   !readings.isEmpty {
+                let readings = Reading.decodeList(row["readings_json"])
+                if !readings.isEmpty {
                     let spreads = readings.compactMap(\.spreadName)
                     let decks = readings.compactMap(\.deckName)
                     let parts = [

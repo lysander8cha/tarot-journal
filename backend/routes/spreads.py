@@ -42,13 +42,6 @@ def get_spreads():
     return jsonify(out)
 
 
-@spreads_bp.route('/api/spreads/<int:spread_id>/tags')
-def get_spread_tag_assignments(spread_id):
-    db = current_app.config['DB']
-    rows = db.get_tags_for_spread(spread_id)
-    return jsonify([row_to_dict(r) for r in rows])
-
-
 @spreads_bp.route('/api/spreads/<int:spread_id>/tags', methods=['PUT'])
 @require_json
 def set_spread_tag_assignments(spread_id, data):

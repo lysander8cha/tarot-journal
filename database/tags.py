@@ -6,8 +6,6 @@ across the three tag types. Each tag type has its own table (tags,
 deck_tags, card_tags) and junction table.
 """
 
-from datetime import datetime
-
 
 class TagsMixin:
     """Mixin providing tag operations for entries, decks, and cards."""
@@ -96,21 +94,10 @@ class TagsMixin:
         )
         self._commit()
 
-    def remove_entry_tag(self, entry_id: int, tag_id: int):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'DELETE FROM entry_tags WHERE entry_id = ? AND tag_id = ?',
-            (entry_id, tag_id)
-        )
-        self._commit()
-
     def set_entry_tags(self, entry_id: int, tag_ids: list):
         self._set_tags_for_entity('entry_tags', 'entry_id', entry_id, tag_ids)
         # Tag changes are part of the entry aggregate for phone sync.
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'UPDATE journal_entries SET updated_at = ? WHERE id = ?',
-            (datetime.now().isoformat(), entry_id))
+        self._touch_entry(self.conn.cursor(), entry_id)
         self._commit()
 
     # ── Deck Tags ──────────────────────────────────────────────
@@ -158,26 +145,6 @@ class TagsMixin:
             })
         return result
 
-    def add_tag_to_deck(self, deck_id: int, tag_id: int):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'INSERT OR IGNORE INTO deck_tag_assignments (deck_id, tag_id) VALUES (?, ?)',
-            (deck_id, tag_id)
-        )
-        # Tag changes are part of the entry aggregate for phone sync.
-        cursor.execute(
-            'UPDATE journal_entries SET updated_at = ? WHERE id = ?',
-            (datetime.now().isoformat(), entry_id))
-        self._commit()
-
-    def remove_tag_from_deck(self, deck_id: int, tag_id: int):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'DELETE FROM deck_tag_assignments WHERE deck_id = ? AND tag_id = ?',
-            (deck_id, tag_id)
-        )
-        self._commit()
-
     def set_deck_tags(self, deck_id: int, tag_ids: list):
         self._set_tags_for_entity('deck_tag_assignments', 'deck_id', deck_id, tag_ids)
 
@@ -197,9 +164,6 @@ class TagsMixin:
 
     def delete_spread_tag(self, tag_id: int):
         return self._delete_tag('spread_tags', tag_id)
-
-    def get_tags_for_spread(self, spread_id: int):
-        return self._get_tags_for_entity('spread_tags', 'spread_tag_assignments', 'spread_id', spread_id)
 
     def get_tags_for_spreads(self) -> dict:
         """All spread-tag assignments in one query: spread_id → tag dicts."""
@@ -251,22 +215,6 @@ class TagsMixin:
             ORDER BY dt.name
         ''', (card_id,))
         return cursor.fetchall()
-
-    def add_tag_to_card(self, card_id: int, tag_id: int):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'INSERT OR IGNORE INTO card_tag_assignments (card_id, tag_id) VALUES (?, ?)',
-            (card_id, tag_id)
-        )
-        self._commit()
-
-    def remove_tag_from_card(self, card_id: int, tag_id: int):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'DELETE FROM card_tag_assignments WHERE card_id = ? AND tag_id = ?',
-            (card_id, tag_id)
-        )
-        self._commit()
 
     def set_card_tags(self, card_id: int, tag_ids: list):
         self._set_tags_for_entity('card_tag_assignments', 'card_id', card_id, tag_ids)

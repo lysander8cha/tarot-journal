@@ -141,7 +141,7 @@ def test_apply_writes(client, db):
     assert data['applied'] == 3
     assert len(data['errors']) == 1 and data['errors'][0]['index'] == 3
 
-    fields = client.get(f"/api/cards/{card['id']}/custom-fields").get_json()
+    fields = client.get(f"/api/cards/{card['id']}").get_json()['card_custom_fields']
     kw = [f for f in fields if f['field_name'].lower() == 'keywords']
     assert len(kw) == 1 and kw[0]['field_value'] == 'gamma'
 
@@ -232,13 +232,13 @@ def test_bulk_llm_export(client):
 
     def make_entry(title, when, cards):
         e = client.post('/api/entries', json={'title': title, 'reading_datetime': when}).get_json()
-        client.post(f"/api/entries/{e['id']}/readings", json={
+        client.put(f"/api/entries/{e['id']}/readings", json={'readings': [{
             'deck_id': deck['id'], 'deck_name': 'Bulk Deck',
             'cards_used': [
                 {'name': n, 'reversed': rev, 'deck_id': deck['id'], 'position_index': i}
                 for i, (n, rev) in enumerate(cards)
             ],
-        })
+        }]})
         return e['id']
 
     id_newer = make_entry('Second', '2026-07-20 10:00', [('The Fool', False), ('Death', True)])
@@ -346,13 +346,13 @@ def test_insights_endpoint(client):
     from datetime import datetime
     now = datetime.now().strftime('%Y-%m-%d 12:00')
     e = client.post('/api/entries', json={'title': 'I1', 'reading_datetime': now}).get_json()
-    client.post(f"/api/entries/{e['id']}/readings", json={
+    client.put(f"/api/entries/{e['id']}/readings", json={'readings': [{
         'deck_id': deck['id'],
         'cards_used': [
             {'name': 'Ace of Wands', 'reversed': True, 'position_index': 0},
             {'name': 'The Fool', 'reversed': False, 'position_index': 1},
         ],
-    })
+    }]})
     r = client.get('/api/stats/insights')
     assert r.status_code == 200
     d = r.get_json()
@@ -393,8 +393,6 @@ def test_spread_tags(client):
     }).get_json()
     r = client.put(f"/api/spreads/{sp['id']}/tags", json={'tag_ids': [tag['id']]})
     assert r.status_code == 200
-    assigned = client.get(f"/api/spreads/{sp['id']}/tags").get_json()
-    assert [t['name'] for t in assigned] == ['daily']
     listed = client.get('/api/spreads').get_json()
     mine = next(s for s in listed if s['id'] == sp['id'])
     assert [t['name'] for t in mine['tags']] == ['daily']
@@ -590,11 +588,11 @@ def test_llm_export_include_reference(client):
     ]})
 
     entry = client.post('/api/entries', json={'title': 'Mirror Test'}).get_json()
-    client.post(f"/api/entries/{entry['id']}/readings", json={
+    client.put(f"/api/entries/{entry['id']}/readings", json={'readings': [{
         'deck_id': deck['id'], 'deck_name': 'Mirror Deck',
         'cartomancy_type': tname,
         'cards_used': [{'name': 'The Fool', 'card_id': card['id'], 'position_index': 0}],
-    })
+    }]})
 
     plain = client.get(f"/api/entries/{entry['id']}/llm-export").get_json()['markdown']
     assert 'yes-energy' not in plain
@@ -684,12 +682,12 @@ def test_insights_rich_aggregates(client):
 
     def make_entry(cards, querent=None):
         e = client.post('/api/entries', json={'title': 'T'}).get_json()
-        client.post(f"/api/entries/{e['id']}/readings", json={
+        client.put(f"/api/entries/{e['id']}/readings", json={'readings': [{
             'deck_id': deck['id'], 'deck_name': 'Rich Deck',
             'spread_name': 'Pair Draw',
             'cards_used': [{'name': n, 'card_id': cid, 'position_index': i}
                            for i, (n, cid) in enumerate(cards)],
-        })
+        }]})
         if querent:
             client.put(f"/api/entries/{e['id']}/querents", json={'profile_ids': [querent]})
         return e['id']
@@ -724,11 +722,11 @@ def test_insights_deck_filter_uses_card_level_decks(client):
     card = client.post('/api/cards', json={'deck_id': deck['id'], 'name': 'Ace of Filters'}).get_json()
     e = client.post('/api/entries', json={'title': 'Card-level deck entry'}).get_json()
     # NO reading-level deck_id — deck info only on the card.
-    client.post(f"/api/entries/{e['id']}/readings", json={
+    client.put(f"/api/entries/{e['id']}/readings", json={'readings': [{
         'spread_name': 'Filter Check',
         'cards_used': [{'name': 'Ace of Filters', 'card_id': card['id'],
                         'deck_id': deck['id'], 'position_index': 0}],
-    })
+    }]})
 
     by_deck = client.get(f"/api/stats/insights?deck_id={deck['id']}").get_json()
     assert by_deck['entries'] >= 1

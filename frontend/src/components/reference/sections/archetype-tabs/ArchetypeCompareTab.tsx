@@ -7,6 +7,7 @@ import { cardPreviewUrl } from '../../../../api/images';
 import { getCardCorrespondences } from '../../../../api/correspondences';
 import RichTextViewer from '../../../common/RichTextViewer';
 import SearchCombobox from '../../../common/SearchCombobox';
+import { SiblingNav } from './ArchetypeCardImage';
 import {
   CORRESPONDENCE_FIELDS,
   CORRESPONDENCE_FIELD_LABELS,
@@ -362,31 +363,7 @@ function CompareColumn({
             This deck has no cards.
           </div>
         )}
-        {siblings.length > 1 && (
-          <>
-            <button
-              type="button"
-              className="archetype-compare__sibling-btn archetype-compare__sibling-btn--prev"
-              onClick={() => cycleSibling(-1)}
-              aria-label="Previous variant"
-              title="Previous variant"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              className="archetype-compare__sibling-btn archetype-compare__sibling-btn--next"
-              onClick={() => cycleSibling(1)}
-              aria-label="Next variant"
-              title="Next variant"
-            >
-              ›
-            </button>
-            <span className="archetype-compare__sibling-counter">
-              {siblingIdx + 1} / {siblings.length}
-            </span>
-          </>
-        )}
+        <SiblingNav index={siblingIdx} count={siblings.length} onCycle={cycleSibling} />
       </div>
 
       {selectedCard && (

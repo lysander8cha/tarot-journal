@@ -592,13 +592,9 @@ struct NewEntryView: View {
             ])
         }
 
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-
         var payload: [String: Any] = [
             "sync_uuid": UUID().uuidString,
-            "reading_datetime": formatter.string(from: readingDate),
+            "reading_datetime": SyncEngine.localTimestamp.string(from: readingDate),
             "querent_ids": querentIds,
             "readings": readingPayloads,
         ]

@@ -68,15 +68,6 @@
   margin: 0 0 16px;
 }
 
-.reference-section__subtitle {
-  font-size: var(--tj-size-kicker);
-  letter-spacing: var(--tj-kicker-tracking);
-  text-transform: uppercase;
-  font-weight: var(--tj-ui-weight-strong);
-  color: var(--tj-text-kicker);
-  margin: 20px 0 8px;
-}
-
 .reference-section__hint {
   font-size: var(--font-size-small);
   color: var(--text-dim);

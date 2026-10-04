@@ -36,6 +36,7 @@ import type { CartomancyType, ReferenceSource, SourceField } from '../../../type
 import '../SettingsTab.css';
 import './ReferenceSourcesSection.css';
 import { confirmDialog } from '../../common/ConfirmDialog';
+import Modal, { ModalCancelButton } from '../../common/Modal';
 
 
 export default function ReferenceSourcesSection() {
@@ -758,12 +759,8 @@ function DeleteDialog({
   };
 
   return (
-    <div className="reference-sources__dialog-backdrop" onClick={onClose}>
-      <div
-        className="reference-sources__dialog"
-        onClick={e => e.stopPropagation()}
-      >
-        <h4>Delete source "{source.name}"?</h4>
+    <Modal open onClose={onClose} title={`Delete source "${source.name}"?`} width={480}>
+      <div className="reference-sources__dialog">
         {total === 0 ? (
           <p>No entries reference this source. Deletion is safe.</p>
         ) : (
@@ -804,11 +801,11 @@ function DeleteDialog({
           </>
         )}
         <div className="reference-sources__dialog-actions">
-          <button onClick={onClose}>Cancel</button>
+          <ModalCancelButton>Cancel</ModalCancelButton>
           <button onClick={handleDelete} className="danger">Delete</button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

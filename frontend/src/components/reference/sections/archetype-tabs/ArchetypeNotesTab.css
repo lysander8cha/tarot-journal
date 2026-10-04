@@ -123,32 +123,6 @@
   color: var(--text-primary);
 }
 
-.archetype-notes__source-block {
-  margin-top: 8px;
-}
-
-.archetype-notes__source-label {
-  margin: 0 0 4px;
-  font-size: var(--font-size-small);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  font-weight: 600;
-}
-
-.archetype-notes__entries {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.archetype-notes__entry {
-  color: var(--text-primary);
-}
-
 /* Field-level disclosure for fields marked collapsible */
 .archetype-notes__field-toggle {
   display: flex;

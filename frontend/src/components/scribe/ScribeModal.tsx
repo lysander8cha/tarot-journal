@@ -37,14 +37,16 @@ import {
 import type { EntityKind } from '../../api/reference';
 import {
   MAX_SOURCE_CHARS,
-  ScribeChatPane,
   ScribeMaterialsField,
   buildUnits,
   readScribeFiles,
   splitUnit,
   type ExtractionUnit,
   type Material,
+  SCRIBE_CHAT_PLACEHOLDER,
+  SCRIBE_CHAT_BUSY_PLACEHOLDER,
 } from './scribeShared';
+import ChatPanel, { type ChatDisplayMessage } from '../common/ChatPanel';
 import { getReversedCombinationTypes } from '../../api/combinations';
 import { useActivePrompt, renderScribePrompt } from '../../utils/assistantPrompts';
 import { llmChat, getLlmConfig, type LlmMessage } from '../../api/llm';
@@ -155,8 +157,7 @@ export default function ScribeModal({ source, deck, open, onClose, combinationsO
 
   // ── Chat state ─────────────────────────────────────────────
   const [messages, setMessages] = useState<LlmMessage[]>([]);
-  const [displayMessages, setDisplayMessages] = useState<{ role: string; text: string }[]>([]);
-  const [chatInput, setChatInput] = useState('');
+  const [displayMessages, setDisplayMessages] = useState<ChatDisplayMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [applying, setApplying] = useState(false);
@@ -169,7 +170,6 @@ export default function ScribeModal({ source, deck, open, onClose, combinationsO
   // async merges and user checkbox clicks can never diverge (a merge
   // building on a stale copy would visually revert the panel).
   const proposalsRef = useRef<Proposal[]>([]);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const updateProposals = (fn: (current: Proposal[]) => Proposal[]): Proposal[] => {
     const next = fn(proposalsRef.current);
@@ -291,7 +291,6 @@ export default function ScribeModal({ source, deck, open, onClose, combinationsO
     updateProposals(() => []);
     setPendingUnits([]);
     steeringNotesRef.current = [];
-    setChatInput('');
     setCtype(availableTypes[0] || 'Tarot');
     setDeckId(deck?.id ?? '');
     setSelectedCardFields([]);
@@ -310,10 +309,6 @@ export default function ScribeModal({ source, deck, open, onClose, combinationsO
   useEffect(() => {
     if (open && deck) setSelectedCardFields(deckFieldDefs.map(f => f.field_name));
   }, [open, deck, deckFieldDefs]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [displayMessages, busy]);
 
   const decksForType = useMemo(
     () => decks.filter(d => (d.cartomancy_types || []).some(t => t.name === ctype)),
@@ -777,10 +772,7 @@ export default function ScribeModal({ source, deck, open, onClose, combinationsO
     }
   };
 
-  const handleSend = async () => {
-    const text = chatInput.trim();
-    if (!text) return;
-    setChatInput('');
+  const handleSend = async (text: string) => {
     if (busyRef.current) {
       // Model's mid-work: queue it. It steers parts not yet sent and
       // gets a full-context reply when the current work finishes.
@@ -1182,13 +1174,13 @@ export default function ScribeModal({ source, deck, open, onClose, combinationsO
 
       {stage === 'chat' && (
         <div className="scribe__workspace">
-          <ScribeChatPane
+          <ChatPanel
             messages={displayMessages}
             busy={busy}
-            chatInput={chatInput}
-            onChatInput={setChatInput}
             onSend={handleSend}
-            endRef={chatEndRef}
+            allowSendWhileBusy
+            placeholder={SCRIBE_CHAT_PLACEHOLDER}
+            busyPlaceholder={SCRIBE_CHAT_BUSY_PLACEHOLDER}
           >
             {pendingUnits.length > 0 && !busy && (
               <button
@@ -1198,7 +1190,7 @@ export default function ScribeModal({ source, deck, open, onClose, combinationsO
                 Resume extraction ({pendingUnits.length} part{pendingUnits.length === 1 ? '' : 's'} left)
               </button>
             )}
-          </ScribeChatPane>
+          </ChatPanel>
 
           <div className="scribe__review">
             <div className="scribe__review-head">

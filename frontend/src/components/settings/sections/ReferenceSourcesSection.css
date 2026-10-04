@@ -198,10 +198,6 @@
   justify-content: flex-end;
 }
 
-.reference-sources__input {
-  flex: 1;
-}
-
 .reference-sources__add {
   display: flex;
   gap: 6px;
@@ -229,30 +225,6 @@
 }
 
 /* Dialog */
-.reference-sources__dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.reference-sources__dialog {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--tj-radius-row);
-  padding: 16px;
-  max-width: 480px;
-  width: 90%;
-  color: var(--text-primary);
-}
-
-.reference-sources__dialog h4 {
-  margin: 0 0 8px;
-}
-
 .reference-sources__dialog p {
   margin: 0 0 12px;
   color: var(--text-secondary);

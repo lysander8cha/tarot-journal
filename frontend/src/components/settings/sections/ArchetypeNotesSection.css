@@ -14,34 +14,11 @@
   min-width: 220px;
 }
 
-.archetype-notes-edit__heading {
-  margin: 20px 0 8px;
-  color: var(--text-primary);
-  font-size: 1em;
-}
-
 .archetype-notes-edit__empty {
   color: var(--text-dim);
   font-size: var(--font-size-small);
   font-style: italic;
   padding: 6px 0;
-}
-
-/* === Source list ================================================= */
-
-.archetype-notes-edit__source-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.archetype-notes-edit__sources {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .archetype-notes-edit__source {
@@ -52,28 +29,6 @@
   border: 1px solid var(--border);
   border-radius: var(--tj-radius-row);
   padding: 4px;
-}
-
-.archetype-notes-edit__source--active {
-  border-color: var(--accent);
-}
-
-.archetype-notes-edit__source-pick {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-  padding: 6px 10px;
-  min-width: 0;
-}
-
-.archetype-notes-edit__source-pick:hover {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.04));
 }
 
 .archetype-notes-edit__source-name {
@@ -91,33 +46,6 @@
   font-size: var(--font-size-small);
 }
 
-.archetype-notes-edit__source-delete {
-  align-self: center;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  padding: 4px 10px;
-  border-radius: var(--tj-radius-row);
-  cursor: pointer;
-  font-size: var(--font-size-small);
-}
-
-.archetype-notes-edit__source-delete:hover {
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
-.archetype-notes-edit__new-source {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.archetype-notes-edit__new-source input {
-  flex: 1;
-  min-width: 0;
-}
-
 /* === Source detail =============================================== */
 
 .archetype-notes-edit__source-detail {
@@ -130,14 +58,6 @@
 
 .archetype-notes-edit__source-detail:first-of-type {
   margin-top: 0;
-}
-
-.archetype-notes-edit__source-heading {
-  margin: 0 0 8px;
-  color: var(--accent);
-  font-size: var(--font-size-body);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 4px;
 }
 
 /* Collapsible source block: clickable header + animated chevron +
@@ -187,13 +107,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.archetype-notes-edit__source-meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
 }
 
 .archetype-notes-edit__field {
@@ -282,41 +195,6 @@
   }
 }
 
-/* === Fields manager ============================================ */
-
-.archetype-notes-edit__fields-manager {
-  margin-top: 24px;
-}
-
-.archetype-notes-edit__fields-list {
-  list-style: none;
-  margin: 8px 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.archetype-notes-edit__field-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--tj-radius-row);
-  padding: 6px 10px;
-}
-
-.archetype-notes-edit__field-row input[type="text"] {
-  flex: 1;
-  min-width: 0;
-}
-
-.archetype-notes-edit__field-row-name {
-  flex: 1;
-  color: var(--text-primary);
-}
-
 /* === Per-field editor stack ==================================== */
 
 .archetype-notes-edit__editor-stack {
@@ -371,26 +249,4 @@
 
 .archetype-notes-edit__field-editor-body {
   margin-top: 8px;
-}
-
-/* === Cartomancy types multi-pick ============================== */
-
-.archetype-notes-edit__types {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  padding: 6px 0;
-}
-
-.archetype-notes-edit__type-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-primary);
-  font-size: var(--font-size-small);
-  cursor: pointer;
-}
-
-.archetype-notes-edit__type-toggle input[type="checkbox"]:disabled {
-  cursor: not-allowed;
 }

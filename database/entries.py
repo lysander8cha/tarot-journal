@@ -307,12 +307,6 @@ class EntriesMixin:
         self._commit()
         return cursor.lastrowid
 
-    def delete_entry_readings(self, entry_id: int):
-        cursor = self.conn.cursor()
-        cursor.execute('DELETE FROM entry_readings WHERE entry_id = ?', (entry_id,))
-        self._touch_entry(cursor, entry_id)
-        self._commit()
-
     def replace_entry_readings(self, entry_id: int, readings: list) -> list:
         """Atomically replace all readings for an entry.
 

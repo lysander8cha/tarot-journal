@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { useQuery, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
-import { getEntries, searchEntries, getProfiles, type EntrySort } from '../../api/entries';
+import { getEntries, searchEntries, type EntrySort } from '../../api/entries';
+import { getProfiles } from '../../api/profiles';
 import { getEntryTags as getAllEntryTags } from '../../api/tags';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import type { JournalEntry, Tag, Profile } from '../../types';

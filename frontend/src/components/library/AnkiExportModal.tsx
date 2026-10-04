@@ -1,24 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import api from '../../api/client';
-import Modal from '../common/Modal';
+import Modal, { ModalCancelButton } from '../common/Modal';
 import './AnkiExportModal.css';
 
 interface FieldOption {
@@ -34,33 +17,43 @@ interface AnkiExportModalProps {
   onClose: () => void;
 }
 
-function SortableField({
+function FieldRow({
   field,
   checked,
   onToggle,
+  dragging,
+  dragOver,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   field: FieldOption;
   checked: boolean;
   onToggle: () => void;
+  dragging: boolean;
+  dragOver: boolean;
+  onDragStart: () => void;
+  onDragOver: () => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: field.key });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+  const cls = [
+    'anki-export__field-row',
+    dragging ? 'anki-export__field-row--dragging' : '',
+    dragOver ? 'anki-export__field-row--drag-over' : '',
+  ].filter(Boolean).join(' ');
 
   return (
-    <div ref={setNodeRef} style={style} className="anki-export__field-row">
-      <span className="anki-export__drag-handle" {...attributes} {...listeners}>
+    <div
+      className={cls}
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; onDragOver(); }}
+      onDrop={e => { e.preventDefault(); onDrop(); }}
+      onDragEnd={onDragEnd}
+    >
+      <span className="anki-export__drag-handle" aria-hidden="true">
         ⠿
       </span>
       <label className="anki-export__field-label">
@@ -107,20 +100,24 @@ export default function AnkiExportModal({ deckId, deckName, onClose }: AnkiExpor
     }
   }, [availableFields, orderedFields.length]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
+  const endDrag = () => { setDraggedKey(null); setDragOverKey(null); };
+
+  // Move the dragged field into the drop target's slot.
+  const handleDrop = (targetKey: string) => {
+    if (draggedKey != null && draggedKey !== targetKey) {
       setOrderedFields(prev => {
-        const oldIndex = prev.findIndex(f => f.key === active.id);
-        const newIndex = prev.findIndex(f => f.key === over.id);
-        return arrayMove(prev, oldIndex, newIndex);
+        const from = prev.findIndex(f => f.key === draggedKey);
+        const to = prev.findIndex(f => f.key === targetKey);
+        if (from < 0 || to < 0) return prev;
+        const next = [...prev];
+        next.splice(to, 0, ...next.splice(from, 1));
+        return next;
       });
     }
+    endDrag();
   };
 
   const toggleField = (key: string) => {
@@ -190,25 +187,20 @@ export default function AnkiExportModal({ deckId, deckName, onClose }: AnkiExpor
         ) : (
           <>
             <div className="anki-export__field-list">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={orderedFields.map(f => f.key)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {orderedFields.map(field => (
-                    <SortableField
-                      key={field.key}
-                      field={field}
-                      checked={selectedKeys.has(field.key)}
-                      onToggle={() => toggleField(field.key)}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
+              {orderedFields.map(field => (
+                <FieldRow
+                  key={field.key}
+                  field={field}
+                  checked={selectedKeys.has(field.key)}
+                  onToggle={() => toggleField(field.key)}
+                  dragging={draggedKey === field.key}
+                  dragOver={dragOverKey === field.key && draggedKey !== field.key}
+                  onDragStart={() => setDraggedKey(field.key)}
+                  onDragOver={() => { if (dragOverKey !== field.key) setDragOverKey(field.key); }}
+                  onDrop={() => handleDrop(field.key)}
+                  onDragEnd={endDrag}
+                />
+              ))}
             </div>
 
             <div className="anki-export__footer">
@@ -216,7 +208,7 @@ export default function AnkiExportModal({ deckId, deckName, onClose }: AnkiExpor
                 {selectedCount} field{selectedCount !== 1 ? 's' : ''} selected
               </span>
               <div className="anki-export__actions">
-                <button onClick={onClose}>Cancel</button>
+                <ModalCancelButton>Cancel</ModalCancelButton>
                 <button
                   className="anki-export__export-btn"
                   onClick={handleExport}

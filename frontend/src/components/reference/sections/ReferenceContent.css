@@ -173,13 +173,6 @@
   font-weight: var(--tj-ui-weight-strong);
 }
 
-.ref-detail__themes {
-  font-size: var(--tj-size-body);
-  color: var(--tj-text);
-  line-height: 1.5;
-  margin: 0 0 14px;
-}
-
 .ref-detail__kicker {
   font-size: var(--tj-size-kicker);
   letter-spacing: var(--tj-kicker-tracking);

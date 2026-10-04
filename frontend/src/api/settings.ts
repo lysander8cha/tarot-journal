@@ -13,16 +13,6 @@ export async function updateTheme(theme: Partial<Theme>): Promise<Theme> {
   return res.data;
 }
 
-export async function getThemePresets(): Promise<Record<string, Theme>> {
-  const res = await api.get('/api/theme/presets');
-  return res.data;
-}
-
-export async function applyThemePreset(presetName: string): Promise<Theme> {
-  const res = await api.post('/api/theme/apply-preset', { preset_name: presetName });
-  return res.data;
-}
-
 // === Defaults ===
 
 export interface AppDefaults {

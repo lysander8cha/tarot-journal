@@ -103,21 +103,6 @@ def get_assignments(system_id):
     return jsonify([row_to_dict(a) for a in assignments])
 
 
-@correspondences_bp.route('/api/correspondence-systems/<int:system_id>/assignments', methods=['PUT'])
-@require_json
-def bulk_set_assignments(system_id, data):
-    db = current_app.config['DB']
-    assignments = data.get('assignments', [])
-    source_group = data.get('source_group')  # None for manual edits
-    if not assignments:
-        return jsonify({'error': 'No assignments provided'}), 400
-    try:
-        db.bulk_set_system_assignments(system_id, assignments, source_group=source_group)
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    return jsonify({'ok': True})
-
-
 @correspondences_bp.route(
     '/api/correspondence-systems/<int:system_id>/expand-elemental-zodiac',
     methods=['POST']
@@ -242,21 +227,7 @@ def set_card_overrides(card_id, data):
     return jsonify({'ok': True})
 
 
-@correspondences_bp.route('/api/cards/<int:card_id>/correspondences/<field_name>', methods=['DELETE'])
-def delete_card_override(card_id, field_name):
-    db = current_app.config['DB']
-    db.delete_card_correspondence_override(card_id, field_name)
-    return jsonify({'ok': True})
-
-
 # === Cross-System Queries (for Reference tab) ===
-
-@correspondences_bp.route('/api/correspondences/by-archetype/<int:archetype_id>')
-def correspondences_by_archetype(archetype_id):
-    db = current_app.config['DB']
-    assignments = db.get_correspondences_by_archetype(archetype_id)
-    return jsonify([row_to_dict(a) for a in assignments])
-
 
 @correspondences_bp.route('/api/correspondences/compare')
 def compare_systems():
@@ -359,26 +330,6 @@ def set_deck_correspondence_override(deck_id, data):
             )
         except ValueError as e:
             return jsonify({'error': str(e)}), 400
-    return jsonify({'ok': True})
-
-
-@correspondences_bp.route(
-    '/api/decks/<int:deck_id>/correspondence-overrides/<int:archetype_id>/<field_name>',
-    methods=['DELETE']
-)
-def delete_deck_correspondence_override_route(deck_id, archetype_id, field_name):
-    """Delete a deck override row for a single archetype/field.
-
-    Query params: source_group (optional) — scope to a specific group;
-                  all=true — wipe every source for this cell.
-    """
-    db = current_app.config['DB']
-    source_group = request.args.get('source_group')
-    delete_all = request.args.get('all') == 'true'
-    db.delete_deck_correspondence_override(
-        deck_id, archetype_id, field_name,
-        source_group=source_group, delete_all_sources=delete_all,
-    )
     return jsonify({'ok': True})
 
 

@@ -223,8 +223,14 @@ def test_archetype_keys_match_app_conventions():
 
 # === API endpoints ===
 
-def test_api_adhoc_birth_cards(client):
-    res = client.get('/api/birth-cards?date=1907-07-06&year=2026&month=8')
+def _bc(client, db, birth_date, query=''):
+    """Birth cards for a throwaway profile born on birth_date."""
+    pid = db.add_profile('Test ' + birth_date, birth_date=birth_date)
+    return client.get(f'/api/profiles/{pid}/birth-cards' + (f'?{query}' if query else ''))
+
+
+def test_api_adhoc_birth_cards(client, db):
+    res = _bc(client, db, '1907-07-06', 'year=2026&month=8')
     assert res.status_code == 200
     data = res.get_json()
     assert data['pattern'] == '12-3'
@@ -237,9 +243,9 @@ def test_api_adhoc_birth_cards(client):
     assert data['reference_year'] == 2026
 
 
-def test_api_adhoc_rejects_bad_date(client):
-    assert client.get('/api/birth-cards?date=zebra').status_code == 400
-    assert client.get('/api/birth-cards').status_code == 400
+def test_api_rejects_bad_birth_date(client, db):
+    pid = db.add_profile('Bad Date', birth_date='zebra')
+    assert client.get(f'/api/profiles/{pid}/birth-cards').status_code == 400
 
 
 def test_api_profile_birth_cards(client, db):
@@ -261,29 +267,26 @@ def test_api_profile_without_birth_date(client, db):
     assert client.get('/api/profiles/99999/birth-cards').status_code == 404
 
 
-def test_api_prefs_roundtrip_and_method_override(client):
-    res = client.get('/api/birth-cards/prefs')
-    assert res.get_json() == {'method': 'greer', 'eight_eleven': 'golden_dawn',
-                              'court_system': 'golden_dawn'}
+def test_api_prefs_roundtrip_and_method_override(client, db):
     res = client.put('/api/birth-cards/prefs',
                      json={'method': 'amberstone', 'eight_eleven': 'marseille'})
     assert res.get_json() == {'method': 'amberstone', 'eight_eleven': 'marseille',
                               'court_system': 'golden_dawn'}
     # Saved prefs now apply by default
-    res = client.get('/api/birth-cards?date=1945-12-12')
+    res = _bc(client, db, '1945-12-12')
     assert res.get_json()['pattern'] == '16-7'
     # Query-param override wins without changing the saved pref
-    res = client.get('/api/birth-cards?date=1945-12-12&method=greer')
+    res = _bc(client, db, '1945-12-12', 'method=greer')
     assert res.get_json()['pattern'] == '7-7'
-    assert client.get('/api/birth-cards/prefs').get_json()['method'] == 'amberstone'
+    assert _bc(client, db, '1945-12-12').get_json()['pattern'] == '16-7'
     assert client.put('/api/birth-cards/prefs', json={'method': 'bogus'}).status_code == 400
 
 
-def test_api_eight_eleven_naming(client):
+def test_api_eight_eleven_naming(client, db):
     # 1961-08-04 -> hidden factor 11 (Justice under Golden Dawn)
-    res = client.get('/api/birth-cards?date=1961-08-04')
+    res = _bc(client, db, '1961-08-04')
     assert res.get_json()['cards']['hidden_factor'][0]['name'] == 'Justice'
-    res = client.get('/api/birth-cards?date=1961-08-04&eight_eleven=marseille')
+    res = _bc(client, db, '1961-08-04', 'eight_eleven=marseille')
     assert res.get_json()['cards']['hidden_factor'][0]['name'] == 'Strength'
 
 
@@ -317,14 +320,14 @@ def test_decan_rulers_structure():
     assert bc.DECAN_RULERS[(10, 'Cups')]['planet'] == 'Mars'    # Pisces III
 
 
-def test_api_zodiacal_rulers(client):
-    res = client.get('/api/birth-cards?date=1907-07-06')  # 3 of Cups
+def test_api_zodiacal_rulers(client, db):
+    res = _bc(client, db, '1907-07-06')  # 3 of Cups
     data = res.get_json()
     assert data['zodiacal_rulers']['sign'] == 'Cancer'
     assert data['cards']['zodiacal_sign_ruler']['name'] == 'The Chariot'
     assert data['cards']['zodiacal_planet_ruler']['name'] == 'The Magician'
     # Ruler names ignore the 8/11 relabel: Leo is always the Strength card
-    res = client.get('/api/birth-cards?date=1943-07-26&eight_eleven=marseille')
+    res = _bc(client, db, '1943-07-26', 'eight_eleven=marseille')
     data = res.get_json()
     assert data['zodiacal_rulers']['sign'] == 'Leo'
     assert data['cards']['zodiacal_sign_ruler']['name'] == 'Strength'
@@ -395,20 +398,20 @@ def test_decan_court_rejects_unknown_system():
         bc.decan_court({'rank': 3, 'suit': 'Cups'}, 'thoth')
 
 
-def test_api_decan_court(client):
+def test_api_decan_court(client, db):
     # 1929-01-15 -> 4 of Pentacles (Capricorn III -> Aquarius arc)
-    res = client.get('/api/birth-cards?date=1929-01-15')
+    res = _bc(client, db, '1929-01-15')
     data = res.get_json()
     assert data['decan_court']['name'] == 'Knight of Swords'
     assert data['cards']['decan_court']['name'] == 'Knight of Swords'
     assert data['court_system'] == 'golden_dawn'
-    res = client.get('/api/birth-cards?date=1929-01-15&court_system=bota')
+    res = _bc(client, db, '1929-01-15', 'court_system=bota')
     data = res.get_json()
     assert data['decan_court']['name'] == 'Queen of Swords'
     # Prefs roundtrip includes the court system
     res = client.put('/api/birth-cards/prefs', json={'court_system': 'bota'})
     assert res.get_json()['court_system'] == 'bota'
-    res = client.get('/api/birth-cards?date=1929-01-15')
+    res = _bc(client, db, '1929-01-15')
     assert res.get_json()['decan_court']['name'] == 'Queen of Swords'
     assert client.put('/api/birth-cards/prefs',
                       json={'court_system': 'thoth'}).status_code == 400

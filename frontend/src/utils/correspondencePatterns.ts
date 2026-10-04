@@ -50,16 +50,6 @@ export function detectGroupPatterns(
   return patterns;
 }
 
-/** Group patterns by field label for display. */
-export function groupPatternsByField(patterns: GroupPattern[]): Map<string, GroupPattern[]> {
-  const map = new Map<string, GroupPattern[]>();
-  for (const p of patterns) {
-    if (!map.has(p.fieldLabel)) map.set(p.fieldLabel, []);
-    map.get(p.fieldLabel)!.push(p);
-  }
-  return map;
-}
-
 // Canonical categories and their group labels — must match BULK_GROUPS in
 // CorrespondencesSection for consistent display ordering.
 export const GROUP_CATEGORIES: { name: string; labels: string[] }[] = [

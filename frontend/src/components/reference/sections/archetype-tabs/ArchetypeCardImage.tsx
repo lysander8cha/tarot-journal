@@ -23,6 +23,41 @@ interface Props {
  * remembered per cartomancy type so flipping between archetypes within the
  * same type doesn't reset the chosen deck.
  */
+/** Prev/next arrows + "n / total" counter overlaid on a card image
+ *  (parent must be position: relative). Renders nothing for < 2. */
+export function SiblingNav({ index, count, onCycle }: {
+  index: number;
+  count: number;
+  onCycle: (direction: -1 | 1) => void;
+}) {
+  if (count < 2) return null;
+  return (
+    <>
+      <button
+        type="button"
+        className="archetype-card-image__sibling-btn archetype-card-image__sibling-btn--prev"
+        onClick={() => onCycle(-1)}
+        aria-label="Previous variant"
+        title="Previous variant"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        className="archetype-card-image__sibling-btn archetype-card-image__sibling-btn--next"
+        onClick={() => onCycle(1)}
+        aria-label="Next variant"
+        title="Next variant"
+      >
+        ›
+      </button>
+      <span className="archetype-card-image__sibling-counter">
+        {index + 1} / {count}
+      </span>
+    </>
+  );
+}
+
 const STORAGE_KEY = (cartomancyType: string) =>
   `archetypes-viewer.image.deck.${cartomancyType}`;
 
@@ -136,31 +171,7 @@ export default function ArchetypeCardImage({ archetype, cartomancyType, classNam
             No matching card in this deck.
           </div>
         )}
-        {matchingCards.length > 1 && (
-          <>
-            <button
-              type="button"
-              className="archetype-card-image__sibling-btn archetype-card-image__sibling-btn--prev"
-              onClick={() => cycleSibling(-1)}
-              aria-label="Previous variant"
-              title="Previous variant"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              className="archetype-card-image__sibling-btn archetype-card-image__sibling-btn--next"
-              onClick={() => cycleSibling(1)}
-              aria-label="Next variant"
-              title="Next variant"
-            >
-              ›
-            </button>
-            <span className="archetype-card-image__sibling-counter">
-              {safeIdx + 1} / {matchingCards.length}
-            </span>
-          </>
-        )}
+        <SiblingNav index={safeIdx} count={matchingCards.length} onCycle={cycleSibling} />
       </div>
       <div className="archetype-card-image__deck">
         <SearchCombobox

@@ -114,12 +114,3 @@ export async function addCardsToDeck(deckId: number, folder: string): Promise<{
 export function exportDeckUrl(deckId: number): string {
   return `${API_BASE}/api/export/deck/${deckId}`;
 }
-
-export async function importDeckJson(data: unknown): Promise<{
-  deck_id: number;
-  deck_name: string;
-  cards_imported: number;
-}> {
-  const res = await api.post('/api/import/deck-json', data);
-  return res.data;
-}

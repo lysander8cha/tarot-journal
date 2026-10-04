@@ -8,62 +8,6 @@ from database.correspondences import CORRESPONDENCE_FIELDS
 stats_bp = Blueprint('stats', __name__)
 
 
-@stats_bp.route('/api/stats')
-def get_stats():
-    """Get basic statistics (totals and top 5 lists)."""
-    db = current_app.config['DB']
-    data = db.get_stats()
-    return jsonify(data)
-
-
-@stats_bp.route('/api/stats/extended')
-def get_extended_stats():
-    """Get extended statistics for the Stats tab overview.
-
-    Returns basic stats plus entries_this_month, unique_cards_drawn,
-    total_readings, and avg_cards_per_reading.
-    """
-    db = current_app.config['DB']
-    data = db.get_extended_stats()
-    return jsonify(data)
-
-
-@stats_bp.route('/api/stats/card-frequency')
-def get_card_frequency():
-    """Get card frequency data for visualization.
-
-    Query params:
-        limit: Max cards to return (default 20, max 100)
-        deck_id: Optional deck ID to filter by
-
-    Returns list of {name, deck_name, count, reversed_count}
-    """
-    db = current_app.config['DB']
-
-    # Parse query params with validation
-    limit = request.args.get('limit', 20, type=int)
-    limit = min(max(limit, 1), 100)  # Clamp between 1 and 100
-
-    deck_id = request.args.get('deck_id', type=int)
-
-    data = db.get_card_frequency(limit=limit, deck_id=deck_id)
-    return jsonify(data)
-
-
-@stats_bp.route('/api/stats/timeline')
-def get_timeline():
-    """Get entry and reading counts grouped by month.
-
-    Query params:
-        limit: Number of months to return (default 12, max 36)
-    """
-    db = current_app.config['DB']
-    limit = request.args.get('limit', 12, type=int)
-    limit = min(max(limit, 1), 36)
-    data = db.get_timeline_stats(limit=limit)
-    return jsonify(data)
-
-
 @stats_bp.route('/api/stats/tag-trends')
 def get_tag_trends():
     """Get entry tag usage counts.
@@ -109,20 +53,3 @@ def get_correspondence_frequency():
     data = db.get_correspondence_frequency(field, months=months)
     return jsonify(data)
 
-
-@stats_bp.route('/api/stats/correspondence-timeline')
-def get_correspondence_timeline():
-    """Get monthly breakdown of correspondence field values across readings.
-
-    Query params:
-        field: Correspondence field name (required)
-        months: Number of months (default 12, max 36)
-    """
-    db = current_app.config['DB']
-    field = request.args.get('field', '')
-    if field not in CORRESPONDENCE_FIELDS:
-        return jsonify({'error': f'Invalid field. Must be one of: {", ".join(CORRESPONDENCE_FIELDS)}'}), 400
-    months = request.args.get('months', 12, type=int)
-    months = min(max(months, 1), 36)
-    data = db.get_correspondence_timeline(field, months=months)
-    return jsonify(data)

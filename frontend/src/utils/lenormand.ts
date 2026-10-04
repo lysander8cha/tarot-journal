@@ -70,11 +70,6 @@ export const PIP_RANK_TO_NUMBER: Record<string, string> = {
   'Ten': '10',
 };
 
-export function isLenormandCourtCard(lenormandName: string): boolean {
-  const rank = LENORMAND_PLAYING_CARD[lenormandName]?.rank;
-  return rank === 'Jack' || rank === 'Queen' || rank === 'King';
-}
-
 /** For a Lenormand archetype, return the numerology values to seed:
  * the card's number (1-36) plus the pip rank number for non-court cards. */
 export function lenormandDefaultNumerology(

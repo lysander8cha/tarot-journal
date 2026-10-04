@@ -9,30 +9,6 @@
   padding: 24px 42px;
 }
 
-.stats-tab__title {
-  font-family: var(--tj-font-display);
-  font-weight: var(--tj-display-weight);
-  font-size: var(--tj-size-display-sm);
-  color: var(--tj-text);
-  margin: 0 0 20px;
-}
-
-.stats-tab__loading {
-  color: var(--text-secondary);
-  padding: 40px 0;
-  text-align: center;
-}
-
-.stats-tab__error {
-  background: color-mix(in srgb, var(--danger) 20%, transparent);
-  color: var(--danger);
-  border: 1px solid var(--danger);
-  padding: 10px 14px;
-  border-radius: var(--tj-radius-row);
-  margin-bottom: 16px;
-  font-size: var(--font-size-body);
-}
-
 /* Sections */
 .stats-tab__section {
   background: var(--tj-panel);
@@ -50,37 +26,6 @@
   margin: 0 0 14px;
 }
 
-/* Overview metrics grid */
-.stats-tab__metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.stats-tab__metric {
-  background: var(--tj-panel-quiet);
-  border-radius: var(--tj-radius-row);
-  padding: 16px 14px;
-  text-align: center;
-}
-
-.stats-tab__metric-value {
-  font-family: var(--tj-font-display);
-  font-weight: var(--tj-display-weight);
-  font-size: 38px;
-  font-variant-numeric: tabular-nums;
-  color: var(--tj-text);
-  display: block;
-  margin-bottom: 4px;
-}
-
-.stats-tab__metric-label {
-  font-size: var(--tj-size-kicker);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--tj-text-muted);
-}
-
 /* Chart container */
 .stats-tab__chart {
   height: 300px;
@@ -94,61 +39,6 @@
   justify-content: center;
   height: 200px;
   color: var(--text-dim);
-  font-size: var(--font-size-body);
-}
-
-/* Card frequency list (fallback/alternative view) */
-.stats-tab__freq-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.stats-tab__freq-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.stats-tab__freq-rank {
-  width: 24px;
-  color: var(--text-dim);
-  font-size: var(--font-size-small);
-  text-align: right;
-}
-
-.stats-tab__freq-name {
-  flex: 1;
-  color: var(--text-primary);
-  font-size: var(--font-size-body);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stats-tab__freq-deck {
-  color: var(--text-dim);
-  font-size: var(--font-size-small);
-}
-
-.stats-tab__freq-bar {
-  width: 150px;
-  height: 16px;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.stats-tab__freq-bar-fill {
-  height: 100%;
-  background: var(--tj-tint-strong);
-  border-radius: 2px;
-}
-
-.stats-tab__freq-count {
-  width: 40px;
-  text-align: right;
-  color: var(--text-secondary);
   font-size: var(--font-size-body);
 }
 

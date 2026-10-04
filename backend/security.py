@@ -6,7 +6,6 @@ stay within expected directories before serving or reading them.
 """
 
 import os
-from pathlib import Path
 from typing import Optional, List
 
 # Image file extensions we allow serving
@@ -90,68 +89,11 @@ def is_valid_image_path(path: str, allowed_directories: Optional[List[str]] = No
     return os.path.isfile(real_path)
 
 
-def is_valid_directory(path: str, must_exist: bool = True) -> bool:
-    """
-    Check if a path is a valid, accessible directory.
-
-    Args:
-        path: The directory path to validate
-        must_exist: If True, the directory must already exist
-
-    Returns:
-        True if the path is a valid directory
-    """
-    if not path:
+def is_valid_directory(path: str) -> bool:
+    """True if path is an existing, accessible directory."""
+    if not path or '\x00' in path:
         return False
-
     try:
-        # Check for null bytes
-        if '\x00' in path:
-            return False
-
-        # Resolve to real path
-        real_path = os.path.realpath(path)
-
-        if must_exist:
-            return os.path.isdir(real_path)
-
-        # If it doesn't need to exist, just check it's a valid path format
-        return True
-
+        return os.path.isdir(os.path.realpath(path))
     except (OSError, TypeError, ValueError):
         return False
-
-
-def sanitize_filename(filename: str) -> str:
-    """
-    Sanitize a filename to prevent directory traversal.
-
-    Removes path separators and other potentially dangerous characters,
-    keeping only alphanumeric characters, spaces, underscores, hyphens,
-    and periods.
-
-    Args:
-        filename: The filename to sanitize
-
-    Returns:
-        A sanitized filename safe for use in file paths
-    """
-    if not filename:
-        return ""
-
-    # Get just the basename (remove any path components)
-    name = os.path.basename(filename)
-
-    # Keep only safe characters
-    safe_chars = []
-    for c in name:
-        if c.isalnum() or c in ' _-.' :
-            safe_chars.append(c)
-
-    result = ''.join(safe_chars).strip()
-
-    # Ensure we don't return an empty string or just dots
-    if not result or result.replace('.', '') == '':
-        return "unnamed"
-
-    return result

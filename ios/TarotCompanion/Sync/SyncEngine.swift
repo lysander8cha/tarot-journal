@@ -3,14 +3,6 @@ import GRDB
 
 /// Talks to the desktop app's /api/sync/ endpoints and mirrors the
 /// results into the local database.
-///
-/// Protocol (Phase 0, desktop side):
-///   GET  /api/sync/manifest          — counts + max timestamps
-///   GET  /api/sync/snapshot/<table>  — full rows for small tables
-///   GET  /api/sync/entries?since=    — changed aggregates + full ID list
-///   GET  /api/sync/source-entries?since=
-///   GET  /api/sync/card-image/<id>   — phone-sized image
-///   POST /api/sync/pair              — pairing code -> bearer token
 final class SyncEngine: ObservableObject {
     private let database: AppDatabase
 
@@ -106,8 +98,9 @@ final class SyncEngine: ObservableObject {
 
     // MARK: - Requests
 
-    private func get(_ path: String, query: [String: String] = [:]) async throws -> Data {
-        guard let base = serverURL else { throw SyncError.notConfigured }
+    /// A request to the Mac carrying this phone's pairing token.
+    static func authorizedRequest(_ base: URL, path: String,
+                                  query: [String: String] = [:]) -> URLRequest {
         var comps = URLComponents(
             url: base.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         if !query.isEmpty {
@@ -117,6 +110,28 @@ final class SyncEngine: ObservableObject {
         if let token = Keychain.token {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
+        return req
+    }
+
+    /// Naive local wall-clock time, the format the desktop stores.
+    static let localTimestamp: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return f
+    }()
+
+    /// A JSON array/object as text, or nil if it isn't one.
+    static func jsonText(_ value: Any?) -> String? {
+        guard let value, JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(withJSONObject: value)
+        else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private func get(_ path: String, query: [String: String] = [:]) async throws -> Data {
+        guard let base = serverURL else { throw SyncError.notConfigured }
+        let req = Self.authorizedRequest(base, path: path, query: query)
         let (data, response) = try await Self.dataSession.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw SyncError.network }
         switch http.statusCode {
@@ -138,10 +153,7 @@ final class SyncEngine: ObservableObject {
             return
         }
         let now = ISO8601DateFormatter().string(from: Date())
-        let naiveFormatter = DateFormatter()
-        naiveFormatter.locale = Locale(identifier: "en_US_POSIX")
-        naiveFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        let naiveNow = naiveFormatter.string(from: Date())
+        let naiveNow = Self.localTimestamp.string(from: Date())
         do {
             try await database.writer.write { db in
                 try db.execute(
@@ -187,36 +199,17 @@ final class SyncEngine: ObservableObject {
             reading["id"] = Int64(index + 1)
             readings.append(reading)
         }
-        func jsonString(_ obj: Any) -> String {
-            guard JSONSerialization.isValidJSONObject(obj),
-                  let d = try? JSONSerialization.data(withJSONObject: obj),
-                  let s = String(data: d, encoding: .utf8) else { return "[]" }
-            return s
-        }
         let querentIds = (payload["querent_ids"] as? [Int64]) ?? []
-        try db.execute(
-            sql: """
-                INSERT OR REPLACE INTO entries
-                (id, title, content, created_at, updated_at, reading_datetime,
-                 location_name, querent_id, reader_id, sync_uuid,
-                 readings_json, tag_ids_json, querent_ids_json, follow_ups_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-            arguments: [
-                -outboxId,
-                payload["title"] as? String,
-                payload["content"] as? String,
-                now, now,
-                payload["reading_datetime"] as? String,
-                payload["location_name"] as? String,
-                querentIds.first,
-                payload["reader_id"] as? Int64,
-                payload["sync_uuid"] as? String,
-                jsonString(readings),
-                "[]",
-                jsonString(querentIds),
-                "[]",
-            ])
+        var aggregate = payload
+        aggregate["id"] = -outboxId
+        aggregate["created_at"] = now
+        aggregate["updated_at"] = now
+        aggregate["readings"] = readings
+        aggregate["querent_ids"] = querentIds
+        aggregate["querent_id"] = querentIds.first
+        aggregate["tag_ids"] = [Int64]()
+        aggregate["follow_up_notes"] = [Any]()
+        try upsertEntry(db, aggregate: aggregate)
     }
 
     @MainActor
@@ -237,12 +230,9 @@ final class SyncEngine: ObservableObject {
         guard !rows.isEmpty else { return }
         guard let base = serverURL else { throw SyncError.notConfigured }
         for (rowId, payload) in rows {
-            var req = URLRequest(url: base.appendingPathComponent("api/sync/push-entry"))
+            var req = Self.authorizedRequest(base, path: "api/sync/push-entry")
             req.httpMethod = "POST"
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            if let token = Keychain.token {
-                req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            }
             req.httpBody = payload.data(using: .utf8)
             let (_, response) = try await Self.dataSession.data(for: req)
             guard let http = response as? HTTPURLResponse else { throw SyncError.network }
@@ -425,32 +415,13 @@ final class SyncEngine: ObservableObject {
     }
 
     private func pullEntries() async throws {
-        let since = (try? database.syncState("entries_since")) ?? nil
-        let data = try await get("api/sync/entries",
-                                 query: since.map { ["since": $0] } ?? [:])
-        guard let body = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let ids = body["ids"] as? [Int64],
-              let changed = body["changed"] as? [[String: Any]] else {
-            throw SyncError.badPayload("entries")
-        }
-        let maxUpdated: String? = try await database.writer.write { db in
-            var newest = since
+        try await pullDelta("entries", cursorKey: "entries_since") { db, ids, changed in
             // Prune local entries deleted on the desktop. Negative
             // ids are provisional phone-composed entries the desktop
             // doesn't know about yet — never prune those.
-            if ids.isEmpty {
-                try db.execute(sql: "DELETE FROM entries WHERE id >= 0")
-            } else {
-                let marks = ids.map { _ in "?" }.joined(separator: ",")
-                try db.execute(
-                    sql: "DELETE FROM entries WHERE id >= 0 AND id NOT IN (\(marks))",
-                    arguments: StatementArguments(ids))
-            }
+            try Self.prune(db, table: "entries", keeping: ids, scope: "id >= 0")
             for e in changed {
                 try Self.upsertEntry(db, aggregate: e)
-                if let u = e["updated_at"] as? String, u > (newest ?? "") {
-                    newest = u
-                }
             }
             // A provisional entry whose real, desktop-assigned twin
             // has arrived (same sync_uuid) is now redundant.
@@ -459,30 +430,12 @@ final class SyncEngine: ObservableObject {
                     (SELECT sync_uuid FROM entries
                      WHERE id >= 0 AND sync_uuid IS NOT NULL)
                 """)
-            return newest
         }
-        if let maxUpdated { try database.setSyncState("entries_since", maxUpdated) }
     }
 
     private func pullSourceEntries() async throws {
-        let since = (try? database.syncState("source_entries_since")) ?? nil
-        let data = try await get("api/sync/source-entries",
-                                 query: since.map { ["since": $0] } ?? [:])
-        guard let body = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let ids = body["ids"] as? [Int64],
-              let changed = body["changed"] as? [[String: Any]] else {
-            throw SyncError.badPayload("source-entries")
-        }
-        let maxUpdated: String? = try await database.writer.write { db in
-            var newest = since
-            if ids.isEmpty {
-                try db.execute(sql: "DELETE FROM source_entries")
-            } else {
-                let marks = ids.map { _ in "?" }.joined(separator: ",")
-                try db.execute(
-                    sql: "DELETE FROM source_entries WHERE id NOT IN (\(marks))",
-                    arguments: StatementArguments(ids))
-            }
+        try await pullDelta("source-entries", cursorKey: "source_entries_since") { db, ids, changed in
+            try Self.prune(db, table: "source_entries", keeping: ids)
             for row in changed {
                 try db.execute(
                     sql: """
@@ -497,13 +450,43 @@ final class SyncEngine: ObservableObject {
                         row["content"] as? String,
                         row["updated_at"] as? String,
                     ])
-                if let u = row["updated_at"] as? String, u > (newest ?? "") {
-                    newest = u
-                }
             }
-            return newest
         }
-        if let maxUpdated { try database.setSyncState("source_entries_since", maxUpdated) }
+    }
+
+    /// An incremental pull: the Mac sends rows changed since our
+    /// cursor plus the full list of ids it still has. `apply` prunes
+    /// and upserts in one transaction; then the cursor advances to
+    /// the newest `updated_at` seen.
+    private func pullDelta(
+        _ endpoint: String, cursorKey: String,
+        apply: @escaping (Database, _ ids: [Int64], _ changed: [[String: Any]]) throws -> Void
+    ) async throws {
+        let since = (try? database.syncState(cursorKey)) ?? nil
+        let data = try await get("api/sync/\(endpoint)",
+                                 query: since.map { ["since": $0] } ?? [:])
+        guard let body = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let ids = body["ids"] as? [Int64],
+              let changed = body["changed"] as? [[String: Any]] else {
+            throw SyncError.badPayload(endpoint)
+        }
+        try await database.writer.write { db in try apply(db, ids, changed) }
+        let newest = ([since] + changed.map { $0["updated_at"] as? String })
+            .compactMap { $0 }.max()
+        if let newest { try database.setSyncState(cursorKey, newest) }
+    }
+
+    /// Delete rows (within `scope`) whose id the Mac no longer lists.
+    private static func prune(_ db: Database, table: String,
+                              keeping ids: [Int64], scope: String = "1") throws {
+        if ids.isEmpty {
+            try db.execute(sql: "DELETE FROM \(table) WHERE \(scope)")
+        } else {
+            let marks = ids.map { _ in "?" }.joined(separator: ",")
+            try db.execute(
+                sql: "DELETE FROM \(table) WHERE \(scope) AND id NOT IN (\(marks))",
+                arguments: StatementArguments(ids))
+        }
     }
 
     // MARK: - Row plumbing
@@ -520,13 +503,7 @@ final class SyncEngine: ObservableObject {
     }
 
     private static func upsertEntry(_ db: Database, aggregate: [String: Any]) throws {
-        func json(_ key: String) -> String? {
-            guard let value = aggregate[key],
-                  JSONSerialization.isValidJSONObject(value),
-                  let data = try? JSONSerialization.data(withJSONObject: value)
-            else { return nil }
-            return String(data: data, encoding: .utf8)
-        }
+        func json(_ key: String) -> String? { jsonText(aggregate[key]) }
         try db.execute(
             sql: """
                 INSERT OR REPLACE INTO entries
@@ -564,12 +541,7 @@ final class SyncEngine: ObservableObject {
         default:
             // Nested JSON (e.g. spread positions arrive as parsed
             // objects if the server ever inlines them) — store as text.
-            if let value,
-               JSONSerialization.isValidJSONObject(value),
-               let data = try? JSONSerialization.data(withJSONObject: value) {
-                return String(data: data, encoding: .utf8)
-            }
-            return nil
+            return jsonText(value)
         }
     }
 }

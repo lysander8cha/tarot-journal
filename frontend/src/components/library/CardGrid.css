@@ -5,11 +5,6 @@
   overflow: hidden;
 }
 
-.card-grid__items-wrap {
-  flex: 1;
-  min-height: 0;
-}
-
 .card-grid__header {
   display: flex;
   align-items: center;

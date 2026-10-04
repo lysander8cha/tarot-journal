@@ -37,7 +37,6 @@ final class AppModel: ObservableObject {
     let sync: SyncEngine
     let images: ImageStore
 
-    @Published var lastSyncError: String?
     private var cancellables = Set<AnyCancellable>()
 
     init() {

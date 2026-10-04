@@ -5,9 +5,9 @@
 # new virtualenv reproduces a known-good environment. When upgrading,
 # change the pin deliberately and test the app afterwards.
 
-# Web backend serving the Electron/React frontend.
+# Web backend serving the Electron/React frontend. Flask also installs
+# Jinja2, which renders the PDF export templates.
 Flask==3.1.2
-flask-cors==6.0.2
 
 # Image loading/scaling for deck thumbnails.
 Pillow==11.3.0
@@ -26,7 +26,6 @@ requests==2.32.5
 # system dependencies (pango, cairo, glib, gdk-pixbuf, libffi) which must
 # already be installed at the OS level — see README setup notes.
 weasyprint==66.0
-jinja2==3.1.6
 # Rasterizes kerykeion's chart SVGs into PNGs before embedding into
 # the PDF — WeasyPrint's own inline-SVG renderer mis-renders the
 # chart wheel (solid black) because of how kerykeion styles it.

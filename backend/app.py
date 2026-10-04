@@ -14,10 +14,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from flask import Flask, send_from_directory, request
-from flask_cors import CORS
-
-from backend.config import CORS_ORIGINS
+from flask import Flask, send_from_directory
 
 # Path to the built React frontend
 FRONTEND_DIST = os.path.join(PROJECT_ROOT, 'frontend', 'dist')
@@ -27,13 +24,9 @@ def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__, static_folder=None)
 
-    # Allow the React dev server to make requests
-    CORS(app, origins=CORS_ORIGINS)
-
     # Import here to avoid circular imports and ensure PROJECT_ROOT is on path
     from database import Database
     from thumbnail_cache import get_cache
-    from theme_config import get_theme
 
     # The journal database lives in the platform app-data folder
     # (~/Library/Application Support/TarotJournal on macOS), not in
@@ -82,7 +75,6 @@ def create_app():
         from logger_config import get_logger
         get_logger('backend').warning("Automatic startup backup failed: %s", e)
     app.config['THUMB_CACHE'] = get_cache()
-    app.config['THEME'] = get_theme()
 
     # Ensure the database is properly closed (and WAL checkpointed) on exit
     atexit.register(db.close)

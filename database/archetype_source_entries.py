@@ -39,13 +39,6 @@ class ArchetypeSourceEntriesMixin:
             ).fetchall()
         ]
 
-    def get_source_field(self, field_id: int):
-        cursor = self.conn.cursor()
-        row = cursor.execute(
-            'SELECT * FROM source_fields WHERE id = ?', (field_id,)
-        ).fetchone()
-        return dict(row) if row else None
-
     def create_source_field(
         self,
         source_id: int,
@@ -208,15 +201,6 @@ class ArchetypeSourceEntriesMixin:
         rows = cursor.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
 
-    def get_source_entry(self, archetype_id: int, field_id: int):
-        cursor = self.conn.cursor()
-        row = cursor.execute(
-            'SELECT * FROM archetype_source_entries '
-            'WHERE archetype_id = ? AND field_id = ?',
-            (archetype_id, field_id)
-        ).fetchone()
-        return dict(row) if row else None
-
     # === Write entries ========================================
 
     def set_source_entry(self, archetype_id: int, field_id: int, content: str):
@@ -246,11 +230,3 @@ class ArchetypeSourceEntriesMixin:
             )
         self._commit()
 
-    def delete_source_entry(self, archetype_id: int, field_id: int):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'DELETE FROM archetype_source_entries '
-            'WHERE archetype_id = ? AND field_id = ?',
-            (archetype_id, field_id)
-        )
-        self._commit()

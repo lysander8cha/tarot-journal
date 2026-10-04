@@ -14,7 +14,7 @@
   min-height: 420px;
 }
 
-.entity-scribe__review .scribe__chat {
+.entity-scribe__review .chat-panel {
   flex: 1 1 40%;
   min-width: 0;
 }

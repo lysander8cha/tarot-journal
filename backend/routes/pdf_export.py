@@ -26,10 +26,10 @@ import re
 from io import BytesIO
 from pathlib import Path
 
-from flask import Blueprint, current_app, request, send_file, abort, jsonify
+from flask import Blueprint, current_app, request, send_file, jsonify
 
 from backend.utils import row_to_dict
-from backend.routes.entries import _enrich_cards_with_ids
+from backend.routes.entries import _enrich_cards_with_ids, _parse_cards_used
 from backend.services.richtext import convert_content_to_html
 from database.correspondences import CORRESPONDENCE_FIELDS
 
@@ -193,23 +193,6 @@ def _safe_filename(stem: str) -> str:
     Drops anything other than alphanumerics, dash, and underscore."""
     cleaned = re.sub(r'[^A-Za-z0-9_-]+', '_', stem).strip('_')
     return cleaned or 'journal_entry'
-
-
-def _parse_cards_used(raw):
-    """Mirror of routes/entries.py's _parse_cards_used so we get the
-    same shape (list of dicts with name + reversed + position_index +
-    card_id) from the JSON the DB stores."""
-    if not raw:
-        return []
-    if isinstance(raw, list):
-        return raw
-    try:
-        parsed = json.loads(raw)
-        if isinstance(parsed, list):
-            return parsed
-    except (TypeError, ValueError):
-        pass
-    return []
 
 
 def _hydrate_entry_for_pdf(db, entry_id: int, cache=None) -> dict | None:
@@ -400,11 +383,12 @@ def _entry_chart_ready(entry: dict) -> bool:
 
 
 def _resolve_event_chart(db, entry: dict) -> dict | None:
-    """Return {svg, chart_data, timezone, house_system} for the
-    entry's event chart, hitting the chart_cache when it can and
+    """Return {svg, chart_data, timezone, house_system, cached,
+    generated_at?} for the entry's event chart, hitting the chart_cache when it can and
     generating fresh otherwise. None if the entry doesn't have
     enough data, or if kerykeion errored out — the export should
-    keep rendering the rest of the PDF rather than 500'ing."""
+    keep rendering the rest of the PDF rather than 500'ing. Also
+    backs GET /api/entries/<id>/chart."""
     if not _entry_chart_ready(entry):
         return None
 
@@ -430,6 +414,8 @@ def _resolve_event_chart(db, entry: dict) -> dict | None:
             'chart_data': cached['chart_data'],
             'timezone': (cached['chart_data'] or {}).get('timezone'),
             'house_system': cached['house_system'],
+            'generated_at': cached['updated_at'],
+            'cached': True,
         }
 
     try:
@@ -463,6 +449,7 @@ def _resolve_event_chart(db, entry: dict) -> dict | None:
         'chart_data': data_to_store,
         'timezone': result['timezone'],
         'house_system': house_system,
+        'cached': False,
     }
 
 

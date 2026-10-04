@@ -1,8 +1,5 @@
 import api, { API_BASE } from './client';
-import type {
-  JournalEntry, JournalEntryFull, EntryReadingParsed,
-  FollowUpNote, Tag, Profile,
-} from '../types';
+import type { JournalEntry, JournalEntryFull, Tag } from '../types';
 
 // ── Entries ──────────────────────────────────────────────────
 
@@ -101,32 +98,9 @@ export async function setEntryBreakdownSettings(
 
 // ── Readings ─────────────────────────────────────────────────
 
-export async function getEntryReadings(entryId: number): Promise<EntryReadingParsed[]> {
-  const res = await api.get(`/api/entries/${entryId}/readings`);
-  return res.data;
-}
-
-export async function addEntryReading(entryId: number, data: {
-  spread_id?: number | null;
-  spread_name?: string;
-  deck_id?: number | null;
-  deck_name?: string;
-  cartomancy_type?: string;
-  cards_used?: Array<{ name: string; reversed?: boolean; deck_id?: number; deck_name?: string; position_index?: number; card_id?: number; clarifies?: number }>;
-  position_order?: number;
-}): Promise<{ id: number }> {
-  const res = await api.post(`/api/entries/${entryId}/readings`, data);
-  return res.data;
-}
-
-export async function deleteEntryReadings(entryId: number): Promise<void> {
-  await api.delete(`/api/entries/${entryId}/readings`);
-}
-
 /** Atomically replace all of an entry's readings in a single request.
  *  The backend performs the swap in one database transaction, so a
- *  failure can never leave the entry with its readings half-deleted.
- *  Always prefer this over deleteEntryReadings + addEntryReading loops. */
+ *  failure can never leave the entry with its readings half-deleted. */
 export async function replaceEntryReadings(entryId: number, readings: Array<{
   notes?: string;
   spread_id?: number | null;
@@ -168,11 +142,6 @@ export async function getBulkLlmMarkdown(entryIds: number[]): Promise<{
 
 // ── Follow-up Notes ──────────────────────────────────────────
 
-export async function getFollowUpNotes(entryId: number): Promise<FollowUpNote[]> {
-  const res = await api.get(`/api/entries/${entryId}/follow-up-notes`);
-  return res.data;
-}
-
 export async function addFollowUpNote(entryId: number, content: string): Promise<{ id: number }> {
   const res = await api.post(`/api/entries/${entryId}/follow-up-notes`, { content });
   return res.data;
@@ -201,13 +170,6 @@ export async function setEntryTags(entryId: number, tagIds: number[]): Promise<v
 
 export async function setEntryQuerents(entryId: number, profileIds: number[]): Promise<void> {
   await api.put(`/api/entries/${entryId}/querents`, { profile_ids: profileIds });
-}
-
-// ── Profiles ─────────────────────────────────────────────────
-
-export async function getProfiles(): Promise<Profile[]> {
-  const res = await api.get('/api/profiles');
-  return res.data;
 }
 
 // ── Export / Import ──────────────────────────────────────────

@@ -171,19 +171,13 @@ struct InsightsView: View {
         var monthCounts: [String: Int] = [:]
         var cards = 0
         var reversals = 0
-        let decoder = JSONDecoder()
-
         for row in rows {
             if let datetime: String = row["reading_datetime"],
                datetime.count >= 7 {
                 let month = String(datetime.prefix(7))   // "2026-09"
                 monthCounts[month, default: 0] += 1
             }
-            guard let raw: String = row["readings_json"],
-                  let data = raw.data(using: .utf8),
-                  let readings = try? decoder.decode([Reading].self, from: data)
-            else { continue }
-            for reading in readings {
+            for reading in Reading.decodeList(row["readings_json"]) {
                 if let deck = reading.deckName {
                     deckCounts[deck, default: 0] += 1
                 }

@@ -5,15 +5,6 @@ import { useToast } from '../../context/ToastContext';
 import Modal, { ModalCancelButton } from '../common/Modal';
 import './AddCardsModal.css';
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      openDirectory: (options?: { title?: string }) => Promise<string | null>;
-      isElectron: boolean;
-    };
-  }
-}
-
 interface AddCardsModalProps {
   deckId: number;
   deckName: string;

@@ -45,18 +45,6 @@ class CardGroupsMixin:
         cursor.execute('DELETE FROM card_groups WHERE id = ?', (group_id,))
         self._commit()
 
-    def swap_card_group_order(self, group_id_a: int, group_id_b: int):
-        """Swap the sort_order of two card groups"""
-        cursor = self.conn.cursor()
-        cursor.execute('SELECT sort_order FROM card_groups WHERE id = ?', (group_id_a,))
-        row_a = cursor.fetchone()
-        cursor.execute('SELECT sort_order FROM card_groups WHERE id = ?', (group_id_b,))
-        row_b = cursor.fetchone()
-        if row_a and row_b:
-            cursor.execute('UPDATE card_groups SET sort_order = ? WHERE id = ?', (row_b['sort_order'], group_id_a))
-            cursor.execute('UPDATE card_groups SET sort_order = ? WHERE id = ?', (row_a['sort_order'], group_id_b))
-            self._commit()
-
     def get_groups_for_card(self, card_id: int):
         """Get all groups a card belongs to"""
         cursor = self.conn.cursor()
@@ -79,11 +67,3 @@ class CardGroupsMixin:
             )
         self._commit()
 
-    def get_cards_in_group(self, group_id: int):
-        """Get all card IDs in a specific group"""
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'SELECT card_id FROM card_group_assignments WHERE group_id = ?',
-            (group_id,)
-        )
-        return [row['card_id'] for row in cursor.fetchall()]

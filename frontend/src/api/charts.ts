@@ -1,16 +1,5 @@
 import api from './client';
 
-/** Subset of the response we currently render. The full kerykeion dump
- *  rides along in chart_data but only a handful of fields are surfaced
- *  in the UI — the rest is reserved for future features. */
-export interface ChartPlanet {
-  name: string;
-  sign: string;
-  position: number;
-  house: string;
-  retrograde: boolean;
-}
-
 export interface ChartResponse {
   chart_svg: string;
   /** Full kerykeion subject.model_dump() output. Shape isn't strict. */
@@ -20,12 +9,6 @@ export interface ChartResponse {
   timezone?: string;
   generated_at?: string;
   cached?: boolean;
-}
-
-export interface ChartError {
-  error: string;
-  /** When the chart can't be generated yet, which fields are missing. */
-  missing?: string[];
 }
 
 /** Fetch (or lazy-generate) the natal chart for a profile. */

@@ -19,6 +19,7 @@ import { getProfiles } from '../../api/profiles';
 import QueryError from '../common/QueryError';
 import SearchCombobox from '../common/SearchCombobox';
 import type { Deck, Profile } from '../../types';
+import { formatDate } from '../../utils/formatting';
 import './InsightsHero.css';
 
 interface Insights {
@@ -61,21 +62,15 @@ async function getInsights(params: {
   return res.data;
 }
 
+/** Insights dates are date-only (YYYY-MM-DD); pin them to local
+ *  midnight so they don't shift a day in negative-offset timezones. */
 function shortDate(s: string | null): string {
-  if (!s) return '';
-  const d = new Date(s + 'T00:00');
-  return isNaN(d.getTime())
-    ? ''
-    : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return s ? formatDate(s + 'T00:00') : '';
 }
 
 function formatRange(range: Insights['date_range']): string {
   if (!range.from || !range.to) return 'no entries yet';
-  const fmt = (s: string) =>
-    new Date(s + 'T00:00').toLocaleDateString(undefined, {
-      day: 'numeric', month: 'short', year: 'numeric',
-    });
-  return `${fmt(range.from)} – ${fmt(range.to)}`;
+  return `${shortDate(range.from)} – ${shortDate(range.to)}`;
 }
 
 export default function InsightsHero() {

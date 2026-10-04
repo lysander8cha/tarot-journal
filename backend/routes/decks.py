@@ -2,7 +2,6 @@
 Deck endpoints -- CRUD for card decks.
 """
 
-import json
 import os
 from collections import Counter
 from flask import Blueprint, jsonify, request, current_app

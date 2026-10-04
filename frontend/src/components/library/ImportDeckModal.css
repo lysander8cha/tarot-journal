@@ -38,11 +38,6 @@
   font-size: var(--font-size-small);
 }
 
-.import-deck__row {
-  display: flex;
-  gap: 12px;
-}
-
 /* Folder path with browse button */
 .import-deck__folder-row {
   display: flex;

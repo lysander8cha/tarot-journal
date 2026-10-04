@@ -52,30 +52,6 @@
   margin: 0 0 12px;
 }
 
-/* Theme Presets */
-.settings-tab__presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.settings-tab__preset-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  font-size: var(--font-size-body);
-}
-
-.settings-tab__preset-swatch {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--tj-radius-row);
-  border: 1px solid var(--border);
-}
-
 .settings-tab__customize-btn {
   font-size: var(--font-size-body);
   color: var(--text-secondary);
@@ -132,65 +108,6 @@
   font-size: var(--font-size-small);
   color: var(--text-secondary);
   font-family: var(--font-mono);
-}
-
-/* Color Editor */
-.settings-tab__color-editor {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
-.settings-tab__color-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-@media (max-width: 600px) {
-  .settings-tab__color-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.settings-tab__color-field {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.settings-tab__color-label {
-  font-size: var(--font-size-small);
-  color: var(--text-secondary);
-}
-
-.settings-tab__color-input-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.settings-tab__color-input-row input[type="color"] {
-  width: 32px;
-  height: 26px;
-  padding: 1px;
-  border: 1px solid var(--border);
-  border-radius: var(--tj-radius-row);
-  cursor: pointer;
-  background: transparent;
-}
-
-.settings-tab__color-hex {
-  font-size: var(--font-size-small);
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-}
-
-.settings-tab__color-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 .settings-tab__save-btn {
@@ -479,16 +396,6 @@
 .settings-tab__ai-form input[type="password"],
 .settings-tab__ai-form select {
   width: 100%;
-}
-
-.settings-tab__link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--accent);
-  font-size: var(--font-size-small);
-  cursor: pointer;
-  text-decoration: underline;
 }
 
 .settings-tab__feature-model {

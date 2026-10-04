@@ -229,33 +229,6 @@ class CombinationsMixin:
             params)
         return cursor.fetchall()
 
-    def list_populated_combinations(self, cartomancy_type: str):
-        """All combinations of this type that have at least one meaning.
-        Used by the viewer's "browse what's been written" listing."""
-        cursor = self.conn.cursor()
-        cursor.execute(
-            '''
-            SELECT
-                c.id AS combination_id,
-                c.archetype_1_id, c.archetype_2_id, c.archetype_3_id,
-                c.archetype_1_reversed, c.archetype_2_reversed, c.archetype_3_reversed,
-                a1.name AS archetype_1_name, a1.rank AS archetype_1_rank,
-                a2.name AS archetype_2_name, a2.rank AS archetype_2_rank,
-                a3.name AS archetype_3_name, a3.rank AS archetype_3_rank,
-                COUNT(m.id) AS meaning_count
-            FROM archetype_combinations c
-            JOIN card_archetypes a1 ON a1.id = c.archetype_1_id
-            JOIN card_archetypes a2 ON a2.id = c.archetype_2_id
-            LEFT JOIN card_archetypes a3 ON a3.id = c.archetype_3_id
-            JOIN combination_meanings m ON m.combination_id = c.id
-            WHERE c.cartomancy_type = ?
-            GROUP BY c.id
-            ORDER BY a1.name, a2.name
-            ''',
-            (cartomancy_type,)
-        )
-        return cursor.fetchall()
-
     # === Write ===
 
     def add_combination_meaning(

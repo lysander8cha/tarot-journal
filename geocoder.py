@@ -35,16 +35,6 @@ DB_PATH = os.path.join(DATA_DIR, 'cities500.db')
 SOURCE_URL = 'https://download.geonames.org/export/dump/cities500.zip'
 ADMIN1_URL = 'https://download.geonames.org/export/dump/admin1CodesASCII.txt'
 
-# Column order in the GeoNames TSV format (cities500.txt). Documented at
-# https://download.geonames.org/export/dump/readme.txt
-GEONAMES_COLS = [
-    'geonameid', 'name', 'asciiname', 'alternatenames',
-    'latitude', 'longitude', 'feature_class', 'feature_code',
-    'country_code', 'cc2', 'admin1_code', 'admin2_code',
-    'admin3_code', 'admin4_code', 'population', 'elevation',
-    'dem', 'timezone', 'modification_date',
-]
-
 
 @dataclass
 class Match:

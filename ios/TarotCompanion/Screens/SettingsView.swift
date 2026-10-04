@@ -103,7 +103,8 @@ struct SettingsView: View {
             }
             ForEach(discovery.servers) { server in
                 Button {
-                    discovery.resolve(server) { url in
+                    discovery.resolveAll(server) { urls in
+                        let url = urls.first
                         selectedURL = url
                         selectedName = server.name
                         if url == nil {

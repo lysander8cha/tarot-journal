@@ -199,13 +199,6 @@ button.danger:hover:not(:disabled) {
   color: var(--tj-text-faint);
 }
 
-/* Fading rules — the Nocturne signature. Use instead of border-top. */
-.tj-rule {
-  height: 1px;
-  border: 0;
-  background: var(--tj-rule-h);
-}
-
 /* Uppercase kicker line above a title */
 .tj-kicker {
   font-size: var(--tj-size-kicker);

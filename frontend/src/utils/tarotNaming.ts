@@ -6,8 +6,6 @@
  * (and, for Marseille, the displayed rank number) is transformed.
  */
 
-export type TarotNamingStyle = 'RWS' | 'Thoth' | 'Marseille';
-
 // Thoth renames applied on top of the canonical RWS names
 const THOTH_NAME_OVERRIDES: Record<string, string> = {
   // Major Arcana renames
@@ -24,17 +22,6 @@ const THOTH_NAME_OVERRIDES: Record<string, string> = {
 const THOTH_SUIT_OVERRIDES: Record<string, string> = {
   'Pentacles': 'Disks',
 };
-
-/** Translate a suit name (e.g. "Pentacles") under the given style. */
-export function displaySuitName(
-  suit: string,
-  namingStyle: string | null | undefined,
-): string {
-  if (namingStyle === 'Thoth' && THOTH_SUIT_OVERRIDES[suit]) {
-    return THOTH_SUIT_OVERRIDES[suit];
-  }
-  return suit;
-}
 
 function applyThothSuitRename(name: string): string {
   for (const [from, to] of Object.entries(THOTH_SUIT_OVERRIDES)) {

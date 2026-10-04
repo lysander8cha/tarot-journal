@@ -49,6 +49,18 @@
   background: var(--bg-secondary);
 }
 
+.anki-export__field-row[draggable="true"] {
+  cursor: grab;
+}
+
+.anki-export__field-row--dragging {
+  opacity: 0.5;
+}
+
+.anki-export__field-row--drag-over {
+  border-top: 2px solid var(--accent);
+}
+
 .anki-export__field-row:last-child {
   border-bottom: none;
 }

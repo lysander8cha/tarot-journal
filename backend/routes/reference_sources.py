@@ -29,15 +29,6 @@ def list_sources():
     return jsonify(db.get_reference_sources(cartomancy_type=ctype))
 
 
-@reference_sources_bp.route('/api/reference/sources/<int:source_id>')
-def get_source(source_id):
-    db = current_app.config['DB']
-    source = db.get_reference_source(source_id)
-    if not source:
-        return jsonify({'error': 'Source not found'}), 404
-    return jsonify(source)
-
-
 @reference_sources_bp.route('/api/reference/sources', methods=['POST'])
 @require_json
 def create_source(data):
@@ -225,11 +216,3 @@ def set_entry(archetype_id, field_id, data):
     return jsonify({'ok': True})
 
 
-@reference_sources_bp.route(
-    '/api/archetypes/<int:archetype_id>/source-fields/<int:field_id>',
-    methods=['DELETE'],
-)
-def delete_entry(archetype_id, field_id):
-    db = current_app.config['DB']
-    db.delete_source_entry(archetype_id, field_id)
-    return jsonify({'ok': True})

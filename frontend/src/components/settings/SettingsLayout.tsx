@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import GeneralSection from './sections/GeneralSection';
-import TagsSection from './sections/TagsSection';
+import TagsTab from '../tags/TagsTab';
 import ImportPresetsSection from './sections/ImportPresetsSection';
 import BackupSection from './sections/BackupSection';
 import CacheSection from './sections/CacheSection';
@@ -120,7 +120,7 @@ export default function SettingsLayout({
       </nav>
       <div className="settings-layout__content">
         {activeSection === 'general' && <GeneralSection />}
-        {activeSection === 'tags' && <TagsSection />}
+        {activeSection === 'tags' && <TagsTab />}
         {activeSection === 'deck-types' && <DeckTypesSection />}
         {activeSection === 'correspondences' && <CorrespondencesSection />}
         {activeSection === 'archetype-notes' && (

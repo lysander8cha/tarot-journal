@@ -5,48 +5,62 @@ Thumbnail caching system for fast image loading
 import hashlib
 import logging
 import os
-import threading
 from pathlib import Path
-from queue import Empty, Queue
 from typing import Optional, Tuple
 
-from PIL import Image
-
-from app_config import get_config
-from image_utils import load_and_scale_for_thumbnail
+from PIL import Image, ImageOps
 
 logger = logging.getLogger(__name__)
 
-_cfg = get_config()
+# Transparent areas are filled with this (the dark theme background).
+BACKGROUND_COLOR = (30, 32, 36)
+
+
+def _load_scaled_rgb(image_path: str, size: Tuple[int, int]) -> Optional[Image.Image]:
+    """Open an image, honour its EXIF rotation, shrink it to fit size,
+    and flatten any transparency onto BACKGROUND_COLOR as RGB."""
+    try:
+        img = ImageOps.exif_transpose(Image.open(image_path))
+    except Exception as e:
+        logger.warning(f"Error loading image {image_path}: {e}")
+        return None
+    try:
+        if img.width > 0 and img.height > 0:
+            img.thumbnail(size, Image.Resampling.LANCZOS)
+        if img.mode == 'RGB':
+            return img
+        if img.mode in ('RGBA', 'P'):
+            background = Image.new('RGB', img.size, BACKGROUND_COLOR)
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            if img.mode == 'RGBA':
+                background.paste(img, mask=img.split()[-1])
+            else:
+                background.paste(img)
+            return background
+        return img.convert('RGB')
+    except Exception as e:
+        logger.warning(f"Error creating thumbnail for {image_path}: {e}")
+        return None
 
 
 class ThumbnailCache:
     """Manages thumbnail generation and caching for card images"""
 
-    THUMBNAIL_SIZE = tuple(_cfg.get("images", "thumbnail_size", [300, 450]))
-    PREVIEW_SIZE = tuple(_cfg.get("images", "preview_size", [500, 750]))
+    THUMBNAIL_SIZE = (300, 450)
+    PREVIEW_SIZE = (500, 750)
     # Phone-companion derivative: big enough to look good full-screen
     # on a modern iPhone, far smaller than the raw scans.
-    PHONE_SIZE = tuple(_cfg.get("images", "phone_size", [1000, 1500]))
+    PHONE_SIZE = (1000, 1500)
 
     def __init__(self, cache_dir: str = None):
         if cache_dir is None:
             # Default to a .cache folder in the app directory
-            cache_dir_name = _cfg.get("paths", "thumbnail_cache_dir", ".thumbnail_cache")
-            self.cache_dir = Path(os.path.dirname(os.path.abspath(__file__))) / cache_dir_name
+            self.cache_dir = Path(os.path.dirname(os.path.abspath(__file__))) / ".thumbnail_cache"
         else:
             self.cache_dir = Path(cache_dir)
         
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        
-        # In-memory cache for PhotoImage objects (managed by caller)
-        self._memory_cache = {}
-        self._cache_lock = threading.Lock()
-        
-        # Background processing queue
-        self._queue = Queue()
-        self._worker_thread = None
-        self._running = False
     
     def _get_cache_key(self, image_path: str, size: Tuple[int, int]) -> str:
         """Generate a unique cache key for an image at a specific size"""
@@ -86,8 +100,7 @@ class ThumbnailCache:
                 logger.debug("Corrupted cache file %s, regenerating: %s", cache_path, e)
                 cache_path.unlink(missing_ok=True)
         
-        # Generate thumbnail using shared utility
-        img = load_and_scale_for_thumbnail(image_path, size)
+        img = _load_scaled_rgb(image_path, size)
         if img is None:
             return None
 
@@ -122,62 +135,6 @@ class ThumbnailCache:
             return str(cache_path)
         
         return None
-    
-    def pregenerate_thumbnails(self, image_paths: list, size: Tuple[int, int] = None,
-                               callback=None):
-        """
-        Pre-generate thumbnails for a list of images.
-        Optionally calls callback(current, total) for progress updates.
-        """
-        if size is None:
-            size = self.THUMBNAIL_SIZE
-        
-        total = len(image_paths)
-        for i, path in enumerate(image_paths):
-            if path and os.path.exists(path):
-                self.get_thumbnail(path, size)
-            if callback:
-                callback(i + 1, total)
-    
-    def start_background_worker(self):
-        """Start a background thread for thumbnail generation"""
-        if self._worker_thread is None or not self._worker_thread.is_alive():
-            self._running = True
-            self._worker_thread = threading.Thread(target=self._background_worker, daemon=True)
-            self._worker_thread.start()
-    
-    def stop_background_worker(self):
-        """Stop the background worker thread"""
-        self._running = False
-        self._queue.put(None)  # Signal to stop
-    
-    def _background_worker(self):
-        """Background worker that processes thumbnail requests"""
-        while self._running:
-            try:
-                item = self._queue.get(timeout=1)
-                if item is None:
-                    break
-
-                image_path, size, callback = item
-                thumb = self.get_thumbnail(image_path, size)
-                if callback:
-                    callback(image_path, thumb)
-
-            except Empty:
-                # Queue timeout - expected, just continue polling
-                continue
-            except Exception as e:
-                logger.debug("Background thumbnail worker error: %s", e)
-                continue
-    
-    def queue_thumbnail(self, image_path: str, size: Tuple[int, int] = None, callback=None):
-        """Queue a thumbnail for background generation"""
-        if size is None:
-            size = self.THUMBNAIL_SIZE
-        
-        self.start_background_worker()
-        self._queue.put((image_path, size, callback))
     
     def clear_cache(self):
         """Clear all cached thumbnails"""

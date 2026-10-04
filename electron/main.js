@@ -124,29 +124,13 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   }
 
-  // Allow toggling DevTools with Cmd+Option+I (Mac) or Ctrl+Shift+I (Windows/Linux)
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if ((input.meta || input.control) && input.alt && input.key.toLowerCase() === 'i') {
-      mainWindow.webContents.toggleDevTools();
-    }
-  });
-
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
-// IPC handlers for file dialogs
-ipcMain.handle('dialog:openFile', async (_event, options) => {
-  if (!mainWindow) return null;
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile'],
-    filters: options?.filters || [],
-    title: options?.title || 'Open File',
-  });
-  return result.canceled ? null : result.filePaths[0];
-});
-
+// IPC handler for the folder picker (the default app menu already
+// provides View → Toggle Developer Tools)
 ipcMain.handle('dialog:openDirectory', async (_event, options) => {
   if (!mainWindow) return null;
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -154,16 +138,6 @@ ipcMain.handle('dialog:openDirectory', async (_event, options) => {
     title: options?.title || 'Select Folder',
   });
   return result.canceled ? null : result.filePaths[0];
-});
-
-ipcMain.handle('dialog:saveFile', async (_event, options) => {
-  if (!mainWindow) return null;
-  const result = await dialog.showSaveDialog(mainWindow, {
-    filters: options?.filters || [],
-    title: options?.title || 'Save File',
-    defaultPath: options?.defaultPath,
-  });
-  return result.canceled ? null : result.filePath;
 });
 
 // App lifecycle
@@ -183,8 +157,8 @@ app.whenReady().then(async () => {
   createWindow();
 });
 
+// app.quit() always emits before-quit, which stops Flask.
 app.on('window-all-closed', () => {
-  stopFlask();
   app.quit();
 });
 

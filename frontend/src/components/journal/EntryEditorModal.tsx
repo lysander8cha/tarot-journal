@@ -7,11 +7,11 @@ import {
   replaceEntryReadings,
   setEntryTags,
   setEntryQuerents,
-  getProfiles,
   getRecentLocations,
   type RecentLocation,
 } from '../../api/entries';
 import { getEntryTags as getAllEntryTags } from '../../api/tags';
+import { getProfiles } from '../../api/profiles';
 import { getDefaults, type AppDefaults } from '../../api/settings';
 import { useToast } from '../../context/ToastContext';
 import Modal, { ModalCancelButton } from '../common/Modal';

@@ -9,15 +9,11 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from app_config import get_config
-
-_cfg = get_config()
-
 LOG_FILE = Path(__file__).parent / "tarot_journal.log"
 LOG_FORMAT = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-MAX_BYTES = _cfg.get("logging", "max_bytes", 1_000_000)
-BACKUP_COUNT = _cfg.get("logging", "backup_count", 3)
+MAX_BYTES = 1_000_000
+BACKUP_COUNT = 3
 
 
 def get_logger(name: str) -> logging.Logger:

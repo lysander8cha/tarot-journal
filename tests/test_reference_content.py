@@ -13,6 +13,15 @@ import birth_cards as bc
 
 # === Dataset integrity ===
 
+def _assign(client, sid, assignments):
+    """Set system correspondence cells one at a time (the UI's per-cell route)."""
+    for a in assignments:
+        r = client.put(f"/api/correspondence-systems/{sid}/assignments/"
+                       f"{a['archetype_id']}/{a['field_name']}",
+                       json={'value': a['field_value']})
+        assert r.status_code == 200, r.get_json()
+
+
 def test_signs_dataset():
     assert len(rc.SIGNS) == 12
     names = [s['name'] for s in rc.SIGNS]
@@ -200,9 +209,8 @@ def test_kabbalah_tree_tabs(client):
         'name': 'ZZ Thoth Style', 'cartomancy_type': 'Tarot'}).get_json()['id']
     arch = client.post('/api/archetypes', json={
         'cartomancy_type': 'Tarot', 'name': 'ZZ Emperor'}).get_json()['id']
-    client.put(f'/api/correspondence-systems/{sid}/assignments', json={
-        'assignments': [{'archetype_id': arch, 'field_name': 'hebrew_letter',
-                         'field_value': 'Tzaddi'}]})
+    _assign(client, sid, [{'archetype_id': arch, 'field_name': 'hebrew_letter',
+                         'field_value': 'Tzaddi'}])
     # A deck holding that card, for the image lookup
     types = client.get('/api/types').get_json()
     tarot = next(t for t in types if t['name'] == 'Tarot')
@@ -234,8 +242,7 @@ def test_tree_matches_combined_letter_values(client):
     for name in ('ZZ Star', 'ZZ Emperor', 'ZZ Chariot', 'ZZ Ace'):
         ids[name] = client.post('/api/archetypes', json={
             'cartomancy_type': 'Tarot', 'name': name}).get_json()['id']
-    client.put(f'/api/correspondence-systems/{sid}/assignments', json={
-        'assignments': [
+    _assign(client, sid, [
             {'archetype_id': ids['ZZ Star'], 'field_name': 'hebrew_letter',
              'field_value': 'ה / He'},
             {'archetype_id': ids['ZZ Emperor'], 'field_name': 'hebrew_letter',
@@ -244,7 +251,7 @@ def test_tree_matches_combined_letter_values(client):
              'field_value': 'ח/ Chet'},
             {'archetype_id': ids['ZZ Ace'], 'field_name': 'hebrew_letter',
              'field_value': 'כֶּתֶר / Kether'},
-        ]})
+        ])
 
     data = client.get(f'/api/reference/kabbalah?system_id={sid}').get_json()
     by_letter = {p['letter']: p for p in data['paths']}
@@ -268,12 +275,11 @@ def test_sephira_cards_split_pips_from_courts(client):
     for name in ('Two of ZZTest', 'King of ZZTest', 'Queen of ZZTest'):
         ids[name] = client.post('/api/archetypes', json={
             'cartomancy_type': 'Tarot', 'name': name}).get_json()['id']
-    client.put(f'/api/correspondence-systems/{sid}/assignments', json={
-        'assignments': [
+    _assign(client, sid, [
             {'archetype_id': aid, 'field_name': 'hebrew_letter',
              'field_value': 'חׇכְמָה / Chokmah'}
             for aid in ids.values()
-        ]})
+        ])
     data = client.get(f'/api/reference/kabbalah?system_id={sid}').get_json()
     chokmah = next(s for s in data['sephiroth'] if s['number'] == 2)
     assert [c['name'] for c in chokmah['cards']] == ['Two of ZZTest']
@@ -498,13 +504,12 @@ def test_chakra_matching_real_value_formats(client):
         'cartomancy_type': 'Tarot', 'name': 'ZZ Chakra Card A'}).get_json()['id']
     a2 = client.post('/api/archetypes', json={
         'cartomancy_type': 'Tarot', 'name': 'ZZ Chakra Card B'}).get_json()['id']
-    client.put(f'/api/correspondence-systems/{sid}/assignments', json={
-        'assignments': [
+    _assign(client, sid, [
             {'archetype_id': a1, 'field_name': 'chakra',
              'field_value': 'Fifth Chakra / Viśuddha / Throat Chakra'},
             {'archetype_id': a2, 'field_name': 'chakra',
              'field_value': 'Mūlādhāra'},
-        ]})
+        ])
     data = client.get(f'/api/reference/chakras?system_id={sid}').get_json()
     by_name = {c['name']: c for c in data['chakras']}
     assert [a['name'] for a in by_name['Throat']['assigned']] == ['ZZ Chakra Card A']
@@ -529,14 +534,13 @@ def test_correspondence_cross_references(client):
         'cartomancy_type': 'Tarot', 'name': 'ZZ Test Card A'}).get_json()['id']
     a2 = client.post('/api/archetypes', json={
         'cartomancy_type': 'Tarot', 'name': 'ZZ Test Card B'}).get_json()['id']
-    client.put(f'/api/correspondence-systems/{sid}/assignments', json={
-        'assignments': [
+    _assign(client, sid, [
             {'archetype_id': a1, 'field_name': 'zodiac_sign', 'field_value': 'Leo'},
             {'archetype_id': a1, 'field_name': 'chakra', 'field_value': 'Anahata'},
             {'archetype_id': a1, 'field_name': 'numerology', 'field_value': '7'},
             {'archetype_id': a1, 'field_name': 'hebrew_letter', 'field_value': 'Alef'},
             {'archetype_id': a2, 'field_name': 'decan', 'field_value': 'Jupiter in Leo'},
-        ]})
+        ])
 
     astro = client.get(f'/api/reference/astrology?system_id={sid}').get_json()
     leo = next(s for s in astro['signs'] if s['name'] == 'Leo')

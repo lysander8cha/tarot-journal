@@ -307,10 +307,6 @@ export interface ReferenceSource {
   created_at: string;
 }
 
-/** @deprecated alias used by older Lenormand-combinations code; switch
- *  callers to ReferenceSource. */
-export type LenormandSource = ReferenceSource;
-
 /** A field defined on a reference source (e.g. "Upright Meaning").
  *  Each field is scoped to one cartomancy type within its source so a
  *  cross-type source can have different field sets per deck type. */
@@ -386,19 +382,6 @@ export interface CombinationMeaning {
   archetype_3_reversed?: number;
 }
 
-/** A pair (across any cartomancy type) that has at least one
- *  authored meaning. Used by the viewer's "browse populated" list. */
-export interface PopulatedCombination {
-  combination_id: number;
-  archetype_1_id: number;
-  archetype_1_name: string;
-  archetype_1_rank: string | null;
-  archetype_2_id: number;
-  archetype_2_name: string;
-  archetype_2_rank: string | null;
-  meaning_count: number;
-}
-
 // === Archetype Languages ===
 
 export interface ArchetypeLanguage {
@@ -456,6 +439,7 @@ export interface ThemeFonts {
 }
 
 export interface Theme {
-  colors: ThemeColors;
+  /** Stored server-side but not applied — the palette is fixed CSS. */
+  colors?: ThemeColors;
   fonts: ThemeFonts;
 }

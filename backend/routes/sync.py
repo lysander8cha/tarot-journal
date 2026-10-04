@@ -2,8 +2,8 @@
 Phone-companion sync endpoints (Phase 0 of the iOS companion plan).
 
 Protocol overview:
-  - /api/sync/manifest        — per-table counts + max timestamps, so
-    the phone can skip unchanged tables entirely.
+  - /api/sync/manifest        — reachability/auth probe (the phone
+    only checks the HTTP status).
   - /api/sync/snapshot/<t>    — full snapshot of a small table
     (deletions come free: the phone mirrors the snapshot).
   - /api/sync/entries         — journal entries as whole aggregates
@@ -254,29 +254,10 @@ def _reference_entity_catalog(db):
 
 @sync_bp.route('/api/sync/manifest')
 def manifest():
+    """Reachability/auth probe: the phone only checks the HTTP status
+    (200 = paired and reachable, 401 = reachable but no token)."""
     _require_auth()
-    db = current_app.config['DB']
-    cursor = db.conn.cursor()
-
-    def one(sql):
-        row = cursor.execute(sql).fetchone()
-        return row[0] if row else None
-
-    tables = {}
-    for name, sql in SNAPSHOT_TABLES.items():
-        tables[name] = {'count': one(f'SELECT COUNT(*) FROM ({sql})')}
-    tables['reference_entities'] = {
-        'count': len(_reference_entity_catalog(db))}
-    tables['entries'] = {
-        'count': one('SELECT COUNT(*) FROM journal_entries'),
-        'max_updated_at': one('SELECT MAX(updated_at) FROM journal_entries'),
-    }
-    tables['source_entries'] = {
-        'count': one('SELECT COUNT(*) FROM archetype_source_entries'),
-        'max_updated_at': one(
-            'SELECT MAX(updated_at) FROM archetype_source_entries'),
-    }
-    return jsonify({'app': 'tarot-journal', 'protocol': 1, 'tables': tables})
+    return jsonify({'app': 'tarot-journal', 'protocol': 1})
 
 
 @sync_bp.route('/api/sync/snapshot/<table>')

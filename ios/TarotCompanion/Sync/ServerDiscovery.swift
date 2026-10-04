@@ -53,15 +53,10 @@ final class ServerDiscovery: NSObject, ObservableObject {
         resolveCompletion = nil
     }
 
-    /// Resolve a discovered service to a plain http URL the pairing
-    /// screen can use. Completion fires once, on the main actor.
-    func resolve(_ server: FoundServer, completion: @escaping (URL?) -> Void) {
-        resolveAll(server) { completion($0.first) }
-    }
-
     /// Resolve a discovered service to EVERY address it advertises —
     /// the Mac announces one per interface (Wi-Fi, hotspot, USB
     /// tether), and only probing tells which one the phone can reach.
+    /// Completion fires once, on the main actor.
     func resolveAll(_ server: FoundServer,
                     completion: @escaping ([URL]) -> Void) {
         cancelResolve()

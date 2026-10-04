@@ -168,69 +168,6 @@
   white-space: nowrap;
 }
 
-.corr-systems__cell-input {
-  width: 100%;
-  min-width: 70px;
-  padding: 4px 4px !important;
-  font-size: var(--font-size-body) !important;
-  line-height: 1.4 !important;
-  border: 1px solid transparent !important;
-  background: transparent !important;
-  color: var(--text-primary) !important;
-}
-
-.corr-systems__cell-input:focus {
-  border-color: var(--accent) !important;
-  background: var(--bg-input) !important;
-}
-
-.corr-systems__cell-select {
-  width: 100%;
-  min-width: 80px;
-  padding: 4px 4px !important;
-  font-size: var(--font-size-body) !important;
-  line-height: 1.6 !important;
-  border: 1px solid transparent !important;
-  background: transparent !important;
-  color: var(--text-primary) !important;
-  font-family: system-ui, -apple-system, 'Arial Hebrew', 'Times New Roman', sans-serif !important;
-  direction: ltr !important;
-  text-align: left !important;
-}
-
-.corr-systems__cell-select:hover,
-.corr-systems__cell-select:focus {
-  border-color: var(--accent) !important;
-  background: var(--bg-input) !important;
-}
-
-.corr-systems__cell-multi {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 4px;
-}
-
-.corr-systems__cell-display {
-  flex: 1;
-  min-width: 0;
-  font-family: system-ui, -apple-system, 'Arial Hebrew', sans-serif;
-  font-size: var(--font-size-body);
-  line-height: 1.6;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  direction: ltr;
-  text-align: left;
-}
-
-.corr-systems__cell-multi .corr-systems__cell-select {
-  width: 24px !important;
-  min-width: 24px;
-  flex-shrink: 0;
-}
-
 /* Bulk assign panel */
 .corr-bulk {
   margin-bottom: 12px;

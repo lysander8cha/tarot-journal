@@ -13,11 +13,6 @@ export async function getReferenceSources(cartomancyType?: string): Promise<Refe
   return res.data;
 }
 
-export async function getReferenceSource(sourceId: number): Promise<ReferenceSource> {
-  const res = await api.get(`/api/reference/sources/${sourceId}`);
-  return res.data;
-}
-
 export async function createReferenceSource(data: {
   name: string;
   cartomancy_types: string[];
@@ -135,11 +130,4 @@ export async function setArchetypeSourceEntry(
     `/api/archetypes/${archetypeId}/source-fields/${fieldId}`,
     { content },
   );
-}
-
-export async function deleteArchetypeSourceEntry(
-  archetypeId: number,
-  fieldId: number,
-): Promise<void> {
-  await api.delete(`/api/archetypes/${archetypeId}/source-fields/${fieldId}`);
 }

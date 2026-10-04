@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { registerDirty } from '../../utils/dirtyGuard';
+import { confirmDialog } from './ConfirmDialog';
 import './Modal.css';
 
 // Lets buttons rendered inside a Modal (e.g. a footer "Cancel") close it
@@ -50,12 +51,9 @@ export default function Modal({
   confirmMessage = 'You have unsaved changes. Are you sure you want to close?',
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  // Reset confirm dialog when modal closes
-  useEffect(() => {
-    if (!open) setShowConfirm(false);
-  }, [open]);
+  // True while the unsaved-changes confirmation is showing, so repeat
+  // close attempts (X, overlay, Cancel) don't stack a second prompt.
+  const confirmingRef = useRef(false);
 
   // While this modal has unsaved changes, closing the whole app window
   // asks for confirmation too (see utils/dirtyGuard).
@@ -63,22 +61,21 @@ export default function Modal({
     if (open && isDirty) return registerDirty();
   }, [open, isDirty]);
 
-  const attemptClose = useCallback(() => {
-    if (isDirty) {
-      setShowConfirm(true);
-    } else {
+  const attemptClose = useCallback(async () => {
+    if (!isDirty) {
       onClose();
+      return;
     }
-  }, [isDirty, onClose]);
-
-  const confirmClose = () => {
-    setShowConfirm(false);
-    onClose();
-  };
-
-  const cancelClose = () => {
-    setShowConfirm(false);
-  };
+    if (confirmingRef.current) return;
+    confirmingRef.current = true;
+    const discard = await confirmDialog({
+      message: confirmMessage,
+      confirmLabel: 'Discard Changes',
+      cancelLabel: 'Keep Editing',
+    });
+    confirmingRef.current = false;
+    if (discard) onClose();
+  }, [isDirty, onClose, confirmMessage]);
 
   // Focus trap: keep Tab cycling within the modal
   const contentRef = useRef<HTMLDivElement>(null);
@@ -86,13 +83,11 @@ export default function Modal({
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showConfirm) {
-          cancelClose();
-        } else {
-          attemptClose();
-        }
-      }
+      // While the confirmation is up it owns the keyboard: its own
+      // capture-phase handler takes Escape, and Tab mustn't be yanked
+      // back into the modal underneath.
+      if (confirmingRef.current) return;
+      if (e.key === 'Escape') attemptClose();
       // Trap focus within modal
       if (e.key === 'Tab' && contentRef.current) {
         const focusable = contentRef.current.querySelectorAll<HTMLElement>(
@@ -116,7 +111,7 @@ export default function Modal({
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, onClose, isDirty, showConfirm]);
+  }, [open, attemptClose]);
 
   // Auto-focus the modal when it opens
   useEffect(() => {
@@ -159,19 +154,6 @@ export default function Modal({
           </ModalCloseContext.Provider>
         </div>
       </div>
-
-      {/* Confirmation dialog */}
-      {showConfirm && (
-        <div className="modal-confirm-overlay" onClick={cancelClose}>
-          <div className="modal-confirm" onClick={(e) => e.stopPropagation()}>
-            <p className="modal-confirm__message">{confirmMessage}</p>
-            <div className="modal-confirm__buttons">
-              <button onClick={cancelClose}>Keep Editing</button>
-              <button className="danger" onClick={confirmClose}>Discard Changes</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

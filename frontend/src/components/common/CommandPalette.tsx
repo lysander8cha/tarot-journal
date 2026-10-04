@@ -14,6 +14,7 @@ import { getEntries, searchEntries } from '../../api/entries';
 import { getArchetypes, type Archetype } from '../../api/correspondences';
 import type { Deck, Spread, JournalEntry } from '../../types';
 import type { TabId } from '../layout/TabNav';
+import { formatDate } from '../../utils/formatting';
 import './CommandPalette.css';
 
 /** Everything the palette can do, expressed as one action object the
@@ -124,15 +125,6 @@ function entryLabel(entry: JournalEntry): string {
   return entry.title?.trim() || 'Untitled entry';
 }
 
-function entryDate(entry: JournalEntry): string {
-  const raw = entry.reading_datetime || entry.created_at;
-  if (!raw) return '';
-  const d = new Date(raw);
-  return isNaN(d.getTime())
-    ? ''
-    : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
 export default function CommandPalette({ open, onClose, onAction }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -227,7 +219,7 @@ export default function CommandPalette({ open, onClose, onAction }: CommandPalet
         key: `entry-${e.id}`,
         group,
         label: entryLabel(e),
-        hint: entryDate(e),
+        hint: formatDate(e.reading_datetime || e.created_at),
         action: { type: 'entry', id: e.id },
       });
     };

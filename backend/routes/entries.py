@@ -278,36 +278,6 @@ def delete_entry(entry_id):
 
 # ── Readings ──────────────────────────────────────────────────
 
-@entries_bp.route('/api/entries/<int:entry_id>/readings')
-def get_entry_readings(entry_id):
-    db = current_app.config['DB']
-    rows = db.get_entry_readings(entry_id)
-    result = []
-    for r in rows:
-        rd = row_to_dict(r)
-        rd['cards_used'] = _enrich_cards_with_ids(db, _parse_cards_used(rd.get('cards_used')))
-        result.append(rd)
-    return jsonify(result)
-
-
-@entries_bp.route('/api/entries/<int:entry_id>/readings', methods=['POST'])
-@require_json
-def add_entry_reading(entry_id, data):
-    db = current_app.config['DB']
-    reading_id = db.add_entry_reading(
-        entry_id,
-        spread_id=data.get('spread_id'),
-        spread_name=data.get('spread_name'),
-        deck_id=data.get('deck_id'),
-        deck_name=data.get('deck_name'),
-        cartomancy_type=data.get('cartomancy_type'),
-        cards_used=data.get('cards_used'),
-        position_order=data.get('position_order', 0),
-        notes=data.get('notes'),
-    )
-    return jsonify({'id': reading_id}), 201
-
-
 @entries_bp.route('/api/entries/<int:entry_id>/readings', methods=['PUT'])
 @require_json
 def replace_entry_readings(entry_id, data):
@@ -329,26 +299,7 @@ def replace_entry_readings(entry_id, data):
     return jsonify({'ids': ids})
 
 
-@entries_bp.route('/api/entries/<int:entry_id>/readings', methods=['DELETE'])
-def delete_entry_readings(entry_id):
-    db = current_app.config['DB']
-    db.delete_entry_readings(entry_id)
-    return jsonify({'ok': True})
-
-
 # ── Follow-up Notes ───────────────────────────────────────────
-
-@entries_bp.route('/api/entries/<int:entry_id>/follow-up-notes')
-def get_follow_up_notes(entry_id):
-    db = current_app.config['DB']
-    rows = db.get_follow_up_notes(entry_id)
-    result = []
-    for n in rows:
-        nd = row_to_dict(n)
-        nd['content'] = convert_content_to_html(nd.get('content'))
-        result.append(nd)
-    return jsonify(result)
-
 
 @entries_bp.route('/api/entries/<int:entry_id>/follow-up-notes', methods=['POST'])
 @require_json
@@ -387,7 +338,7 @@ def get_entry_chart(entry_id):
 
     Responses mirror /api/profiles/:id/chart.
     """
-    import astrology
+    from backend.routes.pdf_export import _resolve_event_chart
 
     db = current_app.config['DB']
     entry = db.get_entry(entry_id)
@@ -408,65 +359,26 @@ def get_entry_chart(entry_id):
             'missing': missing,
         }), 400
 
-    # reading_datetime is stored ISO-ish: "YYYY-MM-DDTHH:MM:SS" or with
-    # microseconds, occasionally space-separated. Split on T or space.
-    dt = entry['reading_datetime']
-    if 'T' in dt:
-        date_iso, time_iso = dt.split('T', 1)
-    elif ' ' in dt:
-        date_iso, time_iso = dt.split(' ', 1)
-    else:
-        date_iso, time_iso = dt, '12:00:00'
+    chart = _resolve_event_chart(db, entry)
+    if chart is None:
+        return jsonify({'error': 'Chart generation failed (details in the log).'}), 500
+    return jsonify(_chart_response(chart))
 
-    house_system = db.get_house_system()
-    place_label = entry.get('location_name') or ''
-    chart_label = 'Reading Chart'
-    input_hash = astrology.compute_input_hash(
-        date_iso, time_iso,
-        entry['location_lat'], entry['location_lon'],
-        house_system,
-        place_label=place_label,
-        chart_label=chart_label,
-    )
 
-    cached = db.get_cached_chart('entry', entry_id)
-    if cached and cached.get('input_hash') == input_hash:
-        return jsonify({
-            'chart_svg': cached['chart_svg'],
-            'chart_data': cached['chart_data'],
-            'house_system': cached['house_system'],
-            'generated_at': cached['updated_at'],
-            'solar_chart': False,
-            'cached': True,
-        })
-
-    try:
-        result = astrology.generate_chart(
-            name=entry.get('title') or 'Reading',
-            date_iso=date_iso, time_iso=time_iso,
-            lat=entry['location_lat'], lon=entry['location_lon'],
-            house_system=house_system,
-            place_label=place_label,
-            chart_label=chart_label,
-        )
-    except Exception as e:
-        return jsonify({'error': f'Chart generation failed: {e}'}), 500
-
-    data_to_store = dict(result['data'])
-    data_to_store['timezone'] = result['timezone']
-    db.save_cached_chart(
-        'entry', entry_id, house_system, input_hash,
-        result['svg'], data_to_store,
-    )
-
-    return jsonify({
-        'chart_svg': result['svg'],
-        'chart_data': data_to_store,
-        'house_system': house_system,
-        'solar_chart': False,
-        'timezone': result['timezone'],
-        'cached': False,
-    })
+def _chart_response(chart: dict) -> dict:
+    """JSON body for the chart routes from a resolved chart dict."""
+    chart_data = chart['chart_data']
+    body = {
+        'chart_svg': chart['svg'],
+        'chart_data': chart_data,
+        'house_system': chart['house_system'],
+        'solar_chart': bool(isinstance(chart_data, dict) and chart_data.get('solar_chart')),
+        'timezone': (chart_data or {}).get('timezone'),
+        'cached': chart['cached'],
+    }
+    if chart.get('generated_at'):
+        body['generated_at'] = chart['generated_at']
+    return body
 
 
 @entries_bp.route('/api/entries/<int:entry_id>/chart', methods=['DELETE'])
@@ -520,15 +432,6 @@ def get_profiles():
     db = current_app.config['DB']
     rows = db.get_profiles()
     return jsonify([row_to_dict(r) for r in rows])
-
-
-@entries_bp.route('/api/profiles/<int:profile_id>')
-def get_profile(profile_id):
-    db = current_app.config['DB']
-    row = db.get_profile(profile_id)
-    if not row:
-        return jsonify({'error': 'Profile not found'}), 404
-    return jsonify(row_to_dict(row))
 
 
 @entries_bp.route('/api/profiles', methods=['POST'])
@@ -599,7 +502,7 @@ def get_profile_chart(profile_id):
       404 — profile not found
       500 — chart generation crashed (kerykeion edge case)
     """
-    import astrology
+    from backend.routes.profile_pdf import _profile_chart
 
     db = current_app.config['DB']
     profile = db.get_profile(profile_id)
@@ -620,73 +523,17 @@ def get_profile_chart(profile_id):
             'missing': missing,
         }), 400
 
-    allow_solar = db.get_allow_solar_chart()
-    if not profile.get('birth_time') and not allow_solar:
+    if not profile.get('birth_time') and not db.get_allow_solar_chart():
         return jsonify({
             'error': 'birth_time is missing and the "Generate solar charts when '
                      'time is missing" setting is off.',
             'missing': ['birth_time'],
         }), 400
 
-    house_system = db.get_house_system()
-    place_label = profile.get('birth_place_name') or ''
-    input_hash = astrology.compute_input_hash(
-        profile['birth_date'],
-        profile.get('birth_time'),
-        profile['birth_place_lat'],
-        profile['birth_place_lon'],
-        house_system,
-        solar_chart=not profile.get('birth_time') and allow_solar,
-        place_label=place_label,
-    )
-
-    cached = db.get_cached_chart('profile', profile_id)
-    if cached and cached.get('input_hash') == input_hash:
-        return jsonify({
-            'chart_svg': cached['chart_svg'],
-            'chart_data': cached['chart_data'],
-            'house_system': cached['house_system'],
-            'generated_at': cached['updated_at'],
-            'solar_chart': bool(
-                cached.get('chart_data', {}).get('solar_chart')
-            ) if isinstance(cached.get('chart_data'), dict) else False,
-            'cached': True,
-        })
-
-    try:
-        result = astrology.generate_chart(
-            name=profile.get('name') or 'Subject',
-            date_iso=profile['birth_date'],
-            time_iso=profile.get('birth_time'),
-            lat=profile['birth_place_lat'],
-            lon=profile['birth_place_lon'],
-            house_system=house_system,
-            solar_chart_fallback=allow_solar,
-            place_label=place_label,
-        )
-    except ValueError as e:
-        return jsonify({'error': str(e), 'missing': ['birth_time']}), 400
-    except Exception as e:
-        return jsonify({'error': f'Chart generation failed: {e}'}), 500
-
-    # Persist the solar_chart flag alongside the kerykeion dump so the
-    # cache hit path can surface it without re-running generation.
-    data_to_store = dict(result['data'])
-    data_to_store['solar_chart'] = result['solar_chart']
-    data_to_store['timezone'] = result['timezone']
-    db.save_cached_chart(
-        'profile', profile_id, house_system, input_hash,
-        result['svg'], data_to_store,
-    )
-
-    return jsonify({
-        'chart_svg': result['svg'],
-        'chart_data': data_to_store,
-        'house_system': house_system,
-        'solar_chart': result['solar_chart'],
-        'timezone': result['timezone'],
-        'cached': False,
-    })
+    chart = _profile_chart(db, profile)
+    if chart is None:
+        return jsonify({'error': 'Chart generation failed (details in the log).'}), 500
+    return jsonify(_chart_response(chart))
 
 
 @entries_bp.route('/api/profiles/<int:profile_id>/chart', methods=['DELETE'])

@@ -38,6 +38,12 @@ struct Reading: Decodable, Identifiable {
         case deckName = "deck_name"
         case cardsUsed = "cards_used"
     }
+
+    /// Decode an entry's readings_json column; empty when absent or malformed.
+    static func decodeList(_ raw: String?) -> [Reading] {
+        guard let data = raw?.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([Reading].self, from: data)) ?? []
+    }
 }
 
 struct SpreadPosition: Decodable {
@@ -249,10 +255,7 @@ struct EntryDetailView: View {
             locationName = row["location_name"]
 
             let decoder = JSONDecoder()
-            if let raw: String = row["readings_json"],
-               let data = raw.data(using: .utf8) {
-                readings = (try? decoder.decode([Reading].self, from: data)) ?? []
-            }
+            readings = Reading.decodeList(row["readings_json"])
             if let raw: String = row["follow_ups_json"],
                let data = raw.data(using: .utf8) {
                 followUps = (try? decoder.decode([FollowUpNote].self, from: data)) ?? []

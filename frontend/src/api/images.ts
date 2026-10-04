@@ -5,11 +5,6 @@ export function cardThumbnailUrl(cardId: number): string {
   return `${API_BASE}/api/images/card/${cardId}/thumbnail`;
 }
 
-/** URL for a card's full-size image */
-export function cardFullUrl(cardId: number): string {
-  return `${API_BASE}/api/images/card/${cardId}`;
-}
-
 /** URL for a card's preview image (500x750) */
 export function cardPreviewUrl(cardId: number): string {
   return `${API_BASE}/api/images/card/${cardId}/preview`;

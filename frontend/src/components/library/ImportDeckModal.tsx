@@ -20,16 +20,6 @@ import { useToast } from '../../context/ToastContext';
 import Modal, { ModalCancelButton } from '../common/Modal';
 import './ImportDeckModal.css';
 
-// Extend window type for Electron API
-declare global {
-  interface Window {
-    electronAPI?: {
-      openDirectory: (options?: { title?: string }) => Promise<string | null>;
-      isElectron: boolean;
-    };
-  }
-}
-
 interface ImportDeckModalProps {
   onClose: () => void;
   onImported: (deckId: number) => void;

@@ -10,7 +10,6 @@ import threading
 from contextlib import contextmanager
 
 from logger_config import get_logger
-from app_config import get_config
 
 # Built-in cartomancy types, re-seeded (INSERT OR IGNORE) on every
 # startup. Because deleting or renaming one would just resurrect it on
@@ -24,7 +23,6 @@ DEFAULT_TYPE_NAMES = [
 ]
 
 logger = get_logger('database')
-_cfg = get_config()
 
 
 _DIGITS_ONLY = re.compile(r'^\d+$')
@@ -50,9 +48,7 @@ def _numerology_reductions(value: str) -> list:
 class CoreMixin:
     """Base mixin providing database initialization and transaction support."""
 
-    def __init__(self, db_path: str = None):
-        if db_path is None:
-            db_path = _cfg.get("paths", "database", "tarot_journal.db")
+    def __init__(self, db_path: str):
         self.db_path = db_path
 
         # Each Flask request thread gets its own sqlite3 connection.
@@ -105,18 +101,6 @@ class CoreMixin:
         if existing is not None and epoch == self._connection_epoch:
             return existing
         return self._open_thread_connection()
-
-    @conn.setter
-    def conn(self, value: sqlite3.Connection) -> None:
-        """Legacy assignment path used by import_export's restore
-        flow. Registers the new connection so close() reaches it,
-        and bumps the epoch so every other thread re-opens too."""
-        self._thread_state.conn = value
-        self._thread_state.epoch = self._connection_epoch
-        if value is not None:
-            with self._connection_registry_lock:
-                if value not in self._connection_registry:
-                    self._connection_registry.append(value)
 
     def _open_thread_connection(self) -> sqlite3.Connection:
         # Wait out any in-progress DB file swap (backup restore) so we
@@ -240,6 +224,17 @@ class CoreMixin:
             finally:
                 self._in_transaction = False
 
+    @staticmethod
+    def _ensure_columns(cursor, table: str, columns: dict) -> list:
+        """Add any of `columns` ({name: SQL declaration}) missing from
+        `table`, in order — how older databases (e.g. restored backups)
+        pick up columns added since. Returns the names it added."""
+        have = {r[1] for r in cursor.execute(f'PRAGMA table_info({table})').fetchall()}
+        added = [name for name in columns if name not in have]
+        for name in added:
+            cursor.execute(f'ALTER TABLE {table} ADD COLUMN {name} {columns[name]}')
+        return added
+
     def _create_tables(self):
         cursor = self.conn.cursor()
 
@@ -263,30 +258,21 @@ class CoreMixin:
             )
         ''')
 
-        # Migration: add suit_names and court_names columns if missing
-        cursor.execute("PRAGMA table_info(decks)")
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'suit_names' not in columns:
-            cursor.execute('ALTER TABLE decks ADD COLUMN suit_names TEXT')
-        if 'court_names' not in columns:
-            cursor.execute('ALTER TABLE decks ADD COLUMN court_names TEXT')
-        # Migration: add deck metadata columns
-        if 'date_published' not in columns:
-            cursor.execute('ALTER TABLE decks ADD COLUMN date_published TEXT')
-        if 'publisher' not in columns:
-            cursor.execute('ALTER TABLE decks ADD COLUMN publisher TEXT')
-        if 'credits' not in columns:
-            cursor.execute('ALTER TABLE decks ADD COLUMN credits TEXT')
-        if 'notes' not in columns:
-            cursor.execute('ALTER TABLE decks ADD COLUMN notes TEXT')
-        if 'favorite' not in columns:
-            # Phone-sync prep: favorited decks are the subset whose
-            # images sync to the iOS companion.
-            cursor.execute('ALTER TABLE decks ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0')
-        if 'card_back_image' not in columns:
-            cursor.execute('ALTER TABLE decks ADD COLUMN card_back_image TEXT')
-        if 'booklet_info' not in columns:
-            cursor.execute('ALTER TABLE decks ADD COLUMN booklet_info TEXT')
+        # Migrations: columns added after the original schema. Older
+        # databases (restored backups) get them via ALTER TABLE.
+        self._ensure_columns(cursor, 'decks', {
+            'suit_names': 'TEXT',
+            'court_names': 'TEXT',
+            'date_published': 'TEXT',
+            'publisher': 'TEXT',
+            'credits': 'TEXT',
+            'notes': 'TEXT',
+            # Phone sync: favorited decks are the subset whose images
+            # sync to the iOS companion.
+            'favorite': 'INTEGER NOT NULL DEFAULT 0',
+            'card_back_image': 'TEXT',
+            'booklet_info': 'TEXT',
+        })
 
         # Cards table
         cursor.execute('''
@@ -305,25 +291,18 @@ class CoreMixin:
             )
         ''')
 
-        # Migration: add new columns to cards table if missing
-        cursor.execute("PRAGMA table_info(cards)")
-        card_columns = [col[1] for col in cursor.fetchall()]
-        if 'archetype' not in card_columns:
-            cursor.execute('ALTER TABLE cards ADD COLUMN archetype TEXT')
-        if 'rank' not in card_columns:
-            cursor.execute('ALTER TABLE cards ADD COLUMN rank TEXT')
-        if 'suit' not in card_columns:
-            cursor.execute('ALTER TABLE cards ADD COLUMN suit TEXT')
-        if 'notes' not in card_columns:
-            cursor.execute('ALTER TABLE cards ADD COLUMN notes TEXT')
-        if 'custom_fields' not in card_columns:
-            cursor.execute('ALTER TABLE cards ADD COLUMN custom_fields TEXT')
-        if 'variant_order' not in card_columns:
-            # Optional within-name-group ordering used by the entry editor's
-            # variant picker. Lets users reorder same-name cards (Terra
-            # Volatile et al.) without touching card_order, which controls
-            # deck display position.
-            cursor.execute('ALTER TABLE cards ADD COLUMN variant_order INTEGER')
+        self._ensure_columns(cursor, 'cards', {
+            'archetype': 'TEXT',
+            'rank': 'TEXT',
+            'suit': 'TEXT',
+            'notes': 'TEXT',
+            'custom_fields': 'TEXT',
+            # Optional within-name-group ordering used by the entry
+            # editor's variant picker. Lets users reorder same-name cards
+            # (Terra Volatile et al.) without touching card_order, which
+            # controls deck display position.
+            'variant_order': 'INTEGER',
+        })
 
         # Spreads table (saved spread layouts)
         cursor.execute('''
@@ -337,33 +316,21 @@ class CoreMixin:
             )
         ''')
 
-        # Migration: add cartomancy_type column if missing
-        cursor.execute("PRAGMA table_info(spreads)")
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'cartomancy_type' not in columns:
-            cursor.execute('ALTER TABLE spreads ADD COLUMN cartomancy_type TEXT')
-
-        # Migration: add allowed_deck_types column for multi-deck-type spreads
-        if 'allowed_deck_types' not in columns:
-            cursor.execute('ALTER TABLE spreads ADD COLUMN allowed_deck_types TEXT')
-
-        # Migration: attribute a spread to a reference source
-        if 'source_id' not in columns:
-            cursor.execute('ALTER TABLE spreads ADD COLUMN source_id INTEGER')
-
-        # Migration: add default_deck_id column for spread-specific default deck
-        if 'default_deck_id' not in columns:
-            cursor.execute('ALTER TABLE spreads ADD COLUMN default_deck_id INTEGER REFERENCES decks(id)')
-
-        # Migration: archive flag — archived spreads are hidden from
-        # the pickers and (by default) the spreads list, but never
-        # deleted, so older entries that used them keep working.
-        if 'archived' not in columns:
-            cursor.execute('ALTER TABLE spreads ADD COLUMN archived INTEGER NOT NULL DEFAULT 0')
-
-        # Migration: add deck_slots column for multi-deck spreads
-        if 'deck_slots' not in columns:
-            cursor.execute('ALTER TABLE spreads ADD COLUMN deck_slots TEXT')
+        self._ensure_columns(cursor, 'spreads', {
+            'cartomancy_type': 'TEXT',
+            # Multi-deck-type spreads
+            'allowed_deck_types': 'TEXT',
+            # Attributes a spread to a reference source
+            'source_id': 'INTEGER',
+            # Spread-specific default deck
+            'default_deck_id': 'INTEGER REFERENCES decks(id)',
+            # Archived spreads are hidden from the pickers and (by
+            # default) the spreads list, but never deleted, so older
+            # entries that used them keep working.
+            'archived': 'INTEGER NOT NULL DEFAULT 0',
+            # Multi-deck spreads
+            'deck_slots': 'TEXT',
+        })
 
         # Journal entries table
         cursor.execute('''
@@ -380,27 +347,19 @@ class CoreMixin:
             )
         ''')
 
-        # Migrate journal_entries table if needed
-        cursor.execute('PRAGMA table_info(journal_entries)')
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'reading_datetime' not in columns:
-            cursor.execute('ALTER TABLE journal_entries ADD COLUMN reading_datetime TIMESTAMP')
-        if 'location_name' not in columns:
-            cursor.execute('ALTER TABLE journal_entries ADD COLUMN location_name TEXT')
-        if 'location_lat' not in columns:
-            cursor.execute('ALTER TABLE journal_entries ADD COLUMN location_lat REAL')
-        if 'sync_uuid' not in columns:
-            # Phone-sync prep: phone-created entries carry a client
-            # UUID so offline pushes are idempotent. Desktop-created
-            # entries leave it NULL.
-            cursor.execute('ALTER TABLE journal_entries ADD COLUMN sync_uuid TEXT')
-        if 'location_lon' not in columns:
-            cursor.execute('ALTER TABLE journal_entries ADD COLUMN location_lon REAL')
-        if 'breakdown_settings' not in columns:
+        self._ensure_columns(cursor, 'journal_entries', {
+            'reading_datetime': 'TIMESTAMP',
+            'location_name': 'TEXT',
+            'location_lat': 'REAL',
+            # Phone-created entries carry a client UUID so offline
+            # pushes are idempotent. Desktop-created entries leave it NULL.
+            'sync_uuid': 'TEXT',
+            'location_lon': 'REAL',
             # Per-entry settings JSON for the Reading Breakdown panel:
             # { open: bool, last_tab: 'all' | <reading_id>,
             #   visible: { <field_name>: bool, ... } }
-            cursor.execute('ALTER TABLE journal_entries ADD COLUMN breakdown_settings TEXT')
+            'breakdown_settings': 'TEXT',
+        })
 
         # Entry readings (links entries to spreads and cards used)
         cursor.execute('''
@@ -538,10 +497,7 @@ class CoreMixin:
         ''')
 
         # Migration: add sort_order to card_groups
-        cursor.execute('PRAGMA table_info(card_groups)')
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'sort_order' not in columns:
-            cursor.execute('ALTER TABLE card_groups ADD COLUMN sort_order INTEGER DEFAULT 0')
+        if self._ensure_columns(cursor, 'card_groups', {'sort_order': 'INTEGER DEFAULT 0'}):
             # Initialize sort_order for existing groups based on name order
             cursor.execute('SELECT id, deck_id FROM card_groups ORDER BY deck_id, name')
             rows = cursor.fetchall()
@@ -589,18 +545,14 @@ class CoreMixin:
         ''')
 
         # Migration: add querent_only and hidden columns to profiles
-        cursor.execute('PRAGMA table_info(profiles)')
-        profile_columns = [col[1] for col in cursor.fetchall()]
-        if 'querent_only' not in profile_columns:
-            cursor.execute('ALTER TABLE profiles ADD COLUMN querent_only INTEGER DEFAULT 0')
-        if 'hidden' not in profile_columns:
-            cursor.execute('ALTER TABLE profiles ADD COLUMN hidden INTEGER DEFAULT 0')
-        # Migration: full birth name (feeds name cards) + the user's
-        # saved name-card adjustments (parts/roles/Y overrides, JSON)
-        if 'full_name' not in profile_columns:
-            cursor.execute('ALTER TABLE profiles ADD COLUMN full_name TEXT')
-        if 'name_cards_config' not in profile_columns:
-            cursor.execute('ALTER TABLE profiles ADD COLUMN name_cards_config TEXT')
+        self._ensure_columns(cursor, 'profiles', {
+            'querent_only': 'INTEGER DEFAULT 0',
+            'hidden': 'INTEGER DEFAULT 0',
+            # Full birth name (feeds name cards) + the user's saved
+            # name-card adjustments (parts/roles/Y overrides, JSON)
+            'full_name': 'TEXT',
+            'name_cards_config': 'TEXT',
+        })
 
         # Alternate names per profile (chosen names, nicknames) — each
         # runs through the name-cards calculator with its own parts and
@@ -622,12 +574,10 @@ class CoreMixin:
         ''')
 
         # Migration: add querent_id and reader_id to journal_entries
-        cursor.execute('PRAGMA table_info(journal_entries)')
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'querent_id' not in columns:
-            cursor.execute('ALTER TABLE journal_entries ADD COLUMN querent_id INTEGER REFERENCES profiles(id)')
-        if 'reader_id' not in columns:
-            cursor.execute('ALTER TABLE journal_entries ADD COLUMN reader_id INTEGER REFERENCES profiles(id)')
+        self._ensure_columns(cursor, 'journal_entries', {
+            'querent_id': 'INTEGER REFERENCES profiles(id)',
+            'reader_id': 'INTEGER REFERENCES profiles(id)',
+        })
 
         # Follow-up notes table (for adding notes to entries after the fact)
         cursor.execute('''
@@ -701,108 +651,46 @@ class CoreMixin:
             )
         ''')
 
-        # One-time rename: "Spanish Playing Cards" → "Playing Cards (Spanish)".
-        # The cartomancy type name is stored as a string in every table
-        # that references it, so we update the cartomancy_types row plus
-        # every other column that carries the name. Runs BEFORE the
+        # One-time cartomancy type renames. The type name is stored as a
+        # string in many tables, so rename the types row plus every
+        # reference (_rename_type_name_references). Runs BEFORE the
         # default_types insert below so the new name's INSERT OR IGNORE
-        # doesn't collide on UNIQUE (we'd end up with both rows). Each
-        # UPDATE is wrapped in try/except OperationalError so tables that
-        # don't exist on older schemas (e.g. source_fields was added
-        # later) don't crash init. Idempotent — re-running on a DB that
-        # never had the old name is a no-op.
-        if self.get_setting('spanish_playing_cards_rename_done') != 'true':
-            renames = [
-                ('cartomancy_types', 'name'),
-                ('card_archetypes', 'cartomancy_type'),
-                ('spreads', 'cartomancy_type'),
-                ('correspondence_systems', 'cartomancy_type'),
-                ('reference_sources', 'cartomancy_type'),
-                ('source_cartomancy_types', 'cartomancy_type'),
-                ('source_fields', 'cartomancy_type'),
-                ('archetype_combinations', 'cartomancy_type'),
-            ]
-            for table, column in renames:
-                try:
-                    cursor.execute(
-                        f"UPDATE {table} SET {column} = 'Playing Cards (Spanish)' "
-                        f"WHERE {column} = 'Spanish Playing Cards'"
-                    )
-                except sqlite3.OperationalError:
-                    pass
-            self.set_setting('spanish_playing_cards_rename_done', 'true')
-
-        # One-time rename: "Vera Sibilla Italiana" → "Vera Sibilla
-        # Italiana / Sibilla della Zingara". The Vera Sibilla and
-        # Sibilla della Zingara decks share the same card structure
-        # and divinatory names, so they're folded under a single
-        # cartomancy type. Same shape as the rename block above —
-        # runs BEFORE the default_types insert to avoid a UNIQUE
-        # collision, idempotent across re-runs.
-        if self.get_setting('vera_sibilla_zingara_rename_done') != 'true':
-            renames = [
-                ('cartomancy_types', 'name'),
-                ('card_archetypes', 'cartomancy_type'),
-                ('spreads', 'cartomancy_type'),
-                ('correspondence_systems', 'cartomancy_type'),
-                ('reference_sources', 'cartomancy_type'),
-                ('source_cartomancy_types', 'cartomancy_type'),
-                ('source_fields', 'cartomancy_type'),
-                ('archetype_combinations', 'cartomancy_type'),
-            ]
-            for table, column in renames:
-                try:
-                    cursor.execute(
-                        f"UPDATE {table} SET {column} = "
-                        f"'Vera Sibilla Italiana / Sibilla della Zingara' "
-                        f"WHERE {column} = 'Vera Sibilla Italiana'"
-                    )
-                except sqlite3.OperationalError:
-                    pass
-            self.set_setting('vera_sibilla_zingara_rename_done', 'true')
-
-        # One-time rename: "Lenormand" → "Petit Lenormand" (distinguishes
-        # the classic 36-card deck from Grand Jeu Lenormand). Same shape
-        # as the rename blocks above. Afterwards, the archetypes' 1-36
-        # card number in the rank field gives way to the playing-card
-        # inset rank + suit (the number stays recoverable from the
-        # curated inset table and the seeded id order).
-        if self.get_setting('petit_lenormand_rename_done') != 'true':
-            renames = [
-                ('cartomancy_types', 'name'),
-                ('card_archetypes', 'cartomancy_type'),
-                ('spreads', 'cartomancy_type'),
-                ('entries', 'cartomancy_type'),
-                ('correspondence_systems', 'cartomancy_type'),
-                ('reference_sources', 'cartomancy_type'),
-                ('source_cartomancy_types', 'cartomancy_type'),
-                ('source_fields', 'cartomancy_type'),
-                ('archetype_combinations', 'cartomancy_type'),
-            ]
-            for table, column in renames:
-                try:
-                    cursor.execute(
-                        f"UPDATE {table} SET {column} = 'Petit Lenormand' "
-                        f"WHERE {column} = 'Lenormand'"
-                    )
-                except sqlite3.OperationalError:
-                    pass
-            # The default-deck setting is keyed by the type name.
-            cursor.execute(
-                "UPDATE settings SET key = 'default_deck_petit lenormand' "
-                "WHERE key = 'default_deck_lenormand' AND NOT EXISTS "
-                "(SELECT 1 FROM settings WHERE key = 'default_deck_petit lenormand')"
-            )
-            # Backfill inset rank + suit onto archetypes still carrying
-            # their card number in rank.
-            import reference_content as _rc
-            for number, (rank_word, suit) in _rc.LENORMAND_INSETS.items():
+        # doesn't collide on UNIQUE. A no-op on databases that never
+        # had the old name.
+        type_renames = [
+            ('spanish_playing_cards_rename_done',
+             'Spanish Playing Cards', 'Playing Cards (Spanish)'),
+            # Vera Sibilla and Sibilla della Zingara share card
+            # structure and names, so they're folded into one type.
+            ('vera_sibilla_zingara_rename_done',
+             'Vera Sibilla Italiana', 'Vera Sibilla Italiana / Sibilla della Zingara'),
+            # Distinguishes the classic 36-card deck from Grand Jeu.
+            ('petit_lenormand_rename_done', 'Lenormand', 'Petit Lenormand'),
+        ]
+        for flag, old_name, new_name in type_renames:
+            if self.get_setting(flag) == 'true':
+                continue
+            cursor.execute('UPDATE cartomancy_types SET name = ? WHERE name = ?',
+                           (new_name, old_name))
+            self._rename_type_name_references(cursor, old_name, new_name)
+            if new_name == 'Petit Lenormand':
+                # The default-deck setting is keyed by the type name.
                 cursor.execute(
-                    "UPDATE card_archetypes SET rank = ?, suit = ? "
-                    "WHERE cartomancy_type = 'Petit Lenormand' AND rank = ?",
-                    (rank_word, suit, str(number))
+                    "UPDATE settings SET key = 'default_deck_petit lenormand' "
+                    "WHERE key = 'default_deck_lenormand' AND NOT EXISTS "
+                    "(SELECT 1 FROM settings WHERE key = 'default_deck_petit lenormand')"
                 )
-            self.set_setting('petit_lenormand_rename_done', 'true')
+                # The archetypes' 1-36 card number in rank gives way to
+                # the playing-card inset rank + suit (the number stays
+                # recoverable from the inset table and seeded id order).
+                import reference_content as _rc
+                for number, (rank_word, suit) in _rc.LENORMAND_INSETS.items():
+                    cursor.execute(
+                        "UPDATE card_archetypes SET rank = ?, suit = ? "
+                        "WHERE cartomancy_type = 'Petit Lenormand' AND rank = ?",
+                        (rank_word, suit, str(number))
+                    )
+            self.set_setting(flag, 'true')
 
         # One-time removal: the "Grand Etteilla Tarot" cartomancy type
         # was retired. Its import preset now lives under the Tarot
@@ -909,15 +797,18 @@ class CoreMixin:
                     notes TEXT,
                     card_back_image TEXT,
                     booklet_info TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    favorite INTEGER NOT NULL DEFAULT 0
                 )
             ''')
             # Copy all non-legacy columns
             cursor.execute('''
                 INSERT INTO decks_new (id, name, image_folder, suit_names, court_names,
-                    date_published, publisher, credits, notes, card_back_image, booklet_info, created_at)
+                    date_published, publisher, credits, notes, card_back_image, booklet_info,
+                    created_at, favorite)
                 SELECT id, name, image_folder, suit_names, court_names,
-                    date_published, publisher, credits, notes, card_back_image, booklet_info, created_at
+                    date_published, publisher, credits, notes, card_back_image, booklet_info,
+                    created_at, favorite
                 FROM decks
             ''')
             # Must disable FK checks to drop a table referenced by other tables.
@@ -987,12 +878,10 @@ class CoreMixin:
             )
         ''')
         # Migration: add columns if they're missing on older databases
-        cursor.execute('PRAGMA table_info(correspondence_systems)')
-        cs_cols = [c[1] for c in cursor.fetchall()]
-        if 'cartomancy_type' not in cs_cols:
-            cursor.execute("ALTER TABLE correspondence_systems ADD COLUMN cartomancy_type TEXT DEFAULT 'Tarot'")
-        if 'naming_style' not in cs_cols:
-            cursor.execute('ALTER TABLE correspondence_systems ADD COLUMN naming_style TEXT')
+        self._ensure_columns(cursor, 'correspondence_systems', {
+            'cartomancy_type': "TEXT DEFAULT 'Tarot'",
+            'naming_style': 'TEXT',
+        })
 
         # System-level correspondence assignments.
         # Multiple rows per (system, archetype, field) allowed — each tagged with
@@ -1075,12 +964,8 @@ class CoreMixin:
         # Add source_group column if upgrading from a pre-source_group schema.
         # Drop any NULL-sourced legacy rows at the same time — pre-feature
         # individual-archetype overrides that the new UI can't surface.
-        cursor.execute("PRAGMA table_info(deck_correspondence_overrides)")
-        deck_ovr_cols = [r[1] for r in cursor.fetchall()]
-        if 'source_group' not in deck_ovr_cols:
-            cursor.execute(
-                'ALTER TABLE deck_correspondence_overrides ADD COLUMN source_group TEXT'
-            )
+        if self._ensure_columns(cursor, 'deck_correspondence_overrides',
+                                {'source_group': 'TEXT'}):
             cursor.execute(
                 'DELETE FROM deck_correspondence_overrides WHERE source_group IS NULL'
             )
@@ -1147,12 +1032,7 @@ class CoreMixin:
         # Add cartomancy_type column for the source-as-typed-field model.
         # NULL is allowed at the column level (older sources predate the
         # column) but the application layer requires it on new sources.
-        cursor.execute('PRAGMA table_info(reference_sources)')
-        rs_cols = [c[1] for c in cursor.fetchall()]
-        if 'cartomancy_type' not in rs_cols:
-            cursor.execute(
-                'ALTER TABLE reference_sources ADD COLUMN cartomancy_type TEXT'
-            )
+        self._ensure_columns(cursor, 'reference_sources', {'cartomancy_type': 'TEXT'})
 
         # Authors per source. Free-text names so a single registry isn't
         # required up front — duplicate names across sources are matched
@@ -1211,15 +1091,10 @@ class CoreMixin:
         # Older DBs (this branch's prior commits) may be missing the
         # cartomancy_type or collapsible columns — add either before
         # the index/upserts later in this method reference them.
-        cursor.execute('PRAGMA table_info(source_fields)')
-        sf_cols = {c[1] for c in cursor.fetchall()}
-        if 'cartomancy_type' not in sf_cols:
-            cursor.execute('ALTER TABLE source_fields ADD COLUMN cartomancy_type TEXT')
-        if 'collapsible' not in sf_cols:
-            cursor.execute(
-                'ALTER TABLE source_fields ADD COLUMN '
-                'collapsible INTEGER NOT NULL DEFAULT 0'
-            )
+        self._ensure_columns(cursor, 'source_fields', {
+            'cartomancy_type': 'TEXT',
+            'collapsible': 'INTEGER NOT NULL DEFAULT 0',
+        })
         cursor.execute(
             'CREATE INDEX IF NOT EXISTS idx_source_fields_source '
             'ON source_fields(source_id, cartomancy_type, sort_order)'
@@ -1533,13 +1408,9 @@ class CoreMixin:
         # generalized archetype_combinations / combination_meanings.)
 
         # Migration: add correspondence_system_id to decks
-        cursor.execute("PRAGMA table_info(decks)")
-        deck_cols = [col[1] for col in cursor.fetchall()]
-        if 'correspondence_system_id' not in deck_cols:
-            cursor.execute('''
-                ALTER TABLE decks ADD COLUMN correspondence_system_id
-                INTEGER REFERENCES correspondence_systems(id)
-            ''')
+        self._ensure_columns(cursor, 'decks', {
+            'correspondence_system_id': 'INTEGER REFERENCES correspondence_systems(id)',
+        })
 
         # Indexes for commonly queried foreign keys and search columns.
         # These speed up filtering, joining, and sorting as data grows.
@@ -1550,10 +1421,7 @@ class CoreMixin:
 
         # Migration: per-reading notes (multi-spread entries get a
         # notes field per reading alongside the entry-level notes)
-        reading_columns = [r[1] for r in cursor.execute(
-            'PRAGMA table_info(entry_readings)').fetchall()]
-        if reading_columns and 'notes' not in reading_columns:
-            cursor.execute('ALTER TABLE entry_readings ADD COLUMN notes TEXT')
+        self._ensure_columns(cursor, 'entry_readings', {'notes': 'TEXT'})
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_entry_tags_entry_id ON entry_tags(entry_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_entry_tags_tag_id ON entry_tags(tag_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_deck_tag_assignments_deck_id ON deck_tag_assignments(deck_id)')
@@ -1672,7 +1540,8 @@ class CoreMixin:
             self.set_setting('i_ching_default_seeded', 'true')
 
         # One-time repair: the original Lenormand -> Petit Lenormand
-        # rename (above) worked from a hardcoded table list that
+        # rename (since rewritten above) worked from a hardcoded table
+        # list, and backups taken in between still carry its gaps. It
         # missed entry_readings and never looked inside spreads' JSON
         # columns (allowed_deck_types, deck_slots). Re-run the full
         # reference rename once with the complete machinery; exact

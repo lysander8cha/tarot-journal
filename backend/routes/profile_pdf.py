@@ -113,10 +113,12 @@ def _collect_card_ids(node, acc: set):
             _collect_card_ids(item, acc)
 
 
-def _resolve_profile_chart(db, profile: dict) -> dict | None:
-    """Natal chart block for the template, or None when birth data is
-    incomplete / generation fails. Mirrors GET /api/profiles/:id/chart
-    including the cache and the solar-chart fallback rule."""
+def _profile_chart(db, profile: dict) -> dict | None:
+    """Natal chart {svg, chart_data, house_system, cached,
+    generated_at?} for the profile, from the chart cache when the
+    inputs are unchanged. None when birth data is incomplete (or the
+    time is missing with the solar fallback off) or generation fails.
+    Shared by the profile PDF and GET /api/profiles/:id/chart."""
     import astrology
 
     if (not profile.get('birth_date')
@@ -137,29 +139,43 @@ def _resolve_profile_chart(db, profile: dict) -> dict | None:
 
     cached = db.get_cached_chart('profile', profile['id'])
     if cached and cached.get('input_hash') == input_hash:
-        svg, chart_data = cached['chart_svg'], cached['chart_data']
-    else:
-        try:
-            result = astrology.generate_chart(
-                name=profile.get('name') or 'Subject',
-                date_iso=profile['birth_date'],
-                time_iso=profile.get('birth_time'),
-                lat=profile['birth_place_lat'],
-                lon=profile['birth_place_lon'],
-                house_system=house_system,
-                solar_chart_fallback=allow_solar,
-                place_label=place_label)
-        except Exception as e:
-            logger.warning('profile PDF: chart generation failed: %s', e)
-            return None
-        svg, chart_data = result['svg'], dict(result['data'])
-        chart_data['solar_chart'] = result['solar_chart']
-        chart_data['timezone'] = result['timezone']
-        try:
-            db.save_cached_chart('profile', profile['id'], house_system,
-                                 input_hash, svg, chart_data)
-        except Exception as e:
-            logger.debug('profile PDF: chart cache write failed: %s', e)
+        return {'svg': cached['chart_svg'], 'chart_data': cached['chart_data'],
+                'house_system': cached['house_system'],
+                'generated_at': cached['updated_at'], 'cached': True}
+    try:
+        result = astrology.generate_chart(
+            name=profile.get('name') or 'Subject',
+            date_iso=profile['birth_date'],
+            time_iso=profile.get('birth_time'),
+            lat=profile['birth_place_lat'],
+            lon=profile['birth_place_lon'],
+            house_system=house_system,
+            solar_chart_fallback=allow_solar,
+            place_label=place_label)
+    except Exception as e:
+        logger.warning('profile chart generation failed: %s', e)
+        return None
+    # Persist the solar_chart flag alongside the kerykeion dump so the
+    # cache hit path can surface it without re-running generation.
+    chart_data = dict(result['data'])
+    chart_data['solar_chart'] = result['solar_chart']
+    chart_data['timezone'] = result['timezone']
+    try:
+        db.save_cached_chart('profile', profile['id'], house_system,
+                             input_hash, result['svg'], chart_data)
+    except Exception as e:
+        logger.debug('profile chart cache write failed: %s', e)
+    return {'svg': result['svg'], 'chart_data': chart_data,
+            'house_system': house_system, 'cached': False}
+
+
+def _resolve_profile_chart(db, profile: dict) -> dict | None:
+    """Natal chart block for the PDF template, or None when no chart
+    can be produced (see _profile_chart)."""
+    chart = _profile_chart(db, profile)
+    if not chart:
+        return None
+    svg, chart_data, house_system = chart['svg'], chart['chart_data'], chart['house_system']
 
     return {
         'png_uri': _render_chart_png_data_uri(svg),

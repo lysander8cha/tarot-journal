@@ -17,10 +17,6 @@
   color: var(--text-secondary);
 }
 
-.pdf-export-modal__section--disabled {
-  opacity: 0.55;
-}
-
 .pdf-export-modal__list,
 .pdf-export-modal__static-list {
   list-style: none;

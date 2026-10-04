@@ -1,5 +1,5 @@
 import api from './client';
-import type { CombinationMeaning, PopulatedCombination } from '../types';
+import type { CombinationMeaning } from '../types';
 
 // Sources are managed via the shared `referenceSources` API — see
 // frontend/src/api/referenceSources.ts.
@@ -37,16 +37,6 @@ export async function getReversedCombinationTypes(): Promise<string[]> {
 
 export async function setReversedCombinationTypes(types: string[]): Promise<void> {
   await api.put('/api/combinations/reversed-types', { types });
-}
-
-/** Combinations of a type that have at least one meaning authored. */
-export async function getPopulatedCombinations(
-  cartomancyType: string,
-): Promise<PopulatedCombination[]> {
-  const res = await api.get('/api/combinations/populated', {
-    params: { cartomancy_type: cartomancyType },
-  });
-  return res.data;
 }
 
 export async function createCombinationMeaning(

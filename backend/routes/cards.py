@@ -2,7 +2,6 @@
 Card endpoints -- CRUD and search for individual cards.
 """
 
-import json
 from flask import Blueprint, jsonify, request, current_app
 from backend.utils import row_to_dict, require_json, validate_length
 
@@ -147,13 +146,6 @@ def set_card_group_assignments(card_id, data):
     group_ids = data.get('group_ids', [])
     db.set_card_groups(card_id, group_ids)
     return jsonify({'ok': True})
-
-
-@cards_bp.route('/api/cards/<int:card_id>/custom-fields')
-def get_card_custom_fields(card_id):
-    db = current_app.config['DB']
-    rows = db.get_card_custom_fields(card_id)
-    return jsonify([row_to_dict(r) for r in rows])
 
 
 @cards_bp.route('/api/cards/<int:card_id>/custom-fields', methods=['POST'])

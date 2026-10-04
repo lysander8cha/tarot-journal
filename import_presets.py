@@ -7,40 +7,10 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-
-# Court card preset definitions
-COURT_PRESETS = {
-    "RWS (Page/Knight/Queen/King)": {
-        "page": "Page",
-        "knight": "Knight",
-        "queen": "Queen",
-        "king": "King"
-    },
-    "Thoth (Princess/Prince/Queen/Knight)": {
-        "page": "Princess",
-        "knight": "Prince",
-        "queen": "Queen",
-        "king": "Knight"
-    },
-    "Marseille (Valet/Cavalier/Queen/King)": {
-        "page": "Valet",
-        "knight": "Cavalier",
-        "queen": "Queen",
-        "king": "King"
-    },
-    "Custom...": None  # Signals UI should show text fields
-}
-
-# Archetype mapping options
-ARCHETYPE_MAPPING_OPTIONS = [
-    "Map to RWS archetypes",
-    "Map to Thoth archetypes",
-    "Create new archetypes"
-]
 
 # Standard RWS court card archetypes (for mapping)
 RWS_COURT_ARCHETYPES = {
@@ -1560,10 +1530,6 @@ class ImportPresets:
         clean_name = name.replace("Custom: ", "")
         return clean_name in self.custom_presets and clean_name in BUILTIN_PRESETS
     
-    def is_builtin_preset(self, name: str) -> bool:
-        """Check if a preset name is a builtin preset"""
-        return name in BUILTIN_PRESETS
-    
     def get_preset_names(self) -> List[str]:
         """Get list of all preset names"""
         return list(self.get_all_presets().keys())
@@ -1680,24 +1646,6 @@ class ImportPresets:
         name = ' '.join(name.split())
         return name
     
-    def get_sort_order(self, card_name: str, preset_name: str = None) -> int:
-        """Get a sort order for a card based on the preset"""
-        if not preset_name:
-            return 0
-        
-        preset = self.get_preset(preset_name)
-        if not preset or not preset.get('mappings'):
-            return 0
-        
-        # Find the card in mappings and return position
-        mappings = preset['mappings']
-        values = list(set(mappings.values()))
-        
-        try:
-            return values.index(card_name)
-        except ValueError:
-            return len(values)  # Unknown cards go at the end
-    
     def find_card_back_image(self, folder: str, preset_name: str = None) -> Optional[str]:
         """
         Find a card back image in the folder based on preset patterns.
@@ -1744,34 +1692,6 @@ class ImportPresets:
             if stem_lower == pattern.lower():
                 return True
         return False
-
-    def preview_import(self, folder: str, preset_name: str,
-                      custom_suit_names: dict = None) -> List[Tuple[str, str, int]]:
-        """
-        Preview what cards would be imported from a folder.
-        Returns list of (original_filename, mapped_name, sort_order) tuples.
-        Excludes card back images from the list.
-        """
-        valid_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-        results = []
-
-        folder_path = Path(folder)
-        if not folder_path.exists():
-            return results
-
-        for filepath in sorted(folder_path.iterdir()):
-            if filepath.suffix.lower() in valid_extensions:
-                # Skip card back images
-                if self.is_card_back_file(filepath.name, preset_name):
-                    continue
-                mapped_name = self.map_filename_to_card(filepath.name, preset_name, custom_suit_names)
-                sort_order = self._get_card_sort_order(mapped_name, custom_suit_names)
-                results.append((filepath.name, mapped_name, sort_order))
-
-        # Sort by sort order
-        results.sort(key=lambda x: x[2])
-
-        return results
 
     def preview_import_with_metadata(self, folder: str, preset_name: str,
                                       custom_suit_names: dict = None,

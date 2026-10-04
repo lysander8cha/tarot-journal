@@ -1,51 +1,3 @@
-/* === Sources panel === */
-
-.combinations__source-list {
-  list-style: none;
-  margin: 0 0 8px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.combinations__source-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: var(--bg-primary);
-  border-radius: var(--tj-radius-row);
-}
-
-.combinations__source-name {
-  flex: 1;
-  color: var(--text-primary);
-}
-
-.combinations__source-input {
-  flex: 1;
-}
-
-.combinations__source-add {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.combinations__add-source-btn {
-  font-size: var(--font-size-body);
-  color: var(--accent) !important;
-  background: none !important;
-  border: 1px dashed var(--accent) !important;
-  width: 100%;
-  padding: 6px !important;
-  cursor: pointer;
-}
-.combinations__add-source-btn:hover {
-  background: color-mix(in srgb, var(--accent) 10%, transparent) !important;
-}
-
 .combinations__empty {
   font-size: var(--font-size-small);
   color: var(--text-dim);
@@ -61,53 +13,6 @@
   border-radius: var(--tj-radius-row);
   padding: 8px 10px;
   margin: 0 0 12px;
-}
-
-/* === Delete dialog === */
-
-.combinations__dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.combinations__dialog {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--tj-radius-row);
-  padding: 16px;
-  max-width: 480px;
-  width: 90%;
-  color: var(--text-primary);
-}
-
-.combinations__dialog h4 {
-  margin: 0 0 8px;
-}
-
-.combinations__dialog p {
-  margin: 0 0 12px;
-  color: var(--text-secondary);
-  font-size: var(--font-size-small);
-}
-
-.combinations__dialog-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-  cursor: pointer;
-}
-
-.combinations__dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-top: 16px;
 }
 
 /* === Card pickers === */
@@ -259,10 +164,6 @@
 .combinations__save-btn {
   background: var(--tj-tint-strong) !important;
   color: var(--text-primary) !important;
-}
-
-.combinations__source-edit {
-  font-size: var(--font-size-small);
 }
 
 /* === Cartomancy type picker === */

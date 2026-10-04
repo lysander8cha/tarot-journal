@@ -56,10 +56,7 @@ actor ImageStore {
 
     private func fetch(cardId: Int64) async -> UIImage? {
         guard let base = serverURL() else { return nil }
-        var req = URLRequest(url: base.appendingPathComponent("api/sync/card-image/\(cardId)"))
-        if let token = Keychain.token {
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
+        let req = SyncEngine.authorizedRequest(base, path: "api/sync/card-image/\(cardId)")
         guard let (data, response) = try? await Self.session.data(for: req),
               let http = response as? HTTPURLResponse, http.statusCode == 200,
               let image = UIImage(data: data) else { return nil }

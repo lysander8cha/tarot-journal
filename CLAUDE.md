@@ -59,7 +59,7 @@ Interpret readings or substitute for human intuition in cartomancy
 - **Backend**: Flask in `backend/` (port 5678), spawned by `electron/main.js`
 - **Database layer**: SQLite mixins in `database/`
 - **User data**: the live database and automatic backups live in `~/Library/Application Support/TarotJournal/`, NOT in the repo
-- Root-level Python modules (`app_config.py`, `theme_config.py`, `thumbnail_cache.py`, `card_metadata.py`, `import_presets.py`, `astrology.py`, `geocoder.py`, `config_base.py`, `image_utils.py`, `logger_config.py`) are shared helpers used by the backend — they are live code
+- Root-level Python modules (`theme_config.py`, `thumbnail_cache.py`, `card_metadata.py`, `import_presets.py`, `astrology.py`, `geocoder.py`, `logger_config.py`) are shared helpers used by the backend — they are live code
 - Planning/design documents live in `docs/planning/`
 
 The legacy wxPython UI (`main.py`, `mixin_*.py`, `ui_library/`, `ui_journal/`, `card_dialogs/`) was deleted in July 2026; recover from git history if ever needed.

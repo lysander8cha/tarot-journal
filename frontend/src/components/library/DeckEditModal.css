@@ -86,11 +86,6 @@
   min-width: 100px;
 }
 
-.deck-edit__notes {
-  width: 100%;
-  resize: vertical;
-}
-
 .deck-edit__checkboxes {
   display: flex;
   flex-wrap: wrap;

@@ -141,18 +141,6 @@ def combinations_by_source():
     return jsonify([row_to_dict(r) for r in rows])
 
 
-@combinations_bp.route('/api/combinations/populated')
-def populated_combinations():
-    """List combinations of a type that have at least one meaning.
-    Query params: cartomancy_type."""
-    db = current_app.config['DB']
-    ctype = (request.args.get('cartomancy_type') or '').strip()
-    if not ctype:
-        return jsonify({'error': 'cartomancy_type is required'}), 400
-    rows = db.list_populated_combinations(ctype)
-    return jsonify([row_to_dict(r) for r in rows])
-
-
 @combinations_bp.route('/api/combinations/meanings', methods=['POST'])
 @require_json
 def create_meaning(data):
