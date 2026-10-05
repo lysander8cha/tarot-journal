@@ -1022,12 +1022,21 @@ def test_reading_querent_scopes_stats(client):
         reading('The Star', star['id'], isabelle),
     ]})
 
+    # A second shared entry holding only Isabelle's reading.
+    eid2 = client.post('/api/entries', json={'title': 'Hers only'}).get_json()['id']
+    client.put(f'/api/entries/{eid2}/querents', json={'profile_ids': [alina, isabelle]})
+    client.put(f'/api/entries/{eid2}/readings', json={'readings': [
+        reading('The Star', star['id'], isabelle)]})
+
     data = client.get(f'/api/stats/insights?querent_id={alina}').get_json()
     assert {c['name'] for c in data['top_cards']} == {'The Fool'}
+    assert data['entries'] == 1
+    assert client.get(f'/api/stats/insights?querent_id={isabelle}').get_json()['entries'] == 2
 
     qb = {q['name']: q for q in client.get('/api/stats/insights').get_json()['querent_breakdown']}
     assert qb['Alina']['top_cards'] == ['The Fool']
     assert qb['Isabelle']['top_cards'] == ['The Star']
+    assert qb['Alina']['entries'] == 1 and qb['Isabelle']['entries'] == 2
 
     def search_ids(card):
         hits = client.get(f'/api/entries/search?querent_id={alina}&card_name={card}').get_json()

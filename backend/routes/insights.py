@@ -74,7 +74,13 @@ def get_insights():
     # A reading marked "for" one querent belongs to that person alone;
     # unmarked readings belong to all of the entry's querents.
     if querent_id:
+        had_readings = {r['entry_id'] for r in readings}
         readings = [r for r in readings if r['querent_id'] in (None, querent_id)]
+        # An entry counts for this querent only if a reading is theirs
+        # (entries with no readings at all still count).
+        kept = {r['entry_id'] for r in readings}
+        entry_ids = {e for e in entry_ids if e in kept or e not in had_readings}
+        entry_when = {k: v for k, v in entry_when.items() if k in entry_ids}
 
     # Parse each reading's cards once, and collect every deck involved.
     # Most readings carry deck ids on their CARDS, not on the reading
@@ -163,9 +169,16 @@ def get_insights():
     total_cards = 0
     reversed_count = 0
 
+    # Whose readings each entry holds: a marked reading names its one
+    # querent, an unmarked one (None) belongs to everyone on the entry.
+    reading_owners: defaultdict = defaultdict(set)
+    for rd in readings:
+        reading_owners[rd['entry_id']].add(profile_names.get(rd['querent_id']))
     for eid, qnames in querents_of.items():
+        owners = reading_owners.get(eid)
         for qn in qnames:
-            querent_entries[qn] += 1
+            if not owners or None in owners or qn in owners:
+                querent_entries[qn] += 1
 
     for rd in readings:
         cards = [c for c in rd['_cards'] if card_included(rd, c)]
