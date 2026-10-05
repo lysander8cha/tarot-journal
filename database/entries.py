@@ -298,14 +298,16 @@ class EntriesMixin:
     def add_entry_reading(self, entry_id: int, spread_id: int = None, spread_name: str = None,
                          deck_id: int = None, deck_name: str = None,
                          cartomancy_type: str = None, cards_used: list = None,
-                         position_order: int = 0, notes: str = None):
+                         position_order: int = 0, notes: str = None,
+                         querent_id: int = None):
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO entry_readings
-            (entry_id, spread_id, spread_name, deck_id, deck_name, cartomancy_type, cards_used, position_order, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (entry_id, spread_id, spread_name, deck_id, deck_name, cartomancy_type, cards_used, position_order, notes, querent_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (entry_id, spread_id, spread_name, deck_id, deck_name,
-              cartomancy_type, json.dumps(cards_used) if cards_used else None, position_order, notes))
+              cartomancy_type, json.dumps(cards_used) if cards_used else None, position_order, notes,
+              querent_id))
         self._touch_entry(cursor, entry_id)
         self._commit()
         return cursor.lastrowid
@@ -329,12 +331,12 @@ class EntriesMixin:
                 cards_used = r.get('cards_used')
                 cursor.execute('''
                     INSERT INTO entry_readings
-                    (entry_id, spread_id, spread_name, deck_id, deck_name, cartomancy_type, cards_used, position_order, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (entry_id, spread_id, spread_name, deck_id, deck_name, cartomancy_type, cards_used, position_order, notes, querent_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (entry_id, r.get('spread_id'), r.get('spread_name'),
                       r.get('deck_id'), r.get('deck_name'), r.get('cartomancy_type'),
                       json.dumps(cards_used) if cards_used else None,
-                      r.get('position_order', i), r.get('notes')))
+                      r.get('position_order', i), r.get('notes'), r.get('querent_id')))
                 new_ids.append(cursor.lastrowid)
             self._touch_entry(cursor, entry_id)
         return new_ids
@@ -406,6 +408,12 @@ class EntriesMixin:
                     INSERT INTO entry_querents (entry_id, profile_id, position)
                     VALUES (?, ?, ?)
                 ''', (entry_id, profile_id, position))
+            # A reading can only be "for" someone still on the entry.
+            cursor.execute(
+                'UPDATE entry_readings SET querent_id = NULL WHERE entry_id = ? '
+                'AND querent_id IS NOT NULL AND querent_id NOT IN '
+                '(SELECT profile_id FROM entry_querents WHERE entry_id = ?)',
+                (entry_id, entry_id))
             self._touch_entry(cursor, entry_id)
             # Also update the legacy querent_id column (first querent or NULL)
             legacy_querent_id = profile_ids[0] if profile_ids else None

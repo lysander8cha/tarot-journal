@@ -24,6 +24,8 @@ export interface ReadingData {
   /** Per-reading notes; only surfaced when the entry has several
    *  readings (single-reading entries use the entry-level notes). */
   notes?: string;
+  /** Which of the entry's querents this reading is for (null = all). */
+  querent_id?: number | null;
   cards: Array<{
     name: string;
     reversed: boolean;
@@ -56,9 +58,11 @@ interface ReadingEditorProps {
   /** Show this reading's own notes field — on for multi-reading
    *  entries (single-reading entries use the entry-level notes). */
   showNotes?: boolean;
+  /** The entry's querents; when given, a "For" picker appears. */
+  querentOptions?: Array<{ id: number; name: string }>;
 }
 
-export default function ReadingEditor({ value, onChange, onRemove, index, defaultDecks, onMoveUp, onMoveDown, showNotes }: ReadingEditorProps) {
+export default function ReadingEditor({ value, onChange, onRemove, index, defaultDecks, onMoveUp, onMoveDown, showNotes, querentOptions }: ReadingEditorProps) {
   const { data: decks = [] } = useQuery({
     queryKey: ['decks'],
     queryFn: () => getDecks(),
@@ -437,6 +441,24 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
                 }
               }}
             />
+          </div>
+        )}
+
+        {querentOptions && (
+          <div className="reading-editor__field">
+            <label className="reading-editor__field-label">For</label>
+            <select
+              value={value.querent_id ?? ''}
+              onChange={(e) => onChange({
+                ...value,
+                querent_id: e.target.value ? Number(e.target.value) : null,
+              })}
+            >
+              <option value="">All querents</option>
+              {querentOptions.map((q) => (
+                <option key={q.id} value={q.id}>{q.name}</option>
+              ))}
+            </select>
           </div>
         )}
       </div>

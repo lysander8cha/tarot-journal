@@ -148,6 +148,14 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
   const [readerId, setReaderId] = useState<number | null>(null);
   const [content, setContent] = useState('');
   const [readings, setReadings] = useState<ReadingData[]>([]);
+  // Per-reading "For" picker: only meaningful with several querents
+  // and several readings; choices are limited to the entry's querents.
+  const chosenQuerents = querentIds
+    .map(id => profiles.find(p => p.id === id))
+    .filter((p): p is Profile => !!p);
+  const readingQuerentOptions = chosenQuerents.length > 1 && readings.length > 1
+    ? chosenQuerents.map(p => ({ id: p.id, name: p.name }))
+    : undefined;
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -183,6 +191,7 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
         deck_name: r.deck_name,
         cartomancy_type: r.cartomancy_type,
         notes: r.notes ?? '',
+        querent_id: r.querent_id ?? null,
         cards: (r.cards_used || []).map((c, idx) => ({
           name: c.name,
           reversed: c.reversed || false,
@@ -265,6 +274,7 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
           deck_name: r.deck_name,
           cartomancy_type: r.cartomancy_type,
           notes: '',
+          querent_id: r.querent_id ?? null,
           cards: (r.cards_used || []).map((c, idx) => ({
             name: '',
             reversed: false,
@@ -410,6 +420,8 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
           spread_id: r.spread_id,
           spread_name: r.spread_name || undefined,
           notes: (r.notes || '').replace(/<[^>]*>/g, '').trim() ? r.notes : undefined,
+          // Only keep a "for" that's still one of the entry's querents.
+          querent_id: r.querent_id && validQuerentIds.includes(r.querent_id) ? r.querent_id : null,
           deck_id: r.deck_id,
           deck_name: r.deck_name || undefined,
           cartomancy_type: r.cartomancy_type || undefined,
@@ -703,6 +715,7 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
                 value={reading}
                 showNotes={readings.length > 1
                   || !!(reading.notes || '').replace(/<[^>]*>/g, '').trim()}
+                querentOptions={readingQuerentOptions}
                 onChange={(data) => updateReading(idx, data)}
                 onRemove={() => removeReading(idx)}
                 defaultDecks={defaults?.default_decks}

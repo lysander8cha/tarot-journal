@@ -978,3 +978,26 @@ def test_other_reversal_count_hint(client):
     assert count() == 2                            # viewing upright
     assert count('&card_1_reversed=1') == 2        # viewing rev+upright
     assert count('&card_1_reversed=1&card_2_reversed=1') == 2
+
+
+def test_reading_querents(client):
+    """Each reading can be 'for' one of the entry's querents; the link
+    clears when that person leaves the entry or the profile is deleted."""
+    anna = client.post('/api/profiles', json={'name': 'Anna'}).get_json()['id']
+    ben = client.post('/api/profiles', json={'name': 'Ben'}).get_json()['id']
+    eid = client.post('/api/entries', json={'title': 'Two people'}).get_json()['id']
+    client.put(f'/api/entries/{eid}/querents', json={'profile_ids': [anna, ben]})
+    client.put(f'/api/entries/{eid}/readings', json={'readings': [
+        {'spread_name': 'One', 'querent_id': anna},
+        {'spread_name': 'Two', 'querent_id': ben},
+    ]})
+    got = client.get(f'/api/entries/{eid}').get_json()['readings']
+    assert [r['querent_id'] for r in got] == [anna, ben]
+
+    client.put(f'/api/entries/{eid}/querents', json={'profile_ids': [anna]})
+    got = client.get(f'/api/entries/{eid}').get_json()['readings']
+    assert [r['querent_id'] for r in got] == [anna, None]
+
+    client.delete(f'/api/profiles/{anna}')
+    got = client.get(f'/api/entries/{eid}').get_json()['readings']
+    assert [r['querent_id'] for r in got] == [None, None]

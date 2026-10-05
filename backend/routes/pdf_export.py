@@ -329,6 +329,9 @@ def _hydrate_entry_for_pdf(db, entry_id: int, cache=None) -> dict | None:
 
     querents = db.get_entry_querents(entry_id)
     entry['querents'] = [row_to_dict(q) for q in querents]
+    names = {q['id']: q['name'] for q in entry['querents']}
+    for rd in entry['readings']:
+        rd['querent_name'] = names.get(rd.get('querent_id'))
     if entry.get('querent_id'):
         q = db.get_profile(entry['querent_id'])
         entry['querent_name'] = q['name'] if q else None

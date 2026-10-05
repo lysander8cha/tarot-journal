@@ -270,6 +270,12 @@ export default function EntryViewer({ entryId, onEdit, onNewFromEntry, onFindCar
             </div>
             {entry.readings.map((reading) => (
               <div key={reading.id} className="entry-viewer__reading">
+                {reading.querent_id != null
+                  && entry.querents?.some(q => q.id === reading.querent_id) && (
+                  <div className="entry-viewer__reading-for">
+                    For {entry.querents.find(q => q.id === reading.querent_id)!.name}
+                  </div>
+                )}
                 <SpreadDisplay
                   reading={reading}
                   onCardDoubleClick={setViewingCardId}

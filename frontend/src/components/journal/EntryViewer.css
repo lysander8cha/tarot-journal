@@ -134,6 +134,12 @@
 }
 
 /* Per-reading notes shown under a spread's layout */
+.entry-viewer__reading-for {
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
 .entry-viewer__reading-notes {
   margin: 8px 0 16px;
   padding: 10px 14px;

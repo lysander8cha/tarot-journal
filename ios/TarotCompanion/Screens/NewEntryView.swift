@@ -49,6 +49,8 @@ struct NewEntryView: View {
         var cards: [PickedCard?] = []
         var freeformCards: [PickedCard] = []
         var extraCards: [ExtraCard] = []
+        /// Which of the entry's querents this reading is for (nil = all).
+        var querentId: Int64?
 
         var chosenCards: [PickedCard?] {
             spread != nil ? cards : freeformCards
@@ -76,6 +78,7 @@ struct NewEntryView: View {
         case reader
         case deck(Int)
         case spread(Int)
+        case readingQuerent(Int)
 
         var id: String {
             switch self {
@@ -83,6 +86,7 @@ struct NewEntryView: View {
             case .reader: return "reader"
             case .deck(let i): return "deck-\(i)"
             case .spread(let i): return "spread-\(i)"
+            case .readingQuerent(let i): return "for-\(i)"
             }
         }
     }
@@ -162,6 +166,13 @@ struct NewEntryView: View {
         .task { load() }
     }
 
+    /// The entry's querents in order, for the per-reading "For" picker.
+    private var chosenQuerents: [(id: Int64, label: String)] {
+        querentIds.compactMap { id in
+            profiles.first { $0.id == id }.map { (id, $0.name) }
+        }
+    }
+
     private var querentSummary: String {
         let names = querentIds.compactMap { id in
             profiles.first { $0.id == id }?.name
@@ -189,6 +200,15 @@ struct NewEntryView: View {
                 noneLabel: nil) { picked in
                 if let picked, readings.indices.contains(index) {
                     readings[index].deckId = picked
+                }
+            }
+        case .readingQuerent(let index):
+            OptionPickerSheet(
+                title: "For",
+                options: chosenQuerents,
+                noneLabel: "All querents") { picked in
+                if readings.indices.contains(index) {
+                    readings[index].querentId = picked
                 }
             }
         case .spread(let index):
@@ -280,6 +300,12 @@ struct NewEntryView: View {
             }
             pickerRow("Spread", value: reading.spread?.name ?? "No spread") {
                 activePicker = .spread(index)
+            }
+            if querentIds.count > 1 && readings.count > 1 {
+                pickerRow("For", value: chosenQuerents.first { $0.id == reading.querentId }?.label
+                          ?? "All querents") {
+                    activePicker = .readingQuerent(index)
+                }
             }
 
             if !reading.duplicateNames.isEmpty {
@@ -592,6 +618,9 @@ struct NewEntryView: View {
                 "spread_name": reading.spread?.name as Any,
                 "deck_name": deckName ?? "",
                 "cards_used": cardsUsed,
+                // Only a querent still on the entry counts.
+                "querent_id": reading.querentId.flatMap {
+                    querentIds.contains($0) ? $0 : nil } as Any,
             ])
         }
 

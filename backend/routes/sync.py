@@ -433,6 +433,7 @@ def push_entry(data):
                 cards_used=reading.get('cards_used') or [],
                 position_order=order,
                 notes=reading.get('notes'),
+                querent_id=reading.get('querent_id'),
             )
 
         querent_ids = [int(q) for q in (data.get('querent_ids') or [])]

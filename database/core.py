@@ -1423,7 +1423,13 @@ class CoreMixin:
 
         # Migration: per-reading notes (multi-spread entries get a
         # notes field per reading alongside the entry-level notes)
-        self._ensure_columns(cursor, 'entry_readings', {'notes': 'TEXT'})
+        self._ensure_columns(cursor, 'entry_readings', {
+            'notes': 'TEXT',
+            # Which of the entry's querents this reading is for (NULL =
+            # the whole entry's querents). Entry-level querents stay the
+            # source of truth for filters and stats.
+            'querent_id': 'INTEGER',
+        })
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_entry_tags_entry_id ON entry_tags(entry_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_entry_tags_tag_id ON entry_tags(tag_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_deck_tag_assignments_deck_id ON deck_tag_assignments(deck_id)')

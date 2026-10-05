@@ -30,9 +30,11 @@ struct Reading: Decodable, Identifiable {
     let deckName: String?
     let cardsUsed: [ReadingCard]?
     let notes: String?
+    let querentId: Int64?
 
     enum CodingKeys: String, CodingKey {
         case id, notes
+        case querentId = "querent_id"
         case spreadId = "spread_id"
         case spreadName = "spread_name"
         case deckName = "deck_name"
@@ -85,6 +87,7 @@ struct EntryDetailView: View {
     @State private var readings: [Reading] = []
     @State private var followUps: [FollowUpNote] = []
     @State private var querentNames: [String] = []
+    @State private var querentNameById: [Int64: String] = [:]
     @State private var readerName: String?
     @State private var tags: [(name: String, color: String?)] = []
     @State private var positionsBySpread: [Int64: [SpreadPosition]] = [:]
@@ -212,6 +215,11 @@ struct EntryDetailView: View {
                     .accessibilityLabel("View spread full screen")
                 }
             }
+            if let id = reading.querentId, let name = querentNameById[id] {
+                Text("For \(name)")
+                    .font(.caption)
+                    .foregroundStyle(TJ.textFaint)
+            }
             if let cards = reading.cardsUsed, !cards.isEmpty {
                 SpreadLayoutView(
                     cards: cards,
@@ -279,9 +287,11 @@ struct EntryDetailView: View {
                let ids = try? decoder.decode([Int64].self, from: data),
                !ids.isEmpty {
                 let marks = ids.map { _ in "?" }.joined(separator: ",")
-                querentNames = try String.fetchAll(
-                    db, sql: "SELECT name FROM profiles WHERE id IN (\(marks))",
+                let rows = try Row.fetchAll(
+                    db, sql: "SELECT id, name FROM profiles WHERE id IN (\(marks))",
                     arguments: StatementArguments(ids))
+                for row in rows { querentNameById[row["id"]] = row["name"] }
+                querentNames = ids.compactMap { querentNameById[$0] }
             }
             if let readerId: Int64 = row["reader_id"] {
                 readerName = try String.fetchOne(

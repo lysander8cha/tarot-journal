@@ -79,6 +79,9 @@
         {% if reading.deck_name %}
           <span class="reading__deck">— {{ reading.deck_name }}</span>
         {% endif %}
+        {% if reading.querent_name %}
+          <span class="reading__deck">· for {{ reading.querent_name }}</span>
+        {% endif %}
       </h2>
 
       {# Spread layout. If positions exist we render an absolute-
