@@ -34,6 +34,7 @@ export async function updateSpread(spreadId: number, data: {
   clear_default_deck?: boolean;
   deck_slots?: DeckSlot[] | null;
   archived?: boolean;
+  favorite?: boolean;
   /** Present-but-null clears the attribution. */
   source_id?: number | null;
 }): Promise<void> {

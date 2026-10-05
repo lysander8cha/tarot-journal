@@ -56,7 +56,7 @@ class EntriesMixin:
                       description: str = None, allowed_deck_types: list = None,
                       default_deck_id: int = None, clear_default_deck: bool = False,
                       deck_slots: list = None, archived: bool = None,
-                      source_id: int = None, clear_source: bool = False):
+                      favorite: bool = None, source_id: int = None, clear_source: bool = False):
         cursor = self.conn.cursor()
         if source_id is not None or clear_source:
             cursor.execute('UPDATE spreads SET source_id = ? WHERE id = ?',
@@ -79,6 +79,9 @@ class EntriesMixin:
         if archived is not None:
             cursor.execute('UPDATE spreads SET archived = ? WHERE id = ?',
                           (1 if archived else 0, spread_id))
+        if favorite is not None:
+            cursor.execute('UPDATE spreads SET favorite = ? WHERE id = ?',
+                          (1 if favorite else 0, spread_id))
         self._commit()
 
     def delete_spread(self, spread_id: int):

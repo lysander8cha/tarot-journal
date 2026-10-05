@@ -383,6 +383,12 @@ def test_spread_archiving(client):
     # Unarchive round-trip
     client.put(f"/api/spreads/{sp['id']}", json={'archived': False})
     assert client.get(f"/api/spreads/{sp['id']}").get_json()['archived'] == 0
+    # Favorite round-trip, independent of archiving
+    client.put(f"/api/spreads/{sp['id']}", json={'favorite': True})
+    got = client.get(f"/api/spreads/{sp['id']}").get_json()
+    assert got['favorite'] == 1 and got['archived'] == 0
+    client.put(f"/api/spreads/{sp['id']}", json={'favorite': False})
+    assert client.get(f"/api/spreads/{sp['id']}").get_json()['favorite'] == 0
 
 
 def test_spread_tags(client):

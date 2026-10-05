@@ -97,6 +97,7 @@ def update_spread(spread_id, data):
         clear_default_deck=data.get('clear_default_deck', False),
         deck_slots=data.get('deck_slots'),
         archived=data.get('archived'),
+        favorite=data.get('favorite'),
         # A present-but-null source_id clears the attribution.
         source_id=data.get('source_id'),
         clear_source='source_id' in data and data.get('source_id') is None,

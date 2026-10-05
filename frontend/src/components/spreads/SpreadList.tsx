@@ -99,9 +99,10 @@ export default function SpreadList({
       return true;
     };
     const sorted = [...spreads].sort((a, b) =>
-      sortKey === 'positions'
+      Number(!!b.favorite) - Number(!!a.favorite)
+      || (sortKey === 'positions'
         ? positionCount(a) - positionCount(b) || a.name.localeCompare(b.name)
-        : a.name.localeCompare(b.name));
+        : a.name.localeCompare(b.name)));
     return {
       active: sorted.filter(s => !s.archived && matches(s)),
       archived: sorted.filter(s => !!s.archived && matches(s)),
@@ -121,6 +122,15 @@ export default function SpreadList({
         'success',
       );
       if (archiving && !showArchived) setShowArchived(true);
+    } catch {
+      showToast('Failed to update the spread.');
+    }
+  };
+
+  const toggleFavorite = async (spread: Spread) => {
+    try {
+      await updateSpread(spread.id, { favorite: !spread.favorite });
+      queryClient.invalidateQueries({ queryKey: ['spreads'] });
     } catch {
       showToast('Failed to update the spread.');
     }
@@ -154,6 +164,16 @@ export default function SpreadList({
         </span>
       )}
       <span className="spread-list__count">{positionCount(spread)} pos</span>
+      <button
+        type="button"
+        className={`spread-list__fav ${spread.favorite ? 'spread-list__fav--on' : ''}`}
+        title={spread.favorite ? 'Favorite — click to unfavorite' : 'Mark as favorite'}
+        aria-label={spread.favorite ? `Unfavorite ${spread.name}` : `Favorite ${spread.name}`}
+        onClick={(e) => { e.stopPropagation(); toggleFavorite(spread); }}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        ★
+      </button>
     </div>
   );
 

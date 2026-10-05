@@ -210,7 +210,7 @@
 }
 
 .deck-list__fav:hover {
-  color: #d9a54a;
+  color: var(--favorite);
 }
 
 .deck-list__row:hover .deck-list__fav,
@@ -219,5 +219,5 @@
 }
 
 .deck-list__fav--on {
-  color: #d9a54a;
+  color: var(--favorite);
 }

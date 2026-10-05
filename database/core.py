@@ -328,6 +328,8 @@ class CoreMixin:
             # default) the spreads list, but never deleted, so older
             # entries that used them keep working.
             'archived': 'INTEGER NOT NULL DEFAULT 0',
+            # Favorite spreads sort first in the list and pickers
+            'favorite': 'INTEGER NOT NULL DEFAULT 0',
             # Multi-deck spreads
             'deck_slots': 'TEXT',
         })

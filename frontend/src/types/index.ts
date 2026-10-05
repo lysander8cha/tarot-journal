@@ -82,6 +82,8 @@ export interface Spread {
    *  the list's Archived group; never deleted (old entries keep
    *  rendering with them). */
   archived?: number;
+  /** 0/1 — favorites sort first in the spread list and pickers. */
+  favorite?: number;
   /** Reference source the spread is attributed to. */
   source_id?: number | null;
   source_name?: string | null;

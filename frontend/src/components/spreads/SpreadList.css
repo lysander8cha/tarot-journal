@@ -206,3 +206,30 @@
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
+
+/* ── Favorite star (mirrors the deck list's) ── */
+
+.spread-list__fav {
+  flex-shrink: 0;
+  width: 22px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--font-size-small);
+  line-height: 1;
+  color: var(--text-dim);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.1s;
+}
+
+.spread-list__row:hover .spread-list__fav,
+.spread-list__fav:focus-visible,
+.spread-list__fav--on {
+  opacity: 1;
+}
+
+.spread-list__fav:hover,
+.spread-list__fav--on {
+  color: var(--favorite);
+}

@@ -408,7 +408,8 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
           <SearchCombobox
             options={spreads
               .filter((s) => !s.archived || s.id === value.spread_id)
-              .map((s) => ({ id: s.id, label: s.name }))}
+              .sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite))
+              .map((s) => ({ id: s.id, label: s.favorite ? `★ ${s.name}` : s.name }))}
             value={value.spread_id ?? undefined}
             placeholder="No spread — type to search…"
             onSelect={(opt) => handleSpreadChange(opt ? opt.id : null)}

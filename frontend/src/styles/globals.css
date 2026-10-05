@@ -36,6 +36,7 @@
   --danger: var(--tj-text-accent-2);
   --danger-tint: rgb(var(--tj-accent-rgb) / 10%);
   --card-slot: var(--tj-card-empty);
+  --favorite: #d9a54a;                      /* favorite-star gold */
 
   --font-display: var(--tj-font-display);
   --font-text: var(--tj-font-ui);
