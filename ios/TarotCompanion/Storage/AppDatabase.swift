@@ -232,6 +232,13 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v9-spread-favorite") { db in
+            // Favorite spreads sort first in the composer's picker.
+            try db.alter(table: "spreads") { t in
+                t.add(column: "favorite", .integer)
+            }
+        }
+
         try migrator.migrate(writer)
     }
 

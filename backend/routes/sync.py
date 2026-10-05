@@ -163,7 +163,7 @@ def unpair():
 # exactly the columns the phone needs.
 SNAPSHOT_TABLES = {
     'spreads': ('SELECT id, name, description, positions, deck_slots, '
-                'allowed_deck_types, archived FROM spreads'),
+                'allowed_deck_types, archived, favorite FROM spreads'),
     'profiles': 'SELECT id, name, hidden, querent_only FROM profiles',
     'decks': ('SELECT id, name, favorite, correspondence_system_id '
               'FROM decks WHERE favorite = 1'),

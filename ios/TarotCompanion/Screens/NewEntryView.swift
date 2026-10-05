@@ -21,6 +21,7 @@ struct NewEntryView: View {
         let id: Int64
         let name: String
         let positions: [SpreadPosition]
+        var favorite = false
 
         var positionLabels: [String] { positions.map { $0.label ?? "" } }
 
@@ -193,7 +194,7 @@ struct NewEntryView: View {
         case .spread(let index):
             OptionPickerSheet(
                 title: "Spread",
-                options: spreads.map { ($0.id, $0.name) },
+                options: spreads.map { ($0.id, $0.favorite ? "★ \($0.name)" : $0.name) },
                 noneLabel: "No spread") { picked in
                 guard readings.indices.contains(index) else { return }
                 let spread = spreads.first { $0.id == picked }
@@ -521,8 +522,9 @@ struct NewEntryView: View {
             let decoder = JSONDecoder()
             spreads = try Row.fetchAll(
                 db, sql: """
-                    SELECT id, name, positions FROM spreads
-                    WHERE archived IS NOT 1 ORDER BY name
+                    SELECT id, name, positions, favorite FROM spreads
+                    WHERE archived IS NOT 1
+                    ORDER BY favorite IS 1 DESC, name
                     """)
                 .map { row in
                     var positions: [SpreadPosition] = []
@@ -532,7 +534,8 @@ struct NewEntryView: View {
                         positions = decoded
                     }
                     return SpreadOption(id: row["id"], name: row["name"],
-                                        positions: positions)
+                                        positions: positions,
+                                        favorite: (row["favorite"] as Int?) == 1)
                 }
             // Last, so a failure here can't take the pickers down
             // with it (this whole block shares one try).
