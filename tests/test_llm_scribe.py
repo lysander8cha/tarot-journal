@@ -1001,3 +1001,36 @@ def test_reading_querents(client):
     client.delete(f'/api/profiles/{anna}')
     got = client.get(f'/api/entries/{eid}').get_json()['readings']
     assert [r['querent_id'] for r in got] == [None, None]
+
+
+def test_reading_querent_scopes_stats(client):
+    """Isabelle's reading in a shared entry must not count toward Alina."""
+    types = client.get('/api/types').get_json()
+    deck = client.post('/api/decks', json={'name': 'Split Deck', 'type_ids': [types[0]['id']]}).get_json()
+    fool = client.post('/api/cards', json={'deck_id': deck['id'], 'name': 'The Fool'}).get_json()
+    star = client.post('/api/cards', json={'deck_id': deck['id'], 'name': 'The Star'}).get_json()
+    alina = client.post('/api/profiles', json={'name': 'Alina'}).get_json()['id']
+    isabelle = client.post('/api/profiles', json={'name': 'Isabelle'}).get_json()['id']
+    eid = client.post('/api/entries', json={'title': 'Both'}).get_json()['id']
+    client.put(f'/api/entries/{eid}/querents', json={'profile_ids': [alina, isabelle]})
+
+    def reading(name, cid, who):
+        return {'deck_id': deck['id'], 'querent_id': who,
+                'cards_used': [{'name': name, 'card_id': cid, 'position_index': 0}]}
+    client.put(f'/api/entries/{eid}/readings', json={'readings': [
+        reading('The Fool', fool['id'], alina),
+        reading('The Star', star['id'], isabelle),
+    ]})
+
+    data = client.get(f'/api/stats/insights?querent_id={alina}').get_json()
+    assert {c['name'] for c in data['top_cards']} == {'The Fool'}
+
+    qb = {q['name']: q for q in client.get('/api/stats/insights').get_json()['querent_breakdown']}
+    assert qb['Alina']['top_cards'] == ['The Fool']
+    assert qb['Isabelle']['top_cards'] == ['The Star']
+
+    def search_ids(card):
+        hits = client.get(f'/api/entries/search?querent_id={alina}&card_name={card}').get_json()
+        return {e['id'] for e in hits}
+    assert eid not in search_ids('The Star')
+    assert eid in search_ids('The Fool')

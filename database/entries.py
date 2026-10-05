@@ -172,6 +172,10 @@ class EntriesMixin:
             if card_name:
                 conditions.append('er.cards_used LIKE ?')
                 params.append(f'%{card_name}%')
+            if querent_id:
+                # The matching reading must be this querent's (or unmarked).
+                conditions.append('(er.querent_id IS NULL OR er.querent_id = ?)')
+                params.append(querent_id)
 
         if query:
             conditions.append('(je.title LIKE ? OR je.content LIKE ?)')

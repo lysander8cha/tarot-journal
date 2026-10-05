@@ -68,9 +68,13 @@ def get_insights():
 
     # ── Readings + cards ────────────────────────────────────────────
     readings = [dict(r) for r in cur.execute(
-        'SELECT entry_id, spread_id, spread_name, deck_id, deck_name, cards_used'
-        ' FROM entry_readings'
+        'SELECT entry_id, spread_id, spread_name, deck_id, deck_name, cards_used,'
+        ' querent_id FROM entry_readings'
     ).fetchall() if r['entry_id'] in entry_ids]
+    # A reading marked "for" one querent belongs to that person alone;
+    # unmarked readings belong to all of the entry's querents.
+    if querent_id:
+        readings = [r for r in readings if r['querent_id'] in (None, querent_id)]
 
     # Parse each reading's cards once, and collect every deck involved.
     # Most readings carry deck ids on their CARDS, not on the reading
@@ -142,6 +146,9 @@ def get_insights():
         if r['id'] in entry_ids:
             querents_of[r['id']].add(r['name'])
 
+    profile_names = {r['id']: r['name'] for r in cur.execute(
+        'SELECT id, name FROM profiles').fetchall()}
+
     card_counts: Counter = Counter()
     suit_counts: Counter = Counter()
     pos_totals: Counter = Counter()
@@ -187,6 +194,9 @@ def get_insights():
             if when and when > spread_last.get(sn, ''):
                 spread_last[sn] = when
 
+        rd_querents = ({profile_names[rd['querent_id']]}
+                       if rd['querent_id'] in profile_names
+                       else querents_of.get(rd['entry_id'], ()))
         reading_displays = set()
         for c in cards:
             archetype, fallback = card_info.get(c.get('card_id'), (None, None))
@@ -196,7 +206,7 @@ def get_insights():
             total_cards += 1
             card_counts[display] += 1
             reading_displays.add(display)
-            for qn in querents_of.get(rd['entry_id'], ()):  # per-querent tallies
+            for qn in rd_querents:  # per-querent tallies
                 querent_cards[qn][display] += 1
             suit = suit_of.get(display.lower())
             if suit:
