@@ -15,6 +15,8 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, jsonify, request
 
+from database.entries import parse_querent_ids
+
 insights_bp = Blueprint('insights', __name__)
 
 CADENCE_MONTHS = 14
@@ -69,13 +71,15 @@ def get_insights():
     # ── Readings + cards ────────────────────────────────────────────
     readings = [dict(r) for r in cur.execute(
         'SELECT entry_id, spread_id, spread_name, deck_id, deck_name, cards_used,'
-        ' querent_id FROM entry_readings'
+        ' querent_ids FROM entry_readings'
     ).fetchall() if r['entry_id'] in entry_ids]
-    # A reading marked "for" one querent belongs to that person alone;
-    # unmarked readings belong to all of the entry's querents.
+    # A reading marked for specific querents belongs to them alone;
+    # an unmarked reading belongs to all of the entry's querents.
+    for rd in readings:
+        rd['_qids'] = parse_querent_ids(rd['querent_ids'])
     if querent_id:
         had_readings = {r['entry_id'] for r in readings}
-        readings = [r for r in readings if r['querent_id'] in (None, querent_id)]
+        readings = [r for r in readings if not r['_qids'] or querent_id in r['_qids']]
         # An entry counts for this querent only if a reading is theirs
         # (entries with no readings at all still count).
         kept = {r['entry_id'] for r in readings}
@@ -169,11 +173,12 @@ def get_insights():
     total_cards = 0
     reversed_count = 0
 
-    # Whose readings each entry holds: a marked reading names its one
-    # querent, an unmarked one (None) belongs to everyone on the entry.
+    # Whose readings each entry holds: a marked reading names its
+    # querents, an unmarked one (None) belongs to everyone on the entry.
     reading_owners: defaultdict = defaultdict(set)
     for rd in readings:
-        reading_owners[rd['entry_id']].add(profile_names.get(rd['querent_id']))
+        owners = {profile_names.get(i) for i in rd['_qids']} if rd['_qids'] else {None}
+        reading_owners[rd['entry_id']] |= owners
     for eid, qnames in querents_of.items():
         owners = reading_owners.get(eid)
         for qn in qnames:
@@ -207,9 +212,8 @@ def get_insights():
             if when and when > spread_last.get(sn, ''):
                 spread_last[sn] = when
 
-        rd_querents = ({profile_names[rd['querent_id']]}
-                       if rd['querent_id'] in profile_names
-                       else querents_of.get(rd['entry_id'], ()))
+        rd_querents = ({profile_names[i] for i in rd['_qids'] if i in profile_names}
+                       if rd['_qids'] else querents_of.get(rd['entry_id'], ()))
         reading_displays = set()
         for c in cards:
             archetype, fallback = card_info.get(c.get('card_id'), (None, None))

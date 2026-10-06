@@ -988,19 +988,20 @@ def test_reading_querents(client):
     eid = client.post('/api/entries', json={'title': 'Two people'}).get_json()['id']
     client.put(f'/api/entries/{eid}/querents', json={'profile_ids': [anna, ben]})
     client.put(f'/api/entries/{eid}/readings', json={'readings': [
-        {'spread_name': 'One', 'querent_id': anna},
-        {'spread_name': 'Two', 'querent_id': ben},
+        {'spread_name': 'One', 'querent_ids': [anna]},
+        {'spread_name': 'Two', 'querent_ids': [anna, ben]},
+        {'spread_name': 'Three'},
     ]})
     got = client.get(f'/api/entries/{eid}').get_json()['readings']
-    assert [r['querent_id'] for r in got] == [anna, ben]
+    assert [r['querent_ids'] for r in got] == [[anna], [anna, ben], []]
 
     client.put(f'/api/entries/{eid}/querents', json={'profile_ids': [anna]})
     got = client.get(f'/api/entries/{eid}').get_json()['readings']
-    assert [r['querent_id'] for r in got] == [anna, None]
+    assert [r['querent_ids'] for r in got] == [[anna], [anna], []]
 
     client.delete(f'/api/profiles/{anna}')
     got = client.get(f'/api/entries/{eid}').get_json()['readings']
-    assert [r['querent_id'] for r in got] == [None, None]
+    assert [r['querent_ids'] for r in got] == [[], [], []]
 
 
 def test_reading_querent_scopes_stats(client):
@@ -1015,7 +1016,7 @@ def test_reading_querent_scopes_stats(client):
     client.put(f'/api/entries/{eid}/querents', json={'profile_ids': [alina, isabelle]})
 
     def reading(name, cid, who):
-        return {'deck_id': deck['id'], 'querent_id': who,
+        return {'deck_id': deck['id'], 'querent_ids': [who],
                 'cards_used': [{'name': name, 'card_id': cid, 'position_index': 0}]}
     client.put(f'/api/entries/{eid}/readings', json={'readings': [
         reading('The Fool', fool['id'], alina),

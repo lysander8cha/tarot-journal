@@ -270,10 +270,12 @@ export default function EntryViewer({ entryId, onEdit, onNewFromEntry, onFindCar
             </div>
             {entry.readings.map((reading) => (
               <div key={reading.id} className="entry-viewer__reading">
-                {reading.querent_id != null
-                  && entry.querents?.some(q => q.id === reading.querent_id) && (
+                {(entry.querents?.length ?? 0) > 1 && !!reading.querent_ids?.length && (
                   <div className="entry-viewer__reading-for">
-                    For {entry.querents.find(q => q.id === reading.querent_id)!.name}
+                    For {entry.querents
+                      .filter(q => reading.querent_ids!.includes(q.id))
+                      .map(q => q.name)
+                      .join(', ')}
                   </div>
                 )}
                 <SpreadDisplay

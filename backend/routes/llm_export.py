@@ -144,8 +144,8 @@ def build_entry_markdown(db, entry: dict, include_reference: bool = False) -> st
             heading += f": {spread_name}"
         if rd.get('deck_name'):
             heading += f" — {rd['deck_name']} deck"
-        if rd.get('querent_name'):
-            heading += f" (for {rd['querent_name']})"
+        if rd.get('querent_names'):
+            heading += f" (for {', '.join(rd['querent_names'])})"
         lines.append(heading)
         lines.append('')
 

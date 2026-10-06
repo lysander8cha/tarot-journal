@@ -79,8 +79,8 @@
         {% if reading.deck_name %}
           <span class="reading__deck">— {{ reading.deck_name }}</span>
         {% endif %}
-        {% if reading.querent_name %}
-          <span class="reading__deck">· for {{ reading.querent_name }}</span>
+        {% if reading.querent_names %}
+          <span class="reading__deck">· for {{ reading.querent_names|join(', ') }}</span>
         {% endif %}
       </h2>
 

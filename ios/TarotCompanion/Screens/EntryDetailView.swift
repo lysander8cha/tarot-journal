@@ -30,11 +30,11 @@ struct Reading: Decodable, Identifiable {
     let deckName: String?
     let cardsUsed: [ReadingCard]?
     let notes: String?
-    let querentId: Int64?
+    let querentIds: [Int64]?
 
     enum CodingKeys: String, CodingKey {
         case id, notes
-        case querentId = "querent_id"
+        case querentIds = "querent_ids"
         case spreadId = "spread_id"
         case spreadName = "spread_name"
         case deckName = "deck_name"
@@ -215,8 +215,10 @@ struct EntryDetailView: View {
                     .accessibilityLabel("View spread full screen")
                 }
             }
-            if let id = reading.querentId, let name = querentNameById[id] {
-                Text("For \(name)")
+            if querentNames.count > 1,
+               case let names = (reading.querentIds ?? []).compactMap({ querentNameById[$0] }),
+               !names.isEmpty {
+                Text("For \(names.joined(separator: ", "))")
                     .font(.caption)
                     .foregroundStyle(TJ.textFaint)
             }

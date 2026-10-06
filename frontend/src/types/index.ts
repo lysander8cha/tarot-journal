@@ -144,8 +144,8 @@ export interface EntryReading {
   position_order: number;
   /** Per-reading notes — used when an entry holds several readings. */
   notes: string | null;
-  /** Which of the entry's querents this reading is for (null = all). */
-  querent_id?: number | null;
+  /** Who this reading is for (empty = all of the entry's querents). */
+  querent_ids?: number[];
 }
 
 /** A card placed in a reading (parsed from cards_used JSON) */
@@ -180,8 +180,8 @@ export interface EntryReadingParsed {
   cards_used: CardUsed[];
   position_order: number;
   notes: string | null;
-  /** Which of the entry's querents this reading is for (null = all). */
-  querent_id?: number | null;
+  /** Who this reading is for (empty = all of the entry's querents). */
+  querent_ids?: number[];
 }
 
 /** Follow-up note on a journal entry */

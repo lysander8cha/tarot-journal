@@ -7,6 +7,7 @@ import json
 from flask import Blueprint, jsonify, request, current_app
 from backend.services.richtext import convert_content_to_html
 from backend.utils import row_to_dict, require_json, validate_length
+from database.entries import parse_querent_ids
 
 entries_bp = Blueprint('entries', __name__)
 
@@ -185,6 +186,7 @@ def get_entry(entry_id):
     for r in readings:
         rd = row_to_dict(r)
         rd['cards_used'] = _enrich_cards_with_ids(db, _parse_cards_used(rd.get('cards_used')))
+        rd['querent_ids'] = parse_querent_ids(rd.get('querent_ids'))
         entry['readings'].append(rd)
 
     # Tags

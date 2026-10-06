@@ -49,8 +49,8 @@ struct NewEntryView: View {
         var cards: [PickedCard?] = []
         var freeformCards: [PickedCard] = []
         var extraCards: [ExtraCard] = []
-        /// Which of the entry's querents this reading is for (nil = all).
-        var querentId: Int64?
+        /// Who this reading is for, in "multiple querents" mode.
+        var querentIds: [Int64] = []
 
         var chosenCards: [PickedCard?] {
             spread != nil ? cards : freeformCards
@@ -93,7 +93,11 @@ struct NewEntryView: View {
 
     @State private var title = ""
     @State private var notes = ""
+    /// One querent for the whole entry (first element), unless
+    /// `multiQuerent` is on — then each reading picks its own and the
+    /// entry's list is sent as their union.
     @State private var querentIds: [Int64] = []
+    @State private var multiQuerent = false
     @State private var readerId: Int64?
     @State private var readingDate = Date()
     @State private var locationName = ""
@@ -166,28 +170,34 @@ struct NewEntryView: View {
         .task { load() }
     }
 
-    /// The entry's querents in order, for the per-reading "For" picker.
-    private var chosenQuerents: [(id: Int64, label: String)] {
-        querentIds.compactMap { id in
-            profiles.first { $0.id == id }.map { (id, $0.name) }
-        }
+    private func names(_ ids: [Int64]) -> String? {
+        let names = ids.compactMap { id in profiles.first { $0.id == id }?.name }
+        return names.isEmpty ? nil : names.joined(separator: ", ")
     }
 
-    private var querentSummary: String {
-        let names = querentIds.compactMap { id in
-            profiles.first { $0.id == id }?.name
+    /// Switching modes carries the current choice across.
+    private func setMultiQuerent(_ on: Bool) {
+        if on {
+            let current = Array(querentIds.prefix(1))
+            for i in readings.indices where readings[i].querentIds.isEmpty {
+                readings[i].querentIds = current
+            }
+        } else {
+            let first = readings.flatMap(\.querentIds).first ?? querentIds.first
+            querentIds = first.map { [$0] } ?? []
+            for i in readings.indices { readings[i].querentIds = [] }
         }
-        return names.isEmpty ? "None" : names.joined(separator: ", ")
+        multiQuerent = on
     }
 
     @ViewBuilder
     private func optionPicker(for picker: ActivePicker) -> some View {
         switch picker {
         case .querent:
-            MultiPickerSheet(
-                title: "Querents",
+            OptionPickerSheet(
+                title: "Querent",
                 options: profiles.map { ($0.id, $0.name) },
-                selection: $querentIds)
+                noneLabel: "None") { querentIds = $0.map { [$0] } ?? [] }
         case .reader:
             OptionPickerSheet(
                 title: "Reader",
@@ -203,13 +213,11 @@ struct NewEntryView: View {
                 }
             }
         case .readingQuerent(let index):
-            OptionPickerSheet(
-                title: "For",
-                options: chosenQuerents,
-                noneLabel: "All querents") { picked in
-                if readings.indices.contains(index) {
-                    readings[index].querentId = picked
-                }
+            if readings.indices.contains(index) {
+                MultiPickerSheet(
+                    title: "Querents",
+                    options: profiles.map { ($0.id, $0.name) },
+                    selection: $readings[index].querentIds)
             }
         case .spread(let index):
             OptionPickerSheet(
@@ -251,8 +259,12 @@ struct NewEntryView: View {
         Section("Entry") {
             TextField("Title (optional)", text: $title)
 
-            pickerRow("Querents", value: querentSummary) {
-                activePicker = .querent
+            Toggle("Multiple querents", isOn: Binding(
+                get: { multiQuerent }, set: { setMultiQuerent($0) }))
+            if !multiQuerent {
+                pickerRow("Querent", value: names(querentIds) ?? "None") {
+                    activePicker = .querent
+                }
             }
             pickerRow("Reader",
                       value: readerOptions.first { $0.id == readerId }?.name ?? "None") {
@@ -301,9 +313,8 @@ struct NewEntryView: View {
             pickerRow("Spread", value: reading.spread?.name ?? "No spread") {
                 activePicker = .spread(index)
             }
-            if querentIds.count > 1 && readings.count > 1 {
-                pickerRow("For", value: chosenQuerents.first { $0.id == reading.querentId }?.label
-                          ?? "All querents") {
+            if multiQuerent {
+                pickerRow("Querents", value: names(reading.querentIds) ?? "Choose…") {
                     activePicker = .readingQuerent(index)
                 }
             }
@@ -581,6 +592,15 @@ struct NewEntryView: View {
     private func save() async {
         saving = true
 
+        // Entry querents: the readings' union in multiple mode.
+        var entryQuerentIds: [Int64] = []
+        for id in multiQuerent
+            ? readings.filter(\.isValid).flatMap(\.querentIds)
+            : Array(querentIds.prefix(1))
+        where !entryQuerentIds.contains(id) {
+            entryQuerentIds.append(id)
+        }
+
         var readingPayloads: [[String: Any]] = []
         for reading in readings where reading.isValid {
             guard let deckId = reading.deckId else { continue }
@@ -618,16 +638,14 @@ struct NewEntryView: View {
                 "spread_name": reading.spread?.name as Any,
                 "deck_name": deckName ?? "",
                 "cards_used": cardsUsed,
-                // Only a querent still on the entry counts.
-                "querent_id": reading.querentId.flatMap {
-                    querentIds.contains($0) ? $0 : nil } as Any,
+                "querent_ids": multiQuerent ? reading.querentIds : [],
             ])
         }
 
         var payload: [String: Any] = [
             "sync_uuid": UUID().uuidString,
             "reading_datetime": SyncEngine.localTimestamp.string(from: readingDate),
-            "querent_ids": querentIds,
+            "querent_ids": entryQuerentIds,
             "readings": readingPayloads,
         ]
         if let readerId {

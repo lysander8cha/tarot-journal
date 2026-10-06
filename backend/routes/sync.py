@@ -35,6 +35,7 @@ from flask import Blueprint, abort, current_app, jsonify, request, send_file
 
 from backend.security import is_safe_path, is_valid_image_path
 from backend.utils import require_json, row_to_dict
+from database.entries import parse_querent_ids
 
 sync_bp = Blueprint('sync', __name__)
 
@@ -285,6 +286,7 @@ def _entry_aggregate(db, entry_row) -> dict:
                 r['cards_used'] = json.loads(r['cards_used'])
             except ValueError:
                 r['cards_used'] = []
+        r['querent_ids'] = parse_querent_ids(r.get('querent_ids'))
     tag_ids = [row[0] if not isinstance(row, dict) else row['tag_id']
                for row in cursor.execute(
                    'SELECT tag_id FROM entry_tags WHERE entry_id = ?',
@@ -433,7 +435,7 @@ def push_entry(data):
                 cards_used=reading.get('cards_used') or [],
                 position_order=order,
                 notes=reading.get('notes'),
-                querent_id=reading.get('querent_id'),
+                querent_ids=reading.get('querent_ids'),
             )
 
         querent_ids = [int(q) for q in (data.get('querent_ids') or [])]

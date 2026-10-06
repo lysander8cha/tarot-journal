@@ -6,6 +6,21 @@ import json
 from datetime import datetime
 
 
+def parse_querent_ids(raw) -> list:
+    """A reading's querent_ids column (JSON text, list or NULL) as a list."""
+    if isinstance(raw, list):
+        return raw
+    try:
+        ids = json.loads(raw) if raw else []
+    except ValueError:
+        return []
+    return [int(i) for i in ids] if isinstance(ids, list) else []
+
+
+def _querent_ids_json(ids):
+    return json.dumps([int(i) for i in ids]) if ids else None
+
+
 class EntriesMixin:
     """Mixin providing journal entry, spread, and reading operations."""
 
@@ -174,7 +189,8 @@ class EntriesMixin:
                 params.append(f'%{card_name}%')
             if querent_id:
                 # The matching reading must be this querent's (or unmarked).
-                conditions.append('(er.querent_id IS NULL OR er.querent_id = ?)')
+                conditions.append('(er.querent_ids IS NULL OR EXISTS '
+                                  '(SELECT 1 FROM json_each(er.querent_ids) WHERE value = ?))')
                 params.append(querent_id)
 
         if query:
@@ -303,15 +319,15 @@ class EntriesMixin:
                          deck_id: int = None, deck_name: str = None,
                          cartomancy_type: str = None, cards_used: list = None,
                          position_order: int = 0, notes: str = None,
-                         querent_id: int = None):
+                         querent_ids: list = None):
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO entry_readings
-            (entry_id, spread_id, spread_name, deck_id, deck_name, cartomancy_type, cards_used, position_order, notes, querent_id)
+            (entry_id, spread_id, spread_name, deck_id, deck_name, cartomancy_type, cards_used, position_order, notes, querent_ids)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (entry_id, spread_id, spread_name, deck_id, deck_name,
               cartomancy_type, json.dumps(cards_used) if cards_used else None, position_order, notes,
-              querent_id))
+              _querent_ids_json(querent_ids)))
         self._touch_entry(cursor, entry_id)
         self._commit()
         return cursor.lastrowid
@@ -335,15 +351,31 @@ class EntriesMixin:
                 cards_used = r.get('cards_used')
                 cursor.execute('''
                     INSERT INTO entry_readings
-                    (entry_id, spread_id, spread_name, deck_id, deck_name, cartomancy_type, cards_used, position_order, notes, querent_id)
+                    (entry_id, spread_id, spread_name, deck_id, deck_name, cartomancy_type, cards_used, position_order, notes, querent_ids)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (entry_id, r.get('spread_id'), r.get('spread_name'),
                       r.get('deck_id'), r.get('deck_name'), r.get('cartomancy_type'),
                       json.dumps(cards_used) if cards_used else None,
-                      r.get('position_order', i), r.get('notes'), r.get('querent_id')))
+                      r.get('position_order', i), r.get('notes'),
+                      _querent_ids_json(r.get('querent_ids'))))
                 new_ids.append(cursor.lastrowid)
             self._touch_entry(cursor, entry_id)
         return new_ids
+
+    def _prune_reading_querents(self, cursor, where: str, args: tuple,
+                                keep: set = None, drop: int = None):
+        """Rewrite readings' querent lists, keeping only ids in `keep`
+        and/or removing `drop`; an emptied list becomes NULL."""
+        rows = cursor.execute(
+            f'SELECT id, querent_ids FROM entry_readings '
+            f'WHERE querent_ids IS NOT NULL AND {where}', args).fetchall()
+        for row in rows:
+            ids = parse_querent_ids(row['querent_ids'])
+            kept = [i for i in ids
+                    if (keep is None or i in keep) and i != drop]
+            if kept != ids:
+                cursor.execute('UPDATE entry_readings SET querent_ids = ? WHERE id = ?',
+                               (_querent_ids_json(kept), row['id']))
 
     # === Follow-up Notes ===
     def get_follow_up_notes(self, entry_id: int):
@@ -412,12 +444,9 @@ class EntriesMixin:
                     INSERT INTO entry_querents (entry_id, profile_id, position)
                     VALUES (?, ?, ?)
                 ''', (entry_id, profile_id, position))
-            # A reading can only be "for" someone still on the entry.
-            cursor.execute(
-                'UPDATE entry_readings SET querent_id = NULL WHERE entry_id = ? '
-                'AND querent_id IS NOT NULL AND querent_id NOT IN '
-                '(SELECT profile_id FROM entry_querents WHERE entry_id = ?)',
-                (entry_id, entry_id))
+            # A reading can only be for people still on the entry.
+            self._prune_reading_querents(cursor, 'entry_id = ?', (entry_id,),
+                                         keep=set(profile_ids))
             self._touch_entry(cursor, entry_id)
             # Also update the legacy querent_id column (first querent or NULL)
             legacy_querent_id = profile_ids[0] if profile_ids else None

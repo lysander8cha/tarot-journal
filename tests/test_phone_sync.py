@@ -323,12 +323,12 @@ def test_push_entry_keeps_reading_querent(client, db):
     token = _pair(client)
     payload = _push_payload(db, deck_id, card_id)
     payload['querent_ids'] = [anna, ben]
-    payload['readings'] = [dict(payload.pop('reading'), querent_id=ben)]
+    payload['readings'] = [dict(payload.pop('reading'), querent_ids=[ben])]
     res = client.post('/api/sync/push-entry', json=payload,
                       headers=_auth(token), environ_overrides=LAN)
     assert res.status_code == 201
     reading = dict(db.get_entry_readings(res.get_json()['id'])[0])
-    assert reading['querent_id'] == ben
+    assert json.loads(reading['querent_ids']) == [ben]
 
 
 def test_push_entry_is_idempotent(client, db):

@@ -1425,10 +1425,10 @@ class CoreMixin:
         # notes field per reading alongside the entry-level notes)
         self._ensure_columns(cursor, 'entry_readings', {
             'notes': 'TEXT',
-            # Which of the entry's querents this reading is for (NULL =
-            # the whole entry's querents). Entry-level querents stay the
-            # source of truth for filters and stats.
-            'querent_id': 'INTEGER',
+            # JSON list of the profiles this reading is for (NULL = all of
+            # the entry's querents). The entry's querent list stays the
+            # union, so filters and stats keep working off it.
+            'querent_ids': 'TEXT',
         })
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_entry_tags_entry_id ON entry_tags(entry_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_entry_tags_tag_id ON entry_tags(tag_id)')

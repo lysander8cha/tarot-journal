@@ -32,6 +32,7 @@ from backend.utils import row_to_dict
 from backend.routes.entries import _enrich_cards_with_ids, _parse_cards_used
 from backend.services.richtext import convert_content_to_html
 from database.correspondences import CORRESPONDENCE_FIELDS
+from database.entries import parse_querent_ids
 
 
 # Custom fields stored before the card_custom_fields table existed
@@ -331,7 +332,8 @@ def _hydrate_entry_for_pdf(db, entry_id: int, cache=None) -> dict | None:
     entry['querents'] = [row_to_dict(q) for q in querents]
     names = {q['id']: q['name'] for q in entry['querents']}
     for rd in entry['readings']:
-        rd['querent_name'] = names.get(rd.get('querent_id'))
+        rd['querent_names'] = [names[i] for i in parse_querent_ids(rd.get('querent_ids'))
+                               if i in names]
     if entry.get('querent_id'):
         q = db.get_profile(entry['querent_id'])
         entry['querent_name'] = q['name'] if q else None

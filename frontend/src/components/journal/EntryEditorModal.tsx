@@ -148,14 +148,10 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
   const [readerId, setReaderId] = useState<number | null>(null);
   const [content, setContent] = useState('');
   const [readings, setReadings] = useState<ReadingData[]>([]);
-  // Per-reading "For" picker: only meaningful with several querents
-  // and several readings; choices are limited to the entry's querents.
-  const chosenQuerents = querentIds
-    .map(id => profiles.find(p => p.id === id))
-    .filter((p): p is Profile => !!p);
-  const readingQuerentOptions = chosenQuerents.length > 1 && readings.length > 1
-    ? chosenQuerents.map(p => ({ id: p.id, name: p.name }))
-    : undefined;
+  // "Multiple querents": each reading picks its own querent(s) and the
+  // entry's querent list is saved as their union. Otherwise the entry
+  // has a single querent (querentIds[0]).
+  const [multiQuerent, setMultiQuerent] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -178,6 +174,11 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
       const querentIdsVal = existingEntry.querents?.length
         ? existingEntry.querents.map(q => q.id)
         : (existingEntry.querent_id ? [existingEntry.querent_id] : []);
+      // Older entries listed several querents without saying whose
+      // reading was whose: open those in multiple mode, each reading
+      // assigned to everyone, so nothing is lost on save.
+      const multiVal = querentIdsVal.length > 1
+        || existingEntry.readings.some(r => r.querent_ids?.length);
       const readerVal = existingEntry.reader_id;
       const contentVal = existingEntry.content || '';
       const tagIds = existingEntry.tags.map(t => t.id);
@@ -191,7 +192,7 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
         deck_name: r.deck_name,
         cartomancy_type: r.cartomancy_type,
         notes: r.notes ?? '',
-        querent_id: r.querent_id ?? null,
+        querent_ids: r.querent_ids?.length ? r.querent_ids : (multiVal ? querentIdsVal : []),
         cards: (r.cards_used || []).map((c, idx) => ({
           name: c.name,
           reversed: c.reversed || false,
@@ -209,6 +210,7 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
       setLocationLat(locationLatVal);
       setLocationLon(locationLonVal);
       setQuerentIds(querentIdsVal);
+      setMultiQuerent(multiVal);
       setReaderId(readerVal);
       setContent(contentVal);
       setSelectedTagIds(tagIds);
@@ -274,7 +276,7 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
           deck_name: r.deck_name,
           cartomancy_type: r.cartomancy_type,
           notes: '',
-          querent_id: r.querent_id ?? null,
+          querent_ids: r.querent_ids ?? [],
           cards: (r.cards_used || []).map((c, idx) => ({
             name: '',
             reversed: false,
@@ -292,6 +294,8 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
       setLocationLon(null);
       setReaderId(readerVal);
       setQuerentIds(querentIdsVal);
+      setMultiQuerent(querentIdsVal.length > 1
+        || readingsVal.some(r => r.querent_ids?.length));
       setContent('');
       setReadings(readingsVal);
       setSelectedTagIds(tagIdsVal);
@@ -374,12 +378,40 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
     });
   };
 
+  const toggleMultiQuerent = () => {
+    if (multiQuerent) {
+      // Keep the first person anyone was reading for as the one querent.
+      const first = readings.flatMap(r => r.querent_ids ?? []).find(id => id > 0)
+        ?? querentIds.find(id => id > 0);
+      setQuerentIds(first ? [first] : []);
+      setReadings(prev => prev.map(r => ({ ...r, querent_ids: [] })));
+    } else {
+      // Start every reading with the current querent.
+      const current = querentIds.filter(id => id > 0).slice(0, 1);
+      setReadings(prev => prev.map(r => ({
+        ...r,
+        querent_ids: r.querent_ids?.length ? r.querent_ids : current,
+      })));
+    }
+    setMultiQuerent(m => !m);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const datetime = readingDatetime;
-      // Filter out any unselected querents (value 0)
-      const validQuerentIds = querentIds.filter(id => id > 0);
+      // Skip completely untouched reading slots (no spread, no deck,
+      // no cards) — new entries open with one ready to fill, and an
+      // unused slot shouldn't save an empty reading.
+      const meaningfulReadings = readings.filter(
+        r => r.spread_id || r.deck_id || r.cards.some(c => c.name.trim()),
+      );
+      const readingQuerents = (r: ReadingData) => [...new Set((r.querent_ids ?? []).filter(id => id > 0))];
+      // Entry querents: the union of the readings' in multiple mode,
+      // else the single chosen one (unselected rows are 0).
+      const validQuerentIds = multiQuerent
+        ? [...new Set(meaningfulReadings.flatMap(readingQuerents))]
+        : querentIds.filter(id => id > 0).slice(0, 1);
 
       const entryData = {
         title: title.trim() || undefined,
@@ -409,19 +441,12 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
       // unlike the old delete-then-re-add flow, which could destroy
       // them if a save failed partway.
       let readingsFailed = false;
-      // Skip completely untouched reading slots (no spread, no deck,
-      // no cards) — new entries open with one ready to fill, and an
-      // unused slot shouldn't save an empty reading.
-      const meaningfulReadings = readings.filter(
-        r => r.spread_id || r.deck_id || r.cards.some(c => c.name.trim()),
-      );
       try {
         await replaceEntryReadings(savedEntryId, meaningfulReadings.map((r, i) => ({
           spread_id: r.spread_id,
           spread_name: r.spread_name || undefined,
           notes: (r.notes || '').replace(/<[^>]*>/g, '').trim() ? r.notes : undefined,
-          // Only keep a "for" that's still one of the entry's querents.
-          querent_id: r.querent_id && validQuerentIds.includes(r.querent_id) ? r.querent_id : null,
+          querent_ids: multiQuerent ? readingQuerents(r) : undefined,
           deck_id: r.deck_id,
           deck_name: r.deck_name || undefined,
           cartomancy_type: r.cartomancy_type || undefined,
@@ -642,46 +667,34 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
             <div className="entry-editor__row">
               <div className="entry-editor__field entry-editor__field--querents">
                 <div className="entry-editor__querents-header">
-                  <label className="entry-editor__label">Querent{querentIds.length !== 1 ? 's' : ''}</label>
+                  <label className="entry-editor__label">Querent</label>
                   <button
                     type="button"
                     className="entry-editor__add-querent-btn"
-                    onClick={() => setQuerentIds(prev => [...prev, 0])}
+                    onClick={toggleMultiQuerent}
+                    title={multiQuerent
+                      ? 'Back to one querent for the whole entry'
+                      : 'Choose a querent on each reading instead'}
                   >
-                    + Add Querent
+                    {multiQuerent ? 'One querent' : 'Multiple querents'}
                   </button>
                 </div>
-                {querentIds.length === 0 ? (
-                  <div className="entry-editor__no-querents">No querents selected</div>
-                ) : (
-                  <div className="entry-editor__querents-list">
-                    {querentIds.map((qId, idx) => (
-                      <div key={idx} className="entry-editor__querent-row">
-                        <select
-                          value={qId || ''}
-                          onChange={(e) => {
-                            const newId = e.target.value ? Number(e.target.value) : 0;
-                            setQuerentIds(prev => prev.map((id, i) => i === idx ? newId : id));
-                          }}
-                        >
-                          <option value="">Select a profile...</option>
-                          {profiles
-                            .filter((p) => !p.hidden || p.id === qId)
-                            .map((p) => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                        </select>
-                        <button
-                          type="button"
-                          className="entry-editor__remove-querent-btn"
-                          onClick={() => setQuerentIds(prev => prev.filter((_, i) => i !== idx))}
-                          title="Remove querent"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
+                {multiQuerent ? (
+                  <div className="entry-editor__no-querents">
+                    Multiple querents — choose them on each reading below.
                   </div>
+                ) : (
+                  <select
+                    value={querentIds.find(id => id > 0) ?? ''}
+                    onChange={(e) => setQuerentIds(e.target.value ? [Number(e.target.value)] : [])}
+                  >
+                    <option value="">None</option>
+                    {profiles
+                      .filter((p) => !p.hidden || querentIds.includes(p.id))
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                  </select>
                 )}
               </div>
               <div className="entry-editor__field">
@@ -715,7 +728,7 @@ export default function EntryEditorModal({ entryId, templateEntryId, open, onClo
                 value={reading}
                 showNotes={readings.length > 1
                   || !!(reading.notes || '').replace(/<[^>]*>/g, '').trim()}
-                querentOptions={readingQuerentOptions}
+                querentProfiles={multiQuerent ? profiles : undefined}
                 onChange={(data) => updateReading(idx, data)}
                 onRemove={() => removeReading(idx)}
                 defaultDecks={defaults?.default_decks}
