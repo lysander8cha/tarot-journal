@@ -63,6 +63,18 @@ export const DEFAULT_SUIT_NAMES: Record<string, Record<string, string>> = {
     clubs: "Clubs",
     spades: "Spades",
   },
+  "Playing Cards (Latin-suited)": {
+    coins: "Coins",
+    cups: "Cups",
+    swords: "Swords",
+    batons: "Batons",
+  },
+  "Playing Cards (German-suited)": {
+    hearts: "Hearts",
+    bells: "Bells",
+    leaves: "Leaves",
+    acorns: "Acorns",
+  },
 };
 
 // Default court card names

@@ -352,9 +352,16 @@ def test_suits_and_ranks_endpoints(client):
         'King of Wands', 'King of Cups', 'King of Swords', 'King of Pentacles'}
 
     ranks = client.get(
-        '/api/reference/ranks?type=Playing Cards (Spanish)').get_json()
+        '/api/reference/ranks?type=Playing Cards (Latin-suited)').get_json()
     labels = [r['rank'] for r in ranks['ranks']]
-    assert labels[-3:] == ['Sota', 'Caballo', 'Rey']
+    assert labels[-3:] == ['Knave', 'Knight', 'King']
+    ranks = client.get(
+        '/api/reference/ranks?type=Playing Cards (German-suited)').get_json()
+    labels = [r['rank'] for r in ranks['ranks']]
+    assert labels[0] == 'Ace' and labels[-4:] == ['Unter', 'Ober', 'King', 'Weli']
+    suits = client.get(
+        '/api/reference/suits?type=Playing Cards (German-suited)').get_json()
+    assert [s['name'] for s in suits['suits']] == ['Acorns', 'Hearts', 'Leaves', 'Bells']
 
     # Numerology no longer bundles ranks; it lists the type tabs
     num = client.get('/api/reference/numerology').get_json()

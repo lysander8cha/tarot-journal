@@ -9,6 +9,8 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from card_metadata import GERMAN_SUITED, LATIN_SUITED
+
 logger = logging.getLogger(__name__)
 
 
@@ -714,18 +716,6 @@ I_CHING_HEXAGRAMS = {
 
 # Canonical card-list constants, hoisted so both the preset-mapping
 # builders and the per-type metadata helpers share one source of truth.
-SPANISH_RANKS = [
-    ('As', 1), ('Dos', 2), ('Tres', 3), ('Cuatro', 4),
-    ('Cinco', 5), ('Seis', 6), ('Siete', 7), ('Ocho', 8),
-    ('Nueve', 9), ('Sota', 10), ('Caballo', 11), ('Rey', 12),
-]
-SPANISH_SUITS = [
-    ('Oros', 'o'),
-    ('Copas', 'c'),
-    ('Espadas', 'e'),
-    ('Bastos', 'b'),
-]
-
 BELLINE_NAMES = [
     'Destiny', "The Man's Star", "The Woman's Star", 'Nativity',
     'Success', 'Elevation', 'Honours',
@@ -772,42 +762,89 @@ SIBILLA_BY_SUIT = {
     ],
 }
 
-# Playing Cards (Spanish) (50 cards): 4 suits × 12 ranks + 2 Comodines.
-# Each card is keyed by single-letter suit prefix + 2-digit rank, by
-# full suit + rank, by name-only ("asdeoros"), and by global positional
-# index ("01"-"50"). The single-letter prefixes follow Spanish names
-# (Oros / Copas / Espadas / Bastos); "j1"/"j2" map the Comodines.
-def _build_spanish_playing_cards() -> dict:
+# Regional suited packs (Latin: Spanish/Italian/Portuguese; German).
+# Each pack keeps its native card names ("Sota de Copas", "Fante di
+# Coppe", "Herz Ober") and links to its family's shared English
+# archetypes ("Knave of Cups"). Suits: (native, English, filename
+# prefixes); ranks: (native, English, printed numbers). Files are
+# named prefix + printed number ("c10", "d08") or by global position.
+_SP_SUITS = [('Oros', 'Coins', 'o'), ('Copas', 'Cups', 'c'),
+             ('Espadas', 'Swords', 'e'), ('Bastos', 'Batons', 'b')]
+_SP_PIPS = [('As', 'Ace', (1,)), ('Dos', 'Two', (2,)), ('Tres', 'Three', (3,)),
+            ('Cuatro', 'Four', (4,)), ('Cinco', 'Five', (5,)), ('Seis', 'Six', (6,)),
+            ('Siete', 'Seven', (7,))]
+_SP_COURTS = [('Sota', 'Knave', (10,)), ('Caballo', 'Knight', (11,)), ('Rey', 'King', (12,))]
+_IT_SUITS = [('Denari', 'Coins', 'd'), ('Coppe', 'Cups', 'c'),
+             ('Spade', 'Swords', 's'), ('Bastoni', 'Batons', 'b')]
+_IT_RANKS = [('Asso', 'Ace', (1,)), ('Due', 'Two', (2,)), ('Tre', 'Three', (3,)),
+             ('Quattro', 'Four', (4,)), ('Cinque', 'Five', (5,)), ('Sei', 'Six', (6,)),
+             ('Sette', 'Seven', (7,)), ('Fante', 'Knave', (8,)),
+             ('Cavallo', 'Knight', (9,)), ('Re', 'King', (10,))]
+_DE_SUITS = [('Herz', 'Hearts', 'h'), ('Schellen', 'Bells', 's'),
+             ('Laub', 'Leaves', ('l', 'g')), ('Eichel', 'Acorns', 'e')]
+_DE_RANKS = [('Sieben', 'Seven', (7,)), ('Acht', 'Eight', (8,)), ('Neun', 'Nine', (9,)),
+             ('Zehn', 'Ten', (10,)), ('Unter', 'Unter', (11,)), ('Ober', 'Ober', (12,)),
+             ('König', 'King', (13,)), ('Ass', 'Ace', (1, 14))]
+
+REGIONAL_PATTERNS = {
+    'Spanish Playing Cards (50 cards)': {
+        'type': LATIN_SUITED,
+        'name': '{rank} de {suit}', 'suits': _SP_SUITS,
+        'ranks': _SP_PIPS + [('Ocho', 'Eight', (8,)), ('Nueve', 'Nine', (9,))] + _SP_COURTS,
+        'extras': [('Comodín', 'Joker', None, ('j', 'joker', 'comodin', 'comodín'), 2)],
+    },
+    'Spanish Playing Cards (40 cards)': {
+        'type': LATIN_SUITED,
+        'name': '{rank} de {suit}', 'suits': _SP_SUITS, 'ranks': _SP_PIPS + _SP_COURTS,
+        'extras': [],
+    },
+    'Italian Playing Cards (40 cards)': {
+        'type': LATIN_SUITED,
+        'name': '{rank} di {suit}', 'suits': _IT_SUITS, 'ranks': _IT_RANKS, 'extras': [],
+    },
+    'German Playing Cards (32 cards)': {
+        'type': GERMAN_SUITED,
+        'name': '{suit} {rank}', 'suits': _DE_SUITS, 'ranks': _DE_RANKS,
+        'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
+    },
+    'German Playing Cards (36 cards)': {
+        'type': GERMAN_SUITED,
+        'name': '{suit} {rank}', 'suits': _DE_SUITS,
+        'ranks': [('Sechs', 'Six', (6,))] + _DE_RANKS,
+        'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
+    },
+}
+
+
+def _build_regional(pattern: dict):
+    """(filename mappings, native name -> metadata) for one pack."""
     mappings: dict[str, str] = {}
+    meta: dict[str, dict] = {}
     pos = 1
-    for suit_name, prefix in SPANISH_SUITS:
-        for rank_name, rank_num in SPANISH_RANKS:
-            card = f'{rank_name} de {suit_name}'
-            # 'o01' / 'oros01' / 'asdeoros' / 'asoros' variants
-            mappings[f'{prefix}{rank_num:02d}'] = card
-            mappings[f'{prefix}{rank_num}'] = card
-            mappings[f'{suit_name.lower()}{rank_num:02d}'] = card
-            mappings[f'{suit_name.lower()}{rank_num}'] = card
-            mappings[f'{rank_name.lower()}de{suit_name.lower()}'] = card
-            mappings[f'{rank_name.lower()}{suit_name.lower()}'] = card
-            # Global positional index across the whole deck (01-48).
-            mappings[f'{pos:02d}'] = card
-            mappings[str(pos)] = card
-            pos += 1
-    # Comodines (jokers). Index continues 49/50; also accept j1/j2 and
-    # comodin1/comodin2.
-    for i in (1, 2):
-        mappings[f'j{i}'] = 'Comodín'
-        mappings[f'joker{i}'] = 'Comodín'
-        mappings[f'comodin{i}'] = 'Comodín'
-        mappings[f'comodín{i}'] = 'Comodín'
-        mappings[f'{pos:02d}'] = 'Comodín'
-        mappings[str(pos)] = 'Comodín'
+
+    def add(card, keys, archetype, rank, suit):
+        nonlocal pos
+        for k in (*keys, f'{pos:02d}', str(pos), card.lower().replace(' ', '')):
+            mappings.setdefault(k, card)
+        meta[card] = {'archetype': archetype, 'rank': rank, 'suit': suit, 'sort_order': pos}
         pos += 1
-    return mappings
+
+    for native_suit, suit, prefixes in pattern['suits']:
+        for native_rank, rank, numbers in pattern['ranks']:
+            card = pattern['name'].format(rank=native_rank, suit=native_suit)
+            keys = [f'{pre}{n:02d}' for pre in (*prefixes, native_suit.lower()) for n in numbers]
+            keys += [f'{pre}{n}' for pre in (*prefixes, native_suit.lower()) for n in numbers]
+            add(card, keys, f'{rank} of {suit}', rank, suit)
+    for card, archetype, suit, key_words, copies in pattern['extras']:
+        for i in range(1, copies + 1):
+            keys = [f'{w}{i}' for w in key_words] + ([*key_words] if copies == 1 else [])
+            add(card, keys, archetype, archetype, suit)
+        # Physical copies share one archetype; every copy sorts as the first.
+        meta[card]['sort_order'] = pos - copies
+    return mappings, meta
 
 
-SPANISH_PLAYING_CARDS = _build_spanish_playing_cards()
+REGIONAL_PACKS = {name: _build_regional(p) for name, p in REGIONAL_PATTERNS.items()}
 
 
 # Oracle Belline (53 cards). Positional 01-53 + ascii-fold name keys.
@@ -1144,22 +1181,6 @@ def _build_grand_etteilla() -> dict:
 GRAND_ETTEILLA = _build_grand_etteilla()
 
 
-def _build_spanish_lookup() -> dict:
-    out: dict[str, tuple] = {}
-    pos = 1
-    for suit_name, _prefix in SPANISH_SUITS:
-        for rank_name, _rank_num in SPANISH_RANKS:
-            card = f'{rank_name} de {suit_name}'
-            out[card] = (rank_name, suit_name, pos)
-            pos += 1
-    # Comodín shares one archetype slot; positional indices 49/50 are
-    # handled at import time via variant_order. Both physical Comodines
-    # resolve through the same archetype here.
-    out['Comodín'] = ('Comodín', None, pos)
-    return out
-
-
-SPANISH_NAME_TO_RSP = _build_spanish_lookup()
 
 
 # Built-in presets
@@ -1405,12 +1426,20 @@ BUILTIN_PRESETS = {
         "suit_names": {},
         "card_back_patterns": DEFAULT_CARD_BACK_PATTERNS
     },
-    "Spanish Playing Cards (50 cards)": {
-        "type": "Playing Cards (Spanish)",
-        "mappings": SPANISH_PLAYING_CARDS,
-        "description": "Naipes Españoles — 4 suits (Oros, Copas, Espadas, Bastos) × 12 ranks (As, Dos…Sota, Caballo, Rey) + 2 Comodines.",
-        "suit_names": {"oros": "Oros", "copas": "Copas", "espadas": "Espadas", "bastos": "Bastos"},
-        "card_back_patterns": DEFAULT_CARD_BACK_PATTERNS
+    **{
+        name: {
+            "type": pattern['type'],
+            "mappings": REGIONAL_PACKS[name][0],
+            "description": (
+                f"{len(REGIONAL_PACKS[name][1])} cards in "
+                + ", ".join(n for n, _e, _p in pattern['suits'])
+                + "; native card names, linked to the shared "
+                + f"{pattern['type']} archetypes. Files: suit letter + printed number "
+                + "(" + ", ".join(f"{p[0]}=" + n for n, _e, p in pattern['suits']) + ") or 01, 02…"),
+            "suit_names": {e.lower(): n for n, e, _p in pattern['suits']},
+            "card_back_patterns": DEFAULT_CARD_BACK_PATTERNS,
+        }
+        for name, pattern in REGIONAL_PATTERNS.items()
     },
     "Oracle Belline (53 cards)": {
         "type": "Oracle Belline",
@@ -1800,8 +1829,8 @@ class ImportPresets:
             return self._get_playing_card_metadata(card_name, sort_order)
         elif preset_type == 'I Ching':
             return self._get_iching_metadata(card_name, sort_order)
-        elif preset_type == 'Playing Cards (Spanish)':
-            return self._get_spanish_playing_card_metadata(card_name, sort_order)
+        elif preset_type in (LATIN_SUITED, GERMAN_SUITED):
+            return self._get_regional_metadata(card_name, sort_order, preset_name)
         elif preset_type == 'Oracle Belline':
             return self._get_belline_metadata(card_name, sort_order)
         elif preset_type == 'Vera Sibilla Italiana / Sibilla della Zingara':
@@ -1854,8 +1883,8 @@ class ImportPresets:
             return self._get_playing_card_metadata_by_position(sort_order)
         elif preset_type == 'I Ching':
             return self._get_iching_metadata_by_position(sort_order)
-        elif preset_type == 'Playing Cards (Spanish)':
-            return self._get_spanish_playing_card_metadata_by_position(sort_order)
+        elif preset_type in (LATIN_SUITED, GERMAN_SUITED):
+            return self._get_regional_metadata_by_position(sort_order, preset_name)
         elif preset_type == 'Oracle Belline':
             return self._get_belline_metadata_by_position(sort_order)
         elif preset_type == 'Vera Sibilla Italiana / Sibilla della Zingara':
@@ -2999,21 +3028,17 @@ class ImportPresets:
             'sort_order': sort_order
         }
 
-    def _get_spanish_playing_card_metadata(self, card_name: str, sort_order: int) -> dict:
-        """Metadata for a Spanish Playing Card (As de Oros … Rey de
-        Bastos, plus Comodín). The canonical archetype name is the card
-        name itself."""
-        rsp = SPANISH_NAME_TO_RSP.get(card_name)
-        if rsp:
-            rank, suit, pos = rsp
-            return {
-                'archetype': card_name,
-                'rank': rank,
-                'suit': suit,
-                'sort_order': pos if pos else sort_order,
-            }
-        # Unknown card — fall through to oracle-style defaults.
-        return {'archetype': card_name, 'rank': None, 'suit': None, 'sort_order': sort_order}
+    def _get_regional_metadata(self, card_name: str, sort_order: int,
+                               preset_name: str = None) -> dict:
+        """Metadata for a Latin- or German-suited pack card ("Sota de
+        Copas" -> Knave of Cups). Custom presets of these types fall
+        back to any built-in pack that knows the name."""
+        packs = ([REGIONAL_PACKS[preset_name]] if preset_name in REGIONAL_PACKS
+                 else REGIONAL_PACKS.values())
+        for _mappings, meta in packs:
+            if card_name in meta:
+                return dict(meta[card_name])
+        return {'archetype': None, 'rank': None, 'suit': None, 'sort_order': sort_order}
 
     def _get_belline_metadata(self, card_name: str, sort_order: int) -> dict:
         """Metadata for an Oracle Belline card. Position (1-53) is the
@@ -3060,25 +3085,12 @@ class ImportPresets:
             }
         return {'archetype': card_name, 'rank': None, 'suit': None, 'sort_order': sort_order}
 
-    def _get_spanish_playing_card_metadata_by_position(self, position: int) -> dict:
-        """Spanish deck metadata for positions 1-50.
-
-        1-48: rank within each suit (As/Dos/.../Rey de Oros, Copas,
-        Espadas, Bastos in that order). 49-50: Comodín.
-        """
-        if 1 <= position <= 48:
-            suit_idx = (position - 1) // 12
-            rank_idx = (position - 1) % 12
-            rank_name, _rank_num = SPANISH_RANKS[rank_idx]
-            suit_name, _prefix = SPANISH_SUITS[suit_idx]
-            return {
-                'archetype': f'{rank_name} de {suit_name}',
-                'rank': rank_name,
-                'suit': suit_name,
-                'sort_order': position,
-            }
-        if position in (49, 50):
-            return {'archetype': 'Comodín', 'rank': 'Comodín', 'suit': None, 'sort_order': position}
+    def _get_regional_metadata_by_position(self, position: int, preset_name: str) -> dict:
+        _mappings, meta = REGIONAL_PACKS.get(
+            preset_name, REGIONAL_PACKS['Spanish Playing Cards (50 cards)'])
+        for m in meta.values():
+            if m['sort_order'] == position:
+                return dict(m)
         return {'archetype': None, 'rank': None, 'suit': None, 'sort_order': position}
 
     def _get_belline_metadata_by_position(self, position: int) -> dict:

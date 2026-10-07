@@ -166,7 +166,12 @@ SNAPSHOT_TABLES = {
     'spreads': ('SELECT id, name, description, positions, deck_slots, '
                 'allowed_deck_types, archived, favorite FROM spreads'),
     'profiles': 'SELECT id, name, hidden, querent_only FROM profiles',
-    'decks': ('SELECT id, name, favorite, correspondence_system_id '
+    # cartomancy_type: the deck's (first) type, so the phone can tell
+    # apart archetypes that share a name across types.
+    'decks': ('SELECT id, name, favorite, correspondence_system_id, '
+              '(SELECT MIN(t.name) FROM deck_type_assignments a '
+              ' JOIN cartomancy_types t ON t.id = a.type_id '
+              ' WHERE a.deck_id = decks.id) AS cartomancy_type '
               'FROM decks WHERE favorite = 1'),
     'cards': ('SELECT c.id, c.deck_id, c.name, c.archetype, c.rank, '
               'c.suit, c.card_order, c.notes, c.custom_fields '

@@ -735,10 +735,16 @@ class CorrespondencesMixin:
         # Resolve the card's archetype ID so we can check deck-level overrides
         archetype_id = None
         if card['archetype']:
-            cursor.execute(
-                'SELECT id FROM card_archetypes WHERE name = ? LIMIT 1',
-                (card['archetype'],)
-            )
+            # Names repeat across types ("Knight of Cups" is Tarot and
+            # Latin-suited): prefer the deck's own type.
+            cursor.execute('''
+                SELECT id FROM card_archetypes WHERE name = ?
+                ORDER BY cartomancy_type IN (
+                    SELECT t.name FROM deck_type_assignments a
+                    JOIN cartomancy_types t ON t.id = a.type_id
+                    WHERE a.deck_id = ?) DESC, id
+                LIMIT 1
+            ''', (card['archetype'], card['deck_id']))
             arch_row = cursor.fetchone()
             if arch_row:
                 archetype_id = arch_row['id']

@@ -235,15 +235,18 @@ struct CardInfoView: View {
         try? appModel.database.writer.read { db in
             var archetypeName: String? = fallbackName
             var deckSystemId: Int64?
+            var deckType: String?
             if let cardId,
                let row = try Row.fetchOne(db, sql: """
                    SELECT c.name, c.archetype, c.rank, c.suit, c.notes,
                           c.custom_fields, d.name AS deck_name,
-                          d.correspondence_system_id AS system_id
+                          d.correspondence_system_id AS system_id,
+                          d.cartomancy_type AS deck_type
                    FROM cards c LEFT JOIN decks d ON d.id = c.deck_id
                    WHERE c.id = ?
                    """, arguments: [cardId]) {
                 deckSystemId = row["system_id"]
+                deckType = row["deck_type"]
                 name = row["name"]
                 archetype = row["archetype"]
                 rank = row["rank"]
@@ -294,14 +297,16 @@ struct CardInfoView: View {
             }
             // Resolve the archetype (for correspondences and the
             // reference link). Names are matched as-is; when several
-            // types share a name, prefer the one with source texts.
+            // types share a name, prefer the deck's own type, then the
+            // one with source texts.
             if let archetypeName {
                 if let row = try Row.fetchOne(db, sql: """
                     SELECT ca.id, ca.cartomancy_type FROM card_archetypes ca
                     LEFT JOIN source_entries se ON se.archetype_id = ca.id
                     WHERE ca.name = ? COLLATE NOCASE
-                    GROUP BY ca.id ORDER BY COUNT(se.id) DESC LIMIT 1
-                    """, arguments: [archetypeName]) {
+                    GROUP BY ca.id
+                    ORDER BY ca.cartomancy_type IS ? DESC, COUNT(se.id) DESC LIMIT 1
+                    """, arguments: [archetypeName, deckType]) {
                     archetypeId = row["id"]
                     cardType = row["cartomancy_type"]
                 }

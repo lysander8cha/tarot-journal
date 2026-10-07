@@ -156,3 +156,53 @@ def test_legacy_deck_type_column_upgrade_keeps_favorite(tmp_path):
     assert 'cartomancy_type_id' not in deck
     assert [t['name'] for t in db.get_types_for_deck(deck['id'])] == ['Tarot']
     db.close()
+
+
+def test_spanish_type_becomes_latin_family(tmp_path):
+    """A database from before the suit families (type 'Playing Cards
+    (Spanish)', archetypes 'Sota de Copas') upgrades in place: same
+    archetype ids, English names, deck cards relinked, names kept."""
+    from database import Database
+    from card_metadata import LATIN_SUITED, SPANISH_TO_LATIN_RANK, SPANISH_TO_LATIN_SUIT
+    path = str(tmp_path / 'old.db')
+    db = Database(db_path=path)
+    c = db.conn.cursor()
+    # Wind the fresh database back to the old Spanish shape.
+    to_sp_rank = {v: k for k, v in SPANISH_TO_LATIN_RANK.items()}
+    to_sp_suit = {v: k for k, v in SPANISH_TO_LATIN_SUIT.items()}
+    for row in c.execute('SELECT id, rank, suit FROM card_archetypes '
+                         'WHERE cartomancy_type = ?', (LATIN_SUITED,)).fetchall():
+        if row['suit']:
+            r, s = to_sp_rank[row['rank']], to_sp_suit[row['suit']]
+            c.execute('UPDATE card_archetypes SET name=?, rank=?, suit=? WHERE id=?',
+                      (f'{r} de {s}', r, s, row['id']))
+        else:
+            c.execute("UPDATE card_archetypes SET name='Comodín', rank='Comodín' WHERE id=?",
+                      (row['id'],))
+    c.execute("UPDATE card_archetypes SET cartomancy_type='Playing Cards (Spanish)' "
+              "WHERE cartomancy_type=?", (LATIN_SUITED,))
+    c.execute("UPDATE cartomancy_types SET name='Playing Cards (Spanish)' WHERE name=?",
+              (LATIN_SUITED,))
+    sota_id = c.execute("SELECT id FROM card_archetypes WHERE name='Sota de Copas'").fetchone()[0]
+    tid = c.execute("SELECT id FROM cartomancy_types WHERE name='Playing Cards (Spanish)'").fetchone()[0]
+    c.execute("INSERT INTO decks (name, suit_names) VALUES ('Fournier', ?)",
+              (json.dumps({'oros': 'Oros', 'copas': 'Copas', 'espadas': 'Espadas', 'bastos': 'Bastos'}),))
+    deck_id = c.lastrowid
+    c.execute('INSERT INTO deck_type_assignments (deck_id, type_id) VALUES (?, ?)', (deck_id, tid))
+    c.execute("INSERT INTO cards (deck_id, name, archetype, rank, suit) "
+              "VALUES (?, 'Sota de Copas', 'Sota de Copas', 'Sota', 'Copas')", (deck_id,))
+    c.execute("UPDATE settings SET value='' WHERE key='latin_suited_rename_done'")
+    db.conn.commit()
+    db.close()
+
+    db = Database(db_path=path)
+    c = db.conn.cursor()
+    assert c.execute("SELECT name, rank, suit FROM card_archetypes WHERE id=?",
+                     (sota_id,)).fetchone()[:] == ('Knave of Cups', 'Knave', 'Cups')
+    assert c.execute("SELECT COUNT(*) FROM card_archetypes WHERE cartomancy_type=?",
+                     (LATIN_SUITED,)).fetchone()[0] == 49
+    assert c.execute("SELECT name, archetype FROM cards WHERE deck_id=?",
+                     (deck_id,)).fetchone()[:] == ('Sota de Copas', 'Knave of Cups')
+    assert json.loads(c.execute("SELECT suit_names FROM decks WHERE id=?",
+                                (deck_id,)).fetchone()[0])['coins'] == 'Oros'
+    db.close()

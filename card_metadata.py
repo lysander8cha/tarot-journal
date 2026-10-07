@@ -266,3 +266,50 @@ PLAYING_CARD_RANK_ALIASES: Dict[str, Tuple[str, int]] = {
     'queen': ('Queen', 12), 'q': ('Queen', 12),
     'king': ('King', 13), 'k': ('King', 13),
 }
+
+
+# =============================================================================
+# REGIONAL SUIT FAMILIES
+# =============================================================================
+# Decks that share a suit system share one set of English-named
+# archetypes; each deck keeps its own native card names (As de Oros,
+# Asso di Denari, Herz Ober) and links to these.
+
+LATIN_SUITED = 'Playing Cards (Latin-suited)'    # Spanish, Italian, Portuguese
+GERMAN_SUITED = 'Playing Cards (German-suited)'
+
+LATIN_SUITS = ['Coins', 'Cups', 'Swords', 'Batons']
+LATIN_RANKS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
+               'Eight', 'Nine', 'Knave', 'Knight', 'King']
+GERMAN_SUITS = ['Hearts', 'Bells', 'Leaves', 'Acorns']
+GERMAN_RANKS = ['Ace', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+                'Unter', 'Ober', 'King']
+
+
+def family_archetypes(cartomancy_type: str) -> list:
+    """(name, rank, suit) for every archetype in a suit family, in
+    seed order: suit-major, then the family's extra cards."""
+    if cartomancy_type == LATIN_SUITED:
+        cards = [(f'{r} of {s}', r, s) for s in LATIN_SUITS for r in LATIN_RANKS]
+        return cards + [('Joker', 'Joker', None)]
+    if cartomancy_type == GERMAN_SUITED:
+        cards = [(f'{r} of {s}', r, s) for s in GERMAN_SUITS for r in GERMAN_RANKS]
+        # The Weli: an extra Bells card in Bavarian/Salzburg packs.
+        return cards + [('Weli', 'Weli', 'Bells')]
+    return []
+
+
+# The old "Playing Cards (Spanish)" archetypes ("As de Oros") became
+# the Latin family's English ones ("Ace of Coins").
+SPANISH_TO_LATIN_SUIT = {'Oros': 'Coins', 'Copas': 'Cups',
+                         'Espadas': 'Swords', 'Bastos': 'Batons'}
+SPANISH_TO_LATIN_RANK = dict(zip(
+    ['As', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete',
+     'Ocho', 'Nueve', 'Sota', 'Caballo', 'Rey'], LATIN_RANKS))
+
+
+if __name__ == '__main__':
+    assert len(family_archetypes(LATIN_SUITED)) == 49
+    assert len(family_archetypes(GERMAN_SUITED)) == 37
+    assert SPANISH_TO_LATIN_RANK['Sota'] == 'Knave'
+    print('ok')

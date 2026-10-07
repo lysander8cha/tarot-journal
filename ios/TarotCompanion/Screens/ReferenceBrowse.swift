@@ -322,7 +322,7 @@ struct CardsGroupView: View {
 /// Deck types with the preferred builtins first, like the desktop.
 func orderedDeckTypes(_ types: [String]) -> [String] {
     let preferred = ["Tarot", "Petit Lenormand", "Playing Cards",
-                     "Playing Cards (Spanish)", "Oracle"]
+                     "Playing Cards (Latin-suited)", "Playing Cards (German-suited)", "Oracle"]
     let head = preferred.filter { types.contains($0) }
     let tail = types.filter { !preferred.contains($0) }.sorted()
     return head + tail

@@ -22,7 +22,7 @@ const SUB_TABS: { id: SubTabId; label: string }[] = [
 // Anything in cartomancy_types not on this list is skipped from the dropdown.
 const SUPPORTED_TYPES = [
   'Tarot', 'Petit Lenormand', 'Playing Cards', 'Kipper', 'I Ching',
-  'Playing Cards (Spanish)', 'Oracle Belline', 'Vera Sibilla Italiana / Sibilla della Zingara', 'Sibylle des Salons / Sibilla Indovina',
+  'Playing Cards (Latin-suited)', 'Playing Cards (German-suited)', 'Oracle Belline', 'Vera Sibilla Italiana / Sibilla della Zingara', 'Sibylle des Salons / Sibilla Indovina',
 ];
 
 interface ArchetypesViewerProps {

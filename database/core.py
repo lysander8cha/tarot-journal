@@ -3,12 +3,16 @@ Database core: initialization, migrations, and transaction management.
 """
 
 import atexit
+import json
 import os
 import re
 import sqlite3
 import threading
 from contextlib import contextmanager
 
+from card_metadata import (
+    GERMAN_SUITED, LATIN_SUITED, SPANISH_TO_LATIN_RANK, SPANISH_TO_LATIN_SUIT,
+    family_archetypes)
 from logger_config import get_logger
 
 # Built-in cartomancy types, re-seeded (INSERT OR IGNORE) on every
@@ -17,7 +21,7 @@ from logger_config import get_logger
 # and deleting types NOT in this list.
 DEFAULT_TYPE_NAMES = [
     'Tarot', 'Petit Lenormand', 'Kipper', 'Playing Cards', 'Oracle', 'I Ching',
-    'Playing Cards (Spanish)', 'Oracle Belline',
+    LATIN_SUITED, GERMAN_SUITED, 'Oracle Belline',
     'Vera Sibilla Italiana / Sibilla della Zingara',
     'Sibylle des Salons / Sibilla Indovina',
 ]
@@ -668,6 +672,9 @@ class CoreMixin:
              'Vera Sibilla Italiana', 'Vera Sibilla Italiana / Sibilla della Zingara'),
             # Distinguishes the classic 36-card deck from Grand Jeu.
             ('petit_lenormand_rename_done', 'Lenormand', 'Petit Lenormand'),
+            # Spanish became the first member of the Latin-suited family
+            # (Spanish, Italian, Portuguese packs share its archetypes).
+            ('latin_suited_rename_done', 'Playing Cards (Spanish)', LATIN_SUITED),
         ]
         for flag, old_name, new_name in type_renames:
             if self.get_setting(flag) == 'true':
@@ -675,6 +682,14 @@ class CoreMixin:
             cursor.execute('UPDATE cartomancy_types SET name = ? WHERE name = ?',
                            (new_name, old_name))
             self._rename_type_name_references(cursor, old_name, new_name)
+            # The default-deck setting is keyed by the lowercased type name.
+            cursor.execute(
+                'UPDATE settings SET key = ? WHERE key = ? AND NOT EXISTS '
+                '(SELECT 1 FROM settings WHERE key = ?)',
+                (f'default_deck_{new_name.lower()}', f'default_deck_{old_name.lower()}',
+                 f'default_deck_{new_name.lower()}'))
+            if new_name == LATIN_SUITED:
+                self._spanish_archetypes_to_latin(cursor)
             if new_name == 'Petit Lenormand':
                 # The default-deck setting is keyed by the type name.
                 cursor.execute(
@@ -1520,13 +1535,14 @@ class CoreMixin:
             # skips existing rows.
             cursor.execute(
                 "SELECT COUNT(*) FROM card_archetypes WHERE cartomancy_type "
-                "IN ('I Ching', 'Kipper', 'Playing Cards (Spanish)', "
+                "IN ('I Ching', 'Kipper', ?, ?, "
                 "    'Oracle Belline', 'Vera Sibilla Italiana / Sibilla della Zingara', "
-                "    'Sibylle des Salons / Sibilla Indovina')"
+                "    'Sibylle des Salons / Sibilla Indovina')",
+                (LATIN_SUITED, GERMAN_SUITED)
             )
-            # 64 I Ching + 36 Kipper + 49 Spanish + 53 Belline + 52 Sibilla
-            # + 52 Sibylle = 306
-            if cursor.fetchone()[0] < 306:
+            # 64 I Ching + 36 Kipper + 49 Latin + 37 German + 53 Belline
+            # + 52 Sibilla + 52 Sibylle = 343
+            if cursor.fetchone()[0] < 343:
                 self._seed_card_archetypes(cursor)
 
         # Seed correspondence systems if table is empty
@@ -2036,6 +2052,64 @@ class CoreMixin:
         from database.correspondence_migration import run_correspondence_migration
         run_correspondence_migration(self)
 
+    def _spanish_archetypes_to_latin(self, cursor):
+        """Rename the old Spanish archetypes ("Sota de Copas") to the
+        Latin family's English ones ("Knave of Cups") in place, so every
+        id-keyed link (meanings, correspondences, combinations) carries
+        over. Cards keep their Spanish names; their archetype/rank/suit
+        strings follow. Runs right after the type rename."""
+        deck_ids = ('SELECT a.deck_id FROM deck_type_assignments a '
+                    'JOIN cartomancy_types t ON t.id = a.type_id WHERE t.name = ?')
+        rows = cursor.execute(
+            'SELECT id, name, rank, suit FROM card_archetypes WHERE cartomancy_type = ?',
+            (LATIN_SUITED,)).fetchall()
+        for row in rows:
+            if row['name'] == 'Comodín':
+                new = ('Joker', 'Joker', None)
+            elif row['rank'] in SPANISH_TO_LATIN_RANK and row['suit'] in SPANISH_TO_LATIN_SUIT:
+                rank = SPANISH_TO_LATIN_RANK[row['rank']]
+                suit = SPANISH_TO_LATIN_SUIT[row['suit']]
+                new = (f'{rank} of {suit}', rank, suit)
+            else:
+                continue  # a user-added archetype: leave it be
+            cursor.execute(
+                "UPDATE card_archetypes SET name = ?, rank = ?, suit = ?, "
+                "card_type = 'latin-playing' WHERE id = ?", (*new, row['id']))
+            cursor.execute(
+                f'UPDATE cards SET archetype = ?, rank = ?, suit = ? '
+                f'WHERE archetype = ? AND deck_id IN ({deck_ids})',
+                (*new, row['name'], LATIN_SUITED))
+        # Suit/rank-keyed notes and correspondence group labels.
+        renames = {**SPANISH_TO_LATIN_SUIT, **SPANISH_TO_LATIN_RANK, 'Comodín': 'Joker'}
+        for old, new in renames.items():
+            try:
+                cursor.execute(
+                    'UPDATE OR IGNORE entity_source_notes SET entity_key = ? WHERE entity_key = ?',
+                    (f'{LATIN_SUITED}::{new}', f'{LATIN_SUITED}::{old}'))
+            except sqlite3.OperationalError:
+                pass  # table not created yet on very old databases
+            for table in ('correspondence_assignments', 'deck_correspondence_overrides'):
+                try:
+                    cursor.execute(
+                        f'UPDATE {table} SET source_group = ? WHERE source_group = ? '
+                        f'AND archetype_id IN (SELECT id FROM card_archetypes '
+                        f'WHERE cartomancy_type = ?)', (new, old, LATIN_SUITED))
+                except sqlite3.OperationalError:
+                    pass
+        # Deck suit names were keyed by the Spanish suit; re-key to the
+        # family's English slots, keeping the deck's own display names.
+        for deck in cursor.execute(
+                f'SELECT id, suit_names FROM decks WHERE suit_names IS NOT NULL '
+                f'AND id IN ({deck_ids})', (LATIN_SUITED,)).fetchall():
+            try:
+                names = json.loads(deck['suit_names'])
+            except ValueError:
+                continue
+            rekeyed = {SPANISH_TO_LATIN_SUIT.get(k.capitalize(), k).lower(): v
+                       for k, v in names.items()}
+            cursor.execute('UPDATE decks SET suit_names = ? WHERE id = ?',
+                           (json.dumps(rekeyed), deck['id']))
+
     def _seed_card_archetypes(self, cursor):
         """Seed the card_archetypes table with standard archetypes for all types.
 
@@ -2108,19 +2182,13 @@ class CoreMixin:
         # (1 = traditionally Red, 2 = traditionally Black).
         archetypes.append(('Joker', 'Playing Cards', 'Joker', None, 'playing'))
 
-        # Playing Cards (Spanish) (50): 4 suits × 12 ranks + 1 Comodín
-        # archetype (the deck's 2 physical Comodines share the slot via
-        # variant_order, same pattern as the consolidated Joker above).
-        spanish_ranks = [
-            'As', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete',
-            'Ocho', 'Nueve', 'Sota', 'Caballo', 'Rey',
-        ]
-        spanish_suits = ['Oros', 'Copas', 'Espadas', 'Bastos']
-        for suit in spanish_suits:
-            for rank in spanish_ranks:
-                name = f'{rank} de {suit}'
-                archetypes.append((name, 'Playing Cards (Spanish)', rank, suit, 'spanish-playing'))
-        archetypes.append(('Comodín', 'Playing Cards (Spanish)', 'Comodín', None, 'spanish-playing'))
+        # Regional suit families (Latin: Spanish/Italian/Portuguese packs;
+        # German). Decks use whatever subset they have; 2 physical
+        # jokers share the one Joker via variant_order.
+        for family, card_type in ((LATIN_SUITED, 'latin-playing'),
+                                  (GERMAN_SUITED, 'german-playing')):
+            for name, rank, suit in family_archetypes(family):
+                archetypes.append((name, family, rank, suit, card_type))
 
         # Oracle Belline (53). Position is the card's traditional number,
         # used as the rank string.

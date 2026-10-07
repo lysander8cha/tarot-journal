@@ -16,7 +16,9 @@ import { confirmDialog } from '../../common/ConfirmDialog';
 const SUIT_KEYS_BY_TYPE: Record<string, string[]> = {
   Tarot: ['wands', 'cups', 'swords', 'pentacles'],
   'Playing Cards': ['hearts', 'diamonds', 'clubs', 'spades'],
-  Lenormand: ['hearts', 'diamonds', 'clubs', 'spades'],
+  'Petit Lenormand': ['hearts', 'diamonds', 'clubs', 'spades'],
+  'Playing Cards (Latin-suited)': ['coins', 'cups', 'swords', 'batons'],
+  'Playing Cards (German-suited)': ['hearts', 'bells', 'leaves', 'acorns'],
 };
 
 export default function ImportPresetsSection() {

@@ -239,6 +239,14 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v10-deck-type") { db in
+            // Lets the card screen pick the right archetype when two
+            // types share a name (Tarot vs Latin-suited "Knight of Cups").
+            try db.alter(table: "decks") { t in
+                t.add(column: "cartomancy_type", .text)
+            }
+        }
+
         try migrator.migrate(writer)
     }
 
