@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from card_metadata import GERMAN_SUITED, LATIN_SUITED
+from card_metadata import GERMAN_SUITED, LATIN_SUITED, SWISS_SUITED
 
 logger = logging.getLogger(__name__)
 
@@ -785,6 +785,13 @@ _DE_SUITS = [('Herz', 'Hearts', 'h'), ('Schellen', 'Bells', 's'),
 _DE_RANKS = [('Sieben', 'Seven', (7,)), ('Acht', 'Eight', (8,)), ('Neun', 'Nine', (9,)),
              ('Zehn', 'Ten', (10,)), ('Unter', 'Unter', (11,)), ('Ober', 'Ober', (12,)),
              ('König', 'King', (13,)), ('Ass', 'Ace', (1, 14))]
+# Swiss (Jass): file letters follow the English suits (Rosen r,
+# Schellen b, Schilten s, Eicheln a) since two German names start with S.
+_CH_SUITS = [('Rosen', 'Roses', 'r'), ('Schellen', 'Bells', 'b'),
+             ('Schilten', 'Shields', 's'), ('Eicheln', 'Acorns', 'a')]
+_CH_RANKS = [('Sechs', 'Six', (6,)), ('Sieben', 'Seven', (7,)), ('Acht', 'Eight', (8,)),
+             ('Neun', 'Nine', (9,)), ('Banner', 'Banner', (10,)), ('Under', 'Under', (11,)),
+             ('Ober', 'Ober', (12,)), ('König', 'King', (13,)), ('Ass', 'Ace', (1, 14))]
 
 REGIONAL_PATTERNS = {
     'Spanish Playing Cards (50 cards)': {
@@ -812,6 +819,10 @@ REGIONAL_PATTERNS = {
         'name': '{suit} {rank}', 'suits': _DE_SUITS,
         'ranks': [('Sechs', 'Six', (6,))] + _DE_RANKS,
         'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
+    },
+    'Swiss Playing Cards (36 cards)': {
+        'type': SWISS_SUITED,
+        'name': '{suit} {rank}', 'suits': _CH_SUITS, 'ranks': _CH_RANKS, 'extras': [],
     },
 }
 
@@ -1829,7 +1840,7 @@ class ImportPresets:
             return self._get_playing_card_metadata(card_name, sort_order)
         elif preset_type == 'I Ching':
             return self._get_iching_metadata(card_name, sort_order)
-        elif preset_type in (LATIN_SUITED, GERMAN_SUITED):
+        elif preset_type in (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED):
             return self._get_regional_metadata(card_name, sort_order, preset_name)
         elif preset_type == 'Oracle Belline':
             return self._get_belline_metadata(card_name, sort_order)
@@ -1883,7 +1894,7 @@ class ImportPresets:
             return self._get_playing_card_metadata_by_position(sort_order)
         elif preset_type == 'I Ching':
             return self._get_iching_metadata_by_position(sort_order)
-        elif preset_type in (LATIN_SUITED, GERMAN_SUITED):
+        elif preset_type in (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED):
             return self._get_regional_metadata_by_position(sort_order, preset_name)
         elif preset_type == 'Oracle Belline':
             return self._get_belline_metadata_by_position(sort_order)

@@ -192,6 +192,9 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
   const GERMAN_SUIT_DEFAULTS: Record<string, string> = {
     hearts: 'Hearts', bells: 'Bells', leaves: 'Leaves', acorns: 'Acorns'
   };
+  const SWISS_SUIT_DEFAULTS: Record<string, string> = {
+    roses: 'Roses', bells: 'Bells', shields: 'Shields', acorns: 'Acorns'
+  };
   const COURT_CARD_DEFAULTS: Record<string, string> = {
     page: 'Page', knight: 'Knight', queen: 'Queen', king: 'King'
   };
@@ -249,6 +252,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
     if (hasTarot) return TAROT_SUIT_DEFAULTS;
     if (selectedTypeNames.some(n => n.includes('latin-suited'))) return LATIN_SUIT_DEFAULTS;
     if (selectedTypeNames.some(n => n.includes('german-suited'))) return GERMAN_SUIT_DEFAULTS;
+    if (selectedTypeNames.some(n => n.includes('swiss-suited'))) return SWISS_SUIT_DEFAULTS;
     if (hasPlayingCards) return PLAYING_SUIT_DEFAULTS;
     return TAROT_SUIT_DEFAULTS; // fallback
   };

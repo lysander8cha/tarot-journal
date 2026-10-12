@@ -3,8 +3,9 @@
  *
  * The user reads with Latin-suited decks (Cups, Swords, Pentacles,
  * Wands — including Spanish and Italian variants), French-suited
- * ones (Hearts, Spades, Diamonds, Clubs) and German-suited ones
- * (Hearts, Leaves, Bells, Acorns). Suit statistics can render
+ * ones (Hearts, Spades, Diamonds, Clubs), German-suited ones
+ * (Hearts, Leaves, Bells, Acorns) and Swiss-suited ones (Roses,
+ * Shields, Bells, Acorns). Suit statistics can render
  * "separate" (each tradition's names as their own rows — the raw
  * data) or "paired" (equivalents merged: "Cups / Hearts").
  *
@@ -17,10 +18,10 @@ export type SuitViewMode = 'separate' | 'paired';
 export const SUIT_VIEW_STORAGE_KEY = 'tj-suit-view-mode';
 
 const PAIRS: [string, string[]][] = [
-  ['Cups / Hearts', ['cups', 'hearts', 'copas', 'coppe', 'herz', 'coupes', 'chalices', 'cœurs', 'coeurs']],
-  ['Swords / Spades', ['swords', 'spades', 'espadas', 'spade', 'leaves', 'laub', 'grün', 'gras', 'épées', 'epees', 'piques']],
+  ['Cups / Hearts', ['cups', 'hearts', 'copas', 'coppe', 'herz', 'roses', 'rosen', 'coupes', 'chalices', 'cœurs', 'coeurs']],
+  ['Swords / Spades', ['swords', 'spades', 'espadas', 'spade', 'leaves', 'laub', 'grün', 'gras', 'shields', 'schilten', 'épées', 'epees', 'piques']],
   ['Pentacles / Diamonds', ['pentacles', 'diamonds', 'oros', 'coins', 'denari', 'bells', 'schellen', 'disks', 'discs', 'deniers', 'carreaux']],
-  ['Wands / Clubs', ['wands', 'clubs', 'bastos', 'batons', 'bastoni', 'acorns', 'eichel', 'bâtons', 'staves', 'trèfles', 'trefles']],
+  ['Wands / Clubs', ['wands', 'clubs', 'bastos', 'batons', 'bastoni', 'acorns', 'eichel', 'eicheln', 'bâtons', 'staves', 'trèfles', 'trefles']],
 ];
 
 const LOOKUP = new Map<string, string>();

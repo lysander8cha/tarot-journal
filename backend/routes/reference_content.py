@@ -350,8 +350,9 @@ _RANK_ORDER = {
     'two': 2, 'dos': 2, 'three': 3, 'tres': 3, 'four': 4, 'cuatro': 4,
     'five': 5, 'cinco': 5, 'six': 6, 'seis': 6, 'seven': 7, 'siete': 7,
     'eight': 8, 'ocho': 8, 'nine': 9, 'nueve': 9, 'ten': 10, 'diez': 10,
+    'banner': 10,
     'page': 11, 'jack': 11, 'sota': 11, 'fante': 11, 'knave': 11,
-    'valet': 11, 'princess': 11, 'unter': 11,
+    'valet': 11, 'princess': 11, 'unter': 11, 'under': 11,
     'ober': 13,
     'knight': 12, 'caballo': 12, 'cavallo': 12, 'cavalier': 12, 'prince': 12,
     'queen': 13, 'dame': 13, 'regina': 13, 'reina': 13,
@@ -391,8 +392,8 @@ def _is_court_rank(label):
 # (runic aetts, custom types) follow alphabetically.
 _SUIT_ORDER = {
     'wands': 0, 'clubs': 0, 'bastos': 0, 'batons': 0, 'acorns': 0,
-    'cups': 1, 'hearts': 1, 'copas': 1,
-    'swords': 2, 'spades': 2, 'espadas': 2, 'leaves': 2,
+    'cups': 1, 'hearts': 1, 'copas': 1, 'roses': 1,
+    'swords': 2, 'spades': 2, 'espadas': 2, 'leaves': 2, 'shields': 2,
     'pentacles': 3, 'diamonds': 3, 'oros': 3, 'coins': 3, 'bells': 3,
 }
 

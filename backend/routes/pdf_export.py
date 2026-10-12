@@ -595,10 +595,10 @@ def _card_categories(card: dict) -> tuple[str | None, str | None]:
 
 # Latin/French/German suit equivalents — mirror of frontend utils/suitPairing.ts.
 _SUIT_PAIRS = {
-    'Cups / Hearts': ['cups', 'hearts', 'copas', 'coppe', 'herz', 'coupes', 'chalices', 'cœurs', 'coeurs'],
-    'Swords / Spades': ['swords', 'spades', 'espadas', 'spade', 'leaves', 'laub', 'grün', 'gras', 'épées', 'epees', 'piques'],
+    'Cups / Hearts': ['cups', 'hearts', 'copas', 'coppe', 'herz', 'roses', 'rosen', 'coupes', 'chalices', 'cœurs', 'coeurs'],
+    'Swords / Spades': ['swords', 'spades', 'espadas', 'spade', 'leaves', 'laub', 'grün', 'gras', 'shields', 'schilten', 'épées', 'epees', 'piques'],
     'Pentacles / Diamonds': ['pentacles', 'diamonds', 'oros', 'coins', 'denari', 'bells', 'schellen', 'disks', 'discs', 'deniers', 'carreaux'],
-    'Wands / Clubs': ['wands', 'clubs', 'bastos', 'batons', 'bastoni', 'acorns', 'eichel', 'bâtons', 'staves', 'trèfles', 'trefles'],
+    'Wands / Clubs': ['wands', 'clubs', 'bastos', 'batons', 'bastoni', 'acorns', 'eichel', 'eicheln', 'bâtons', 'staves', 'trèfles', 'trefles'],
 }
 _SUIT_PAIR_LOOKUP = {
     name: label for label, names in _SUIT_PAIRS.items() for name in names

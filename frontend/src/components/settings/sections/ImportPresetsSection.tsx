@@ -19,6 +19,7 @@ const SUIT_KEYS_BY_TYPE: Record<string, string[]> = {
   'Petit Lenormand': ['hearts', 'diamonds', 'clubs', 'spades'],
   'Playing Cards (Latin-suited)': ['coins', 'cups', 'swords', 'batons'],
   'Playing Cards (German-suited)': ['hearts', 'bells', 'leaves', 'acorns'],
+  'Playing Cards (Swiss-suited)': ['roses', 'bells', 'shields', 'acorns'],
 };
 
 export default function ImportPresetsSection() {

@@ -26,6 +26,7 @@ export const SUPPORTED_COMBINATION_TYPES = [
   'Playing Cards',
   'Playing Cards (Latin-suited)',
   'Playing Cards (German-suited)',
+  'Playing Cards (Swiss-suited)',
   'Kipper',
   'Vera Sibilla Italiana / Sibilla della Zingara', 'Sibylle des Salons / Sibilla Indovina',
 ] as const;

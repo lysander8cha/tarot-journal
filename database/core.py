@@ -12,7 +12,7 @@ from contextlib import contextmanager
 
 from card_metadata import (
     GERMAN_SUITED, LATIN_SUITED, SPANISH_TO_LATIN_RANK, SPANISH_TO_LATIN_SUIT,
-    family_archetypes)
+    SWISS_SUITED, family_archetypes)
 from logger_config import get_logger
 
 # Built-in cartomancy types, re-seeded (INSERT OR IGNORE) on every
@@ -21,7 +21,7 @@ from logger_config import get_logger
 # and deleting types NOT in this list.
 DEFAULT_TYPE_NAMES = [
     'Tarot', 'Petit Lenormand', 'Kipper', 'Playing Cards', 'Oracle', 'I Ching',
-    LATIN_SUITED, GERMAN_SUITED, 'Oracle Belline',
+    LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED, 'Oracle Belline',
     'Vera Sibilla Italiana / Sibilla della Zingara',
     'Sibylle des Salons / Sibilla Indovina',
 ]
@@ -1535,14 +1535,14 @@ class CoreMixin:
             # skips existing rows.
             cursor.execute(
                 "SELECT COUNT(*) FROM card_archetypes WHERE cartomancy_type "
-                "IN ('I Ching', 'Kipper', ?, ?, "
+                "IN ('I Ching', 'Kipper', ?, ?, ?, "
                 "    'Oracle Belline', 'Vera Sibilla Italiana / Sibilla della Zingara', "
                 "    'Sibylle des Salons / Sibilla Indovina')",
-                (LATIN_SUITED, GERMAN_SUITED)
+                (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED)
             )
-            # 64 I Ching + 36 Kipper + 49 Latin + 37 German + 53 Belline
-            # + 52 Sibilla + 52 Sibylle = 343
-            if cursor.fetchone()[0] < 343:
+            # 64 I Ching + 36 Kipper + 49 Latin + 37 German + 36 Swiss
+            # + 53 Belline + 52 Sibilla + 52 Sibylle = 379
+            if cursor.fetchone()[0] < 379:
                 self._seed_card_archetypes(cursor)
 
         # Seed correspondence systems if table is empty
@@ -2183,10 +2183,11 @@ class CoreMixin:
         archetypes.append(('Joker', 'Playing Cards', 'Joker', None, 'playing'))
 
         # Regional suit families (Latin: Spanish/Italian/Portuguese packs;
-        # German). Decks use whatever subset they have; 2 physical
+        # German; Swiss). Decks use whatever subset they have; 2 physical
         # jokers share the one Joker via variant_order.
         for family, card_type in ((LATIN_SUITED, 'latin-playing'),
-                                  (GERMAN_SUITED, 'german-playing')):
+                                  (GERMAN_SUITED, 'german-playing'),
+                                  (SWISS_SUITED, 'swiss-playing')):
             for name, rank, suit in family_archetypes(family):
                 archetypes.append((name, family, rank, suit, card_type))
 

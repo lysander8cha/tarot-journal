@@ -277,6 +277,7 @@ PLAYING_CARD_RANK_ALIASES: Dict[str, Tuple[str, int]] = {
 
 LATIN_SUITED = 'Playing Cards (Latin-suited)'    # Spanish, Italian, Portuguese
 GERMAN_SUITED = 'Playing Cards (German-suited)'
+SWISS_SUITED = 'Playing Cards (Swiss-suited)'      # Jass packs
 
 LATIN_SUITS = ['Coins', 'Cups', 'Swords', 'Batons']
 LATIN_RANKS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
@@ -284,6 +285,9 @@ LATIN_RANKS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
 GERMAN_SUITS = ['Hearts', 'Bells', 'Leaves', 'Acorns']
 GERMAN_RANKS = ['Ace', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
                 'Unter', 'Ober', 'King']
+SWISS_SUITS = ['Roses', 'Bells', 'Shields', 'Acorns']
+SWISS_RANKS = ['Ace', 'Six', 'Seven', 'Eight', 'Nine', 'Banner',
+               'Under', 'Ober', 'King']
 
 
 def family_archetypes(cartomancy_type: str) -> list:
@@ -296,6 +300,8 @@ def family_archetypes(cartomancy_type: str) -> list:
         cards = [(f'{r} of {s}', r, s) for s in GERMAN_SUITS for r in GERMAN_RANKS]
         # The Weli: an extra Bells card in Bavarian/Salzburg packs.
         return cards + [('Weli', 'Weli', 'Bells')]
+    if cartomancy_type == SWISS_SUITED:
+        return [(f'{r} of {s}', r, s) for s in SWISS_SUITS for r in SWISS_RANKS]
     return []
 
 
@@ -311,5 +317,6 @@ SPANISH_TO_LATIN_RANK = dict(zip(
 if __name__ == '__main__':
     assert len(family_archetypes(LATIN_SUITED)) == 49
     assert len(family_archetypes(GERMAN_SUITED)) == 37
+    assert len(family_archetypes(SWISS_SUITED)) == 36
     assert SPANISH_TO_LATIN_RANK['Sota'] == 'Knave'
     print('ok')

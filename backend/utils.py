@@ -8,6 +8,7 @@ from flask import request, jsonify
 # Preferred display order for cartomancy types
 TYPE_ORDER = ['Tarot', 'Petit Lenormand', 'Oracle', 'Playing Cards',
               'Playing Cards (Latin-suited)', 'Playing Cards (German-suited)',
+              'Playing Cards (Swiss-suited)',
               'Kipper', 'I Ching']
 
 # Maximum allowed length for text fields (prevents abuse on a local app)
