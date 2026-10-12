@@ -462,12 +462,35 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
 
   const visibleFields = customFields.filter(f => !f.deleted);
 
+  // Shown above the card and in the footer, so long cards don't need
+  // a scroll to the bottom to move on (moving saves first).
+  const nav = cardIds.length > 1 && (
+    <div className="card-edit__nav">
+      <button
+        disabled={saving || currentIndex <= 0}
+        onClick={() => handleSave(cardIds[currentIndex - 1])}
+      >
+        &lsaquo; Prev
+      </button>
+      <span className="card-edit__nav-position">
+        {currentIndex + 1} / {cardIds.length}
+      </span>
+      <button
+        disabled={saving || currentIndex >= cardIds.length - 1}
+        onClick={() => handleSave(cardIds[currentIndex + 1])}
+      >
+        Next &rsaquo;
+      </button>
+    </div>
+  );
+
   return (
     <Modal open={true} onClose={onClose} width={700} isDirty={isDirty}>
       {isLoading ? (
         <div className="card-edit__loading">Loading...</div>
       ) : card ? (
         <div className="card-edit">
+          {nav && <div className="card-edit__nav-top">{nav}</div>}
           <div className="card-edit__header">
             {card.image_path && (
               <img
@@ -661,25 +684,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
 
           <div className="card-edit__footer">
             {error && <div className="card-edit__error">{error}</div>}
-            {cardIds.length > 1 && (
-              <div className="card-edit__nav">
-                <button
-                  disabled={saving || currentIndex <= 0}
-                  onClick={() => handleSave(cardIds[currentIndex - 1])}
-                >
-                  &lsaquo; Prev
-                </button>
-                <span className="card-edit__nav-position">
-                  {currentIndex + 1} / {cardIds.length}
-                </span>
-                <button
-                  disabled={saving || currentIndex >= cardIds.length - 1}
-                  onClick={() => handleSave(cardIds[currentIndex + 1])}
-                >
-                  Next &rsaquo;
-                </button>
-              </div>
-            )}
+            {nav}
             <div className="card-edit__footer-buttons">
               <ModalCancelButton>Cancel</ModalCancelButton>
               <button
