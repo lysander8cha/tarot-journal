@@ -106,7 +106,10 @@ class CardsMixin:
             if card_category == 'Major Arcana':
                 conditions.append("(c.suit = 'Major Arcana' OR c.suit IS NULL OR c.suit = '' OR c.suit = 'None')")
             elif card_category == 'Court Cards':
-                conditions.append("c.rank IN ('Page', 'Knight', 'Queen', 'King', 'Princess', 'Prince', 'Valet')")
+                # Every deck family's courts: Tarot, French (Jack),
+                # Latin (Knave), German (Unter/Ober), Swiss (Under).
+                conditions.append("c.rank IN ('Page', 'Knight', 'Queen', 'King', 'Princess', 'Prince', "
+                                  "'Valet', 'Jack', 'Knave', 'Unter', 'Ober', 'Under')")
             elif card_category == 'Minor Arcana':
                 conditions.append("(c.suit IS NOT NULL AND c.suit != '' AND c.suit != 'None' AND c.suit != 'Major Arcana')")
 

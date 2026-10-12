@@ -348,18 +348,19 @@ export default function CorrespondencesSection() {
     }
   }
 
-  // Detect group-level patterns (same as Reference view), grouped by category
-  const patternSections = useMemo<PatternCategorySection[]>(() => {
-    if (!systemDetail?.assignments) return [];
-    const patterns = detectGroupPatterns(systemDetail.assignments as CorrespondenceAssignment[]);
-    return patternsByCategory(patterns);
-  }, [systemDetail]);
-
   // === Bulk assign groups ===
   // Curated per-type lists where they exist (Tarot, Lenormand,
   // Playing Cards); every other type derives Suits/Ranks groups from
   // its own archetype data.
   const BULK_GROUPS = getBulkGroups(activeCartomancyType, allArchetypes);
+
+  // Detect group-level patterns (same as Reference view), sectioned by
+  // this type's own groups.
+  const patternSections = useMemo<PatternCategorySection[]>(() => {
+    if (!systemDetail?.assignments) return [];
+    const patterns = detectGroupPatterns(systemDetail.assignments as CorrespondenceAssignment[]);
+    return patternsByCategory(patterns, getBulkGroups(activeCartomancyType, allArchetypes));
+  }, [systemDetail, activeCartomancyType, allArchetypes]);
   const BULK_CATEGORIES = getBulkCategories(BULK_GROUPS);
 
   const getGroupArchetypes = (groupLabel: string): Archetype[] =>

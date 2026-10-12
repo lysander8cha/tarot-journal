@@ -512,12 +512,13 @@ class CorrespondencesMixin:
         cursor = self.conn.cursor()
         report = []
 
-        # Default suit → element fallback used when no system assignment exists
+        # Default suit → element fallback used when no system assignment
+        # exists. Latin-suited packs share the tarot minors' suits.
         DEFAULT_SUIT_ELEMENT = {
-            'Wands': 'Fire',
+            'Wands': 'Fire', 'Batons': 'Fire',
             'Cups': 'Water',
             'Swords': 'Air',
-            'Pentacles': 'Earth',
+            'Pentacles': 'Earth', 'Coins': 'Earth',
         }
 
         for archetype_id in archetype_ids:

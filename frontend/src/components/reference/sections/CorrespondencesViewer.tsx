@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
+  getArchetypes,
   getCorrespondenceSystems,
   getCorrespondenceSystem,
   compareCorrespondenceSystems,
+  type Archetype,
 } from '../../../api/correspondences';
+import { getBulkGroups } from '../../../utils/bulkGroups';
 import type { CorrespondenceSystem, CorrespondenceAssignment } from '../../../types';
 import { CORRESPONDENCE_FIELDS, CORRESPONDENCE_FIELD_LABELS } from '../../../types';
 import { detectGroupPatterns, patternsByCategory, type PatternCategorySection } from '../../../utils/correspondencePatterns';
@@ -92,12 +95,18 @@ export default function CorrespondencesViewer({ onEditCorrespondences }: Corresp
     }
   }
 
-  // Detect group-level patterns, structured by category
+  // The type's archetypes give its suit/rank groups (sections below).
+  const { data: typeArchetypes = [] } = useQuery<Archetype[]>({
+    queryKey: ['archetypes', activeType],
+    queryFn: () => getArchetypes(activeType),
+  });
+
+  // Detect group-level patterns, sectioned by this type's own groups
   const patternSections = useMemo<PatternCategorySection[]>(() => {
     if (!systemDetail?.assignments) return [];
     const patterns = detectGroupPatterns(systemDetail.assignments as CorrespondenceAssignment[]);
-    return patternsByCategory(patterns);
-  }, [systemDetail]);
+    return patternsByCategory(patterns, getBulkGroups(activeType, typeArchetypes));
+  }, [systemDetail, activeType, typeArchetypes]);
 
   const filteredArchetypeIds = [...bySystemRows.keys()].filter(id => {
     if (!filterText) return true;

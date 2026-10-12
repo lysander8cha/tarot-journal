@@ -206,3 +206,24 @@ def test_spanish_type_becomes_latin_family(tmp_path):
     assert json.loads(c.execute("SELECT suit_names FROM decks WHERE id=?",
                                 (deck_id,)).fetchone()[0])['coins'] == 'Oros'
     db.close()
+
+
+def test_suit_families_courts_and_elements(db):
+    """Court filter and the suit→element fallback cover every suit
+    family, not just Tarot (Knave/Unter/Ober/Under/Jack; Coins/Batons)."""
+    from card_metadata import LATIN_SUITED
+    deck_id, _ = make_deck_with_card(db)
+    c = db.conn.cursor()
+    for rank in ('Knave', 'Unter', 'Ober', 'Under', 'Jack', 'Seven'):
+        c.execute('INSERT INTO cards (deck_id, name, rank, suit) VALUES (?, ?, ?, ?)',
+                  (deck_id, f'{rank} card', rank, 'Coins'))
+    db.conn.commit()
+    courts = {r['rank'] for r in db.search_cards(deck_id=deck_id, card_category='Court Cards')}
+    assert {'Knave', 'Unter', 'Ober', 'Under', 'Jack'} <= courts and 'Seven' not in courts
+
+    system_id = db.create_correspondence_system('Latin test', cartomancy_type=LATIN_SUITED)
+    ids = [r['id'] for r in c.execute(
+        "SELECT id FROM card_archetypes WHERE cartomancy_type = ? AND rank = 'Ace'",
+        (LATIN_SUITED,)).fetchall()]
+    report = db.expand_elemental_zodiac(system_id, ids, 'Aces')
+    assert len(ids) == 4 and not any(r.get('skipped') for r in report)
