@@ -19,6 +19,10 @@ def _preview(tmp_path, preset, files, suits=None):
     ('Spanish Playing Cards (50 cards)', 'b09.jpg', 'Nueve de Bastos', 'Nine of Batons'),
     ('German Playing Cards (36 cards)', 'h14.jpg', 'Herz Ass', 'Ace of Hearts'),
     ('German Playing Cards (32 cards)', 'e12.jpg', 'Eichel Ober', 'Ober of Acorns'),
+    ('German Playing Cards (36 cards)', 'b06.jpg', 'Schellen Sechs', 'Six of Bells'),
+    ('German Playing Cards (36 cards)', 'a01.jpg', 'Eichel Ass', 'Ace of Acorns'),
+    ('German Playing Cards (36 cards)', 'l13.jpg', 'Laub König', 'King of Leaves'),
+    ('German Playing Cards (32 cards)', 'h11.jpg', 'Herz Unter', 'Unter of Hearts'),
     ('Swiss Playing Cards (36 cards)', 's10.jpg', 'Schilten Banner', 'Banner of Shields'),
     ('Playing Cards (52 cards)', 'h01.jpg', 'Ace of Hearts', 'Ace of Hearts'),
 ])

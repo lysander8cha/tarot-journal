@@ -780,8 +780,9 @@ _IT_RANKS = [('Asso', 'Ace', (1,)), ('Due', 'Two', (2,)), ('Tre', 'Three', (3,))
              ('Quattro', 'Four', (4,)), ('Cinque', 'Five', (5,)), ('Sei', 'Six', (6,)),
              ('Sette', 'Seven', (7,)), ('Fante', 'Knave', (8,)),
              ('Cavallo', 'Knight', (9,)), ('Re', 'King', (10,))]
-_DE_SUITS = [('Herz', 'Hearts', 'h'), ('Schellen', 'Bells', 's'),
-             ('Laub', 'Leaves', ('l', 'g')), ('Eichel', 'Acorns', 'e')]
+# German: English initials (h, b, l, a) or the German ones (h, s, g, e).
+_DE_SUITS = [('Herz', 'Hearts', 'h'), ('Schellen', 'Bells', ('b', 's')),
+             ('Laub', 'Leaves', ('l', 'g')), ('Eichel', 'Acorns', ('a', 'e'))]
 _DE_RANKS = [('Sieben', 'Seven', (7,)), ('Acht', 'Eight', (8,)), ('Neun', 'Nine', (9,)),
              ('Zehn', 'Ten', (10,)), ('Unter', 'Unter', (11,)), ('Ober', 'Ober', (12,)),
              ('König', 'King', (13,)), ('Ass', 'Ace', (1, 14))]
