@@ -1676,6 +1676,17 @@ class ImportPresets:
         
         return card_name
     
+    @staticmethod
+    def _apply_preset_suit_names(card_name: str, preset: dict,
+                                 custom_suit_names: dict = None) -> str:
+        """Swap a preset's default suit word for the user's edit."""
+        defaults = (preset or {}).get('suit_names') or {}
+        for key, default in defaults.items():
+            custom = (custom_suit_names or {}).get(key)
+            if custom and custom != default:
+                card_name = re.sub(rf'\b{re.escape(default)}\b', custom, card_name)
+        return card_name
+
     def _clean_filename(self, filename: str) -> str:
         """Clean a filename into a readable card name"""
         # Replace separators with spaces
@@ -1796,6 +1807,15 @@ class ImportPresets:
                         metadata = self.get_card_metadata(mapped_name, preset_name, custom_suit_names,
                                                           custom_court_names, archetype_mapping)
                         sort_order = metadata.get('sort_order', 999)
+
+                # Suit names edited in the import dialog rename the
+                # cards. Tarot already did this in map_filename_to_card;
+                # other packs swap the preset's own suit word (Denari ->
+                # Ori, Hearts -> Cœurs) only now, after metadata matched
+                # the original name.
+                if preset_type != 'Tarot':
+                    mapped_name = self._apply_preset_suit_names(
+                        mapped_name, preset, custom_suit_names)
 
                 results.append({
                     'filename': filepath.name,

@@ -33,10 +33,6 @@ export const ARCHETYPE_MAPPING_OPTIONS = [
   "Create new archetypes",
 ];
 
-// Suit keys for different deck types
-export const TAROT_SUITS = ["wands", "cups", "swords", "pentacles"] as const;
-export const PLAYING_SUITS = ["hearts", "diamonds", "clubs", "spades"] as const;
-
 // Default suit names by deck type
 export const DEFAULT_SUIT_NAMES: Record<string, Record<string, string>> = {
   Tarot: {

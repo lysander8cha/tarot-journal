@@ -13,8 +13,6 @@ import {
   ARCHETYPE_MAPPING_OPTIONS,
   DEFAULT_SUIT_NAMES,
   DEFAULT_COURT_NAMES,
-  TAROT_SUITS,
-  PLAYING_SUITS,
 } from '../../constants/importPresets';
 import { useToast } from '../../context/ToastContext';
 import Modal, { ModalCancelButton } from '../common/Modal';
@@ -79,14 +77,6 @@ export default function ImportDeckModal({ onClose, onImported }: ImportDeckModal
       setTypeId(types[0].id);
     }
   }, [typeId, types]);
-
-  // Get current suit keys based on deck type
-  const getSuitKeys = useCallback(() => {
-    if (deckType === 'Petit Lenormand' || deckType === 'Playing Cards') {
-      return PLAYING_SUITS;
-    }
-    return TAROT_SUITS;
-  }, [deckType]);
 
   // Get effective court names based on preset selection
   const getEffectiveCourtNames = useCallback(() => {
@@ -237,7 +227,9 @@ export default function ImportDeckModal({ onClose, onImported }: ImportDeckModal
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron;
   const isTarot = deckType === 'Tarot';
   const showCustomCourtFields = courtPreset === 'Custom...';
-  const suitKeys = getSuitKeys();
+  // Exactly the suits the chosen preset defines (Denari/Coppe/…, Herz/
+  // Schellen/…); none for suitless packs like Kipper or I Ching.
+  const suitKeys = Object.keys(suitNames);
 
   // Track if user has entered any configuration that would be lost
   // Only relevant during 'configure' and 'preview' steps
@@ -326,6 +318,7 @@ export default function ImportDeckModal({ onClose, onImported }: ImportDeckModal
               </div>
 
               {/* Suit Names Section */}
+              {suitKeys.length > 0 && (
               <div className="import-deck__section">
                 <div className="import-deck__section-title">Suit Names</div>
                 <div className="import-deck__suit-grid">
@@ -344,6 +337,7 @@ export default function ImportDeckModal({ onClose, onImported }: ImportDeckModal
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Court Cards Section (Tarot only) */}
               {isTarot && (
