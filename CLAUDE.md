@@ -68,22 +68,36 @@ The legacy wxPython UI (`main.py`, `mixin_*.py`, `ui_library/`, `ui_journal/`, `
 
 ## Card Image Naming Conventions
 
-When renaming card image files for deck folders, use these naming schemes:
+When renaming card image files for deck folders, use these naming schemes (they match the built-in import presets in `import_presets.py`; the import preview shows unmatched files without an archetype). Back images: `back`, `cardback`, `cover`.
 
-**Playing Cards:**
-- h01-h13 for Ace of Hearts through King of Hearts
+**Tarot:**
+- Major Arcana: 00 for The Fool through 21 for The World (RWS: 08 Strength, 11 Justice; Pre-Golden Dawn preset swaps them)
+- Minor Arcana: w01-w14 for Ace through King of Wands (11 Page, 12 Knight, 13 Queen, 14 King)
+- c01-c14 for Cups, s01-s14 for Swords, p01-p14 for Pentacles
+- Thoth: same numbers; p = Disks; courts 11 Princess, 12 Prince, 13 Queen, 14 Knight
+
+**Playing Cards (French suits):**
+- h01-h13 for Ace of Hearts through King of Hearts (11 Jack, 12 Queen, 13 King)
 - c01-c13 for Clubs (same pattern)
 - s01-s13 for Spades
 - d01-d13 for Diamonds
-- j1 and j2 for Jokers
+- j1 and j2 for Jokers (Red, Black)
 
-**Tarot:**
-- Major Arcana: 00 for The Fool through 21 for The World
-- Minor Arcana: w01-w14 for Ace through King of Wands
-- c01-c14 for Cups, s01-s14 for Swords, p01-p14 for Pentacles
+**Regional playing cards** — suit letter + the number printed on the card:
+- Spanish (40/50): o Oros, c Copas, e Espadas, b Bastos; 1-9, 10 Sota, 11 Caballo, 12 Rey; j1/j2 Comodines (the 40-card pack has no 8/9)
+- Italian (40): d Denari, c Coppe, s Spade, b Bastoni; 1-7, 8 Fante, 9 Cavallo, 10 Re
+- German (32/36): h Herz, b Schellen, l Laub, a Eichel; 6/7-10, 11 Unter, 12 Ober, 13 König, Ass = 01 (or 14); Weli = w
+- Swiss (36): r Rosen, b Schellen, s Schilten, a Eicheln; 6-9, 10 Banner, 11 Under, 12 Ober, 13 König, Ass = 01 (or 14)
 
 **Lenormand:**
 - 01-36, starting with Rider and ending with Cross
+- Grand Lenormand (54): h/d/c/s + 01-13 for the playing-card cards; 53 Man, 54 Woman (consultants)
+
+**Kipper:** 01-36 (Main Male … Hope, Great Water)
+
+**Sibillas (52):** h/c/d/s + 01-13 (Ace … King)
+
+**Oracle Belline:** 01-53 · **I Ching:** 01-64 hexagrams, t1-t8 trigrams
 
 **Oracle:**
 - Look for numbers on the card and use those if available

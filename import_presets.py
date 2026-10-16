@@ -634,6 +634,7 @@ PLAYING_CARDS_54.update({
     "joker": "Joker", "joker1": "Red Joker", "joker01": "Red Joker", "redjoker": "Red Joker",
     "joker2": "Black Joker", "joker02": "Black Joker", "blackjoker": "Black Joker",
     "jr": "Red Joker", "jb": "Black Joker",
+    "j1": "Red Joker", "j01": "Red Joker", "j2": "Black Joker", "j02": "Black Joker",
 })
 
 # I Ching - 64 Hexagrams
@@ -1498,7 +1499,7 @@ BUILTIN_PRESETS = {
     "Playing Cards with Jokers (54 cards)": {
         "type": "Playing Cards",
         "mappings": PLAYING_CARDS_54,
-        "description": "Playing card deck with 2 jokers (52 cards + Red Joker + Black Joker)",
+        "description": "Playing card deck with 2 jokers (52 cards + Red Joker + Black Joker). Jokers: j1/j2, jr/jb or joker1/joker2.",
         "suit_names": {"hearts": "Hearts", "diamonds": "Diamonds", "clubs": "Clubs", "spades": "Spades"},
         "card_back_patterns": DEFAULT_CARD_BACK_PATTERNS
     },
@@ -2136,10 +2137,10 @@ class ImportPresets:
                 'suit': suit,
                 'sort_order': position
             }
-        elif position == 53:
-            return {'archetype': 'Red Joker', 'rank': '53', 'suit': 'Joker', 'sort_order': 53}
-        elif position == 54:
-            return {'archetype': 'Black Joker', 'rank': '54', 'suit': 'Joker', 'sort_order': 54}
+        elif position in (53, 54):
+            # Both jokers share the one Joker archetype; the card names
+            # (Red/Black Joker) tell them apart.
+            return {'archetype': 'Joker', 'rank': 'Joker', 'suit': None, 'sort_order': position}
 
         return {'archetype': None, 'rank': None, 'suit': None, 'sort_order': position}
 
@@ -2931,13 +2932,9 @@ class ImportPresets:
         name_lower = card_name.lower()
 
         # Jokers
+        # Red and Black share the one Joker archetype.
         if 'joker' in name_lower:
-            if 'red' in name_lower:
-                return {'archetype': 'Red Joker', 'rank': 'Joker', 'suit': None, 'sort_order': sort_order}
-            elif 'black' in name_lower:
-                return {'archetype': 'Black Joker', 'rank': 'Joker', 'suit': None, 'sort_order': sort_order}
-            else:
-                return {'archetype': 'Joker', 'rank': 'Joker', 'suit': None, 'sort_order': sort_order}
+            return {'archetype': 'Joker', 'rank': 'Joker', 'suit': None, 'sort_order': sort_order}
 
         # Rank names - both word and numeric forms
         rank_names = {

@@ -467,13 +467,9 @@ class CardsMixin:
     def _parse_playing_card_name(self, card_name: str, card_name_lower: str):
         """Parse Playing Card names and return (archetype, rank, suit)"""
         # Check for joker
+        # Red and Black jokers share the one Joker archetype.
         if 'joker' in card_name_lower:
-            if 'red' in card_name_lower:
-                return 'Red Joker', 'Joker', None
-            elif 'black' in card_name_lower:
-                return 'Black Joker', 'Joker', None
-            else:
-                return 'Red Joker', 'Joker', None  # Default to red
+            return 'Joker', 'Joker', None
 
         found_suit = None
         found_rank = None

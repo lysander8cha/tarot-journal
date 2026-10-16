@@ -25,6 +25,9 @@ def _preview(tmp_path, preset, files, suits=None):
     ('German Playing Cards (32 cards)', 'h11.jpg', 'Herz Unter', 'Unter of Hearts'),
     ('Swiss Playing Cards (36 cards)', 's10.jpg', 'Schilten Banner', 'Banner of Shields'),
     ('Playing Cards (52 cards)', 'h01.jpg', 'Ace of Hearts', 'Ace of Hearts'),
+    ('Playing Cards with Jokers (54 cards)', 'j1.jpg', 'Red Joker', 'Joker'),
+    ('Playing Cards with Jokers (54 cards)', 'j2.jpg', 'Black Joker', 'Joker'),
+    ('Playing Cards with Jokers (54 cards)', 'jb.jpg', 'Black Joker', 'Joker'),
 ])
 def test_preset_maps_files(tmp_path, preset, filename, name, archetype):
     row = _preview(tmp_path, preset, [filename])[filename]
