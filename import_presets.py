@@ -784,9 +784,11 @@ _IT_RANKS = [('Asso', 'Ace', (1,)), ('Due', 'Two', (2,)), ('Tre', 'Three', (3,))
 # German: English initials (h, b, l, a) or the German ones (h, s, g, e).
 _DE_SUITS = [('Herz', 'Hearts', 'h'), ('Schellen', 'Bells', ('b', 's')),
              ('Laub', 'Leaves', ('l', 'g')), ('Eichel', 'Acorns', ('a', 'e'))]
+# The Ass sorts first in each suit (Ass, then any 2-6, then 7-König).
+_DE_ASS = [('Ass', 'Ace', (1, 14))]
 _DE_RANKS = [('Sieben', 'Seven', (7,)), ('Acht', 'Eight', (8,)), ('Neun', 'Nine', (9,)),
              ('Zehn', 'Ten', (10,)), ('Unter', 'Unter', (11,)), ('Ober', 'Ober', (12,)),
-             ('König', 'King', (13,)), ('Ass', 'Ace', (1, 14))]
+             ('König', 'King', (13,))]
 # Swiss (Jass): file letters follow the English suits (Rosen r,
 # Schellen b, Schilten s, Eicheln a) since two German names start with S.
 _CH_SUITS = [('Rosen', 'Roses', 'r'), ('Schellen', 'Bells', 'b'),
@@ -813,20 +815,20 @@ REGIONAL_PATTERNS = {
     },
     'German Playing Cards (32 cards)': {
         'type': GERMAN_SUITED,
-        'name': '{suit} {rank}', 'suits': _DE_SUITS, 'ranks': _DE_RANKS,
+        'name': '{suit} {rank}', 'suits': _DE_SUITS, 'ranks': _DE_ASS + _DE_RANKS,
         'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
     },
     'German Playing Cards (36 cards)': {
         'type': GERMAN_SUITED,
         'name': '{suit} {rank}', 'suits': _DE_SUITS,
-        'ranks': [('Sechs', 'Six', (6,))] + _DE_RANKS,
+        'ranks': _DE_ASS + [('Sechs', 'Six', (6,))] + _DE_RANKS,
         'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
     },
     'German Playing Cards (52 cards, 2–Ace)': {
         'type': GERMAN_SUITED,
         'name': '{suit} {rank}', 'suits': _DE_SUITS,
-        'ranks': [('Zwei', 'Two', (2,)), ('Drei', 'Three', (3,)), ('Vier', 'Four', (4,)),
-                  ('Fünf', 'Five', (5,)), ('Sechs', 'Six', (6,))] + _DE_RANKS,
+        'ranks': _DE_ASS + [('Zwei', 'Two', (2,)), ('Drei', 'Three', (3,)), ('Vier', 'Four', (4,)),
+                            ('Fünf', 'Five', (5,)), ('Sechs', 'Six', (6,))] + _DE_RANKS,
         'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
     },
     'Swiss Playing Cards (36 cards)': {

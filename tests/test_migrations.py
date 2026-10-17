@@ -227,3 +227,23 @@ def test_suit_families_courts_and_elements(db):
         (LATIN_SUITED,)).fetchall()]
     report = db.expand_elemental_zodiac(system_id, ids, 'Aces')
     assert len(ids) == 4 and not any(r.get('skipped') for r in report)
+
+
+def test_german_decks_reordered_ace_first(db):
+    from card_metadata import GERMAN_SUITED
+    c = db.conn.cursor()
+    tid = c.execute('SELECT id FROM cartomancy_types WHERE name = ?', (GERMAN_SUITED,)).fetchone()[0]
+    c.execute("INSERT INTO decks (name) VALUES ('Skat')")
+    deck_id = c.lastrowid
+    c.execute('INSERT INTO deck_type_assignments (deck_id, type_id) VALUES (?, ?)', (deck_id, tid))
+    old_order = [('Herz Sieben', 'Seven', 'Hearts'), ('Herz König', 'King', 'Hearts'),
+                 ('Herz Ass', 'Ace', 'Hearts'), ('Schellen Ass', 'Ace', 'Bells'),
+                 ('Weli', 'Weli', 'Bells'), ('Schellen Zehn', 'Ten', 'Bells')]
+    for i, (name, rank, suit) in enumerate(old_order, 1):
+        c.execute('INSERT INTO cards (deck_id, name, rank, suit, card_order) VALUES (?, ?, ?, ?, ?)',
+                  (deck_id, name, rank, suit, i))
+    db._order_german_decks_ace_first(c)
+    names = [r[0] for r in c.execute(
+        'SELECT name FROM cards WHERE deck_id = ? ORDER BY card_order', (deck_id,))]
+    assert names == ['Herz Ass', 'Herz Sieben', 'Herz König',
+                     'Schellen Ass', 'Schellen Zehn', 'Weli']

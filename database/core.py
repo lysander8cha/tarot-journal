@@ -11,8 +11,8 @@ import threading
 from contextlib import contextmanager
 
 from card_metadata import (
-    GERMAN_SUITED, LATIN_SUITED, SPANISH_TO_LATIN_RANK, SPANISH_TO_LATIN_SUIT,
-    SWISS_SUITED, family_archetypes)
+    GERMAN_RANKS, GERMAN_SUITED, GERMAN_SUITS, LATIN_SUITED, SPANISH_TO_LATIN_RANK,
+    SPANISH_TO_LATIN_SUIT, SWISS_SUITED, family_archetypes)
 from logger_config import get_logger
 
 # Built-in cartomancy types, re-seeded (INSERT OR IGNORE) on every
@@ -1991,6 +1991,12 @@ class CoreMixin:
                 )
             self.set_setting('belline_compound_name_rename_done', 'true')
 
+        # One-time reorder: German-suited decks imported before the Ass
+        # moved to the front of each suit sorted it after the König.
+        if self.get_setting('german_ace_first_order_done') != 'true':
+            self._order_german_decks_ace_first(cursor)
+            self.set_setting('german_ace_first_order_done', 'true')
+
         # One-time migration: drop the legacy Lenormand-only combinations
         # tables. Both were empty when the multi-type rewrite shipped (the
         # feature only ever surfaced UI for Lenormand and nobody authored
@@ -2051,6 +2057,34 @@ class CoreMixin:
         # Run one-time correspondence field migration (after commit so tables exist)
         from database.correspondence_migration import run_correspondence_migration
         run_correspondence_migration(self)
+
+    def _order_german_decks_ace_first(self, cursor):
+        """Renumber card_order in German-suited decks: suits in family
+        order, each Ace, Two … Ten, Unter, Ober, King, then the Weli;
+        unrecognised cards keep their place after those. Stable, so
+        duplicate cards (Doppelkopf) keep their relative order."""
+        suit_pos = {s: i for i, s in enumerate(GERMAN_SUITS)}
+        rank_pos = {r: i for i, r in enumerate(GERMAN_RANKS)}
+        decks = cursor.execute(
+            'SELECT a.deck_id FROM deck_type_assignments a '
+            'JOIN cartomancy_types t ON t.id = a.type_id WHERE t.name = ?',
+            (GERMAN_SUITED,)).fetchall()
+        for (deck_id,) in decks:
+            cards = cursor.execute(
+                'SELECT id, rank, suit FROM cards WHERE deck_id = ? '
+                'ORDER BY card_order, variant_order IS NULL, variant_order, id',
+                (deck_id,)).fetchall()
+
+            def key(card):
+                if card['rank'] == 'Weli':
+                    return (len(suit_pos), 0)
+                if card['suit'] in suit_pos and card['rank'] in rank_pos:
+                    return (suit_pos[card['suit']], rank_pos[card['rank']])
+                return (len(suit_pos) + 1, 0)
+
+            for order, card in enumerate(sorted(cards, key=key), 1):
+                cursor.execute('UPDATE cards SET card_order = ? WHERE id = ?',
+                               (order, card['id']))
 
     def _spanish_archetypes_to_latin(self, cursor):
         """Rename the old Spanish archetypes ("Sota de Copas") to the
