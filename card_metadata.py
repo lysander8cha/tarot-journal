@@ -283,8 +283,10 @@ LATIN_SUITS = ['Coins', 'Cups', 'Swords', 'Batons']
 LATIN_RANKS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
                'Eight', 'Nine', 'Knave', 'Knight', 'King']
 GERMAN_SUITS = ['Hearts', 'Bells', 'Leaves', 'Acorns']
-GERMAN_RANKS = ['Ace', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-                'Unter', 'Ober', 'King']
+# Two-Five exist only in some full-pip German packs; 32/36-card packs
+# simply don't use them.
+GERMAN_RANKS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
+                'Eight', 'Nine', 'Ten', 'Unter', 'Ober', 'King']
 SWISS_SUITS = ['Roses', 'Bells', 'Shields', 'Acorns']
 SWISS_RANKS = ['Ace', 'Six', 'Seven', 'Eight', 'Nine', 'Banner',
                'Under', 'Ober', 'King']
@@ -316,7 +318,7 @@ SPANISH_TO_LATIN_RANK = dict(zip(
 
 if __name__ == '__main__':
     assert len(family_archetypes(LATIN_SUITED)) == 49
-    assert len(family_archetypes(GERMAN_SUITED)) == 37
+    assert len(family_archetypes(GERMAN_SUITED)) == 53
     assert len(family_archetypes(SWISS_SUITED)) == 36
     assert SPANISH_TO_LATIN_RANK['Sota'] == 'Knave'
     print('ok')

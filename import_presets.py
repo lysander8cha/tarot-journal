@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from card_metadata import GERMAN_SUITED, LATIN_SUITED, SWISS_SUITED
+from card_metadata import GERMAN_SUITED, LATIN_SUITED, SWISS_SUITED, family_archetypes
 
 logger = logging.getLogger(__name__)
 
@@ -820,6 +820,13 @@ REGIONAL_PATTERNS = {
         'type': GERMAN_SUITED,
         'name': '{suit} {rank}', 'suits': _DE_SUITS,
         'ranks': [('Sechs', 'Six', (6,))] + _DE_RANKS,
+        'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
+    },
+    'German Playing Cards (52 cards, 2–Ace)': {
+        'type': GERMAN_SUITED,
+        'name': '{suit} {rank}', 'suits': _DE_SUITS,
+        'ranks': [('Zwei', 'Two', (2,)), ('Drei', 'Three', (3,)), ('Vier', 'Four', (4,)),
+                  ('Fünf', 'Five', (5,)), ('Sechs', 'Six', (6,))] + _DE_RANKS,
         'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
     },
     'Swiss Playing Cards (36 cards)': {
@@ -3067,6 +3074,12 @@ class ImportPresets:
         for _mappings, meta in packs:
             if card_name in meta:
                 return dict(meta[card_name])
+        # Cards already named after the shared English archetype
+        # ("Two of Bells") link to it directly.
+        preset_type = (self.get_preset(preset_name) or {}).get('type')
+        for pos, (name, rank, suit) in enumerate(family_archetypes(preset_type), 1):
+            if name.lower() == card_name.lower():
+                return {'archetype': name, 'rank': rank, 'suit': suit, 'sort_order': pos}
         return {'archetype': None, 'rank': None, 'suit': None, 'sort_order': sort_order}
 
     def _get_belline_metadata(self, card_name: str, sort_order: int) -> dict:

@@ -1540,9 +1540,9 @@ class CoreMixin:
                 "    'Sibylle des Salons / Sibilla Indovina')",
                 (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED)
             )
-            # 64 I Ching + 36 Kipper + 49 Latin + 37 German + 36 Swiss
-            # + 53 Belline + 52 Sibilla + 52 Sibylle = 379
-            if cursor.fetchone()[0] < 379:
+            # 64 I Ching + 36 Kipper + 49 Latin + 53 German + 36 Swiss
+            # + 53 Belline + 52 Sibilla + 52 Sibylle = 395
+            if cursor.fetchone()[0] < 395:
                 self._seed_card_archetypes(cursor)
 
         # Seed correspondence systems if table is empty

@@ -86,7 +86,7 @@ When renaming card image files for deck folders, use these naming schemes (they 
 **Regional playing cards** — suit letter + the number printed on the card:
 - Spanish (40/50): o Oros, c Copas, e Espadas, b Bastos; 1-9, 10 Sota, 11 Caballo, 12 Rey; j1/j2 Comodines (the 40-card pack has no 8/9)
 - Italian (40): d Denari, c Coppe, s Spade, b Bastoni; 1-7, 8 Fante, 9 Cavallo, 10 Re
-- German (32/36): h Herz, b Schellen, l Laub, a Eichel; 6/7-10, 11 Unter, 12 Ober, 13 König, Ass = 01 (or 14); Weli = w
+- German (32/36, or 52 with 2-5): h Herz, b Schellen, l Laub, a Eichel; 2/6/7-10, 11 Unter, 12 Ober, 13 König, Ass = 01 (or 14); Weli = w
 - Swiss (36): r Rosen, b Schellen, s Schilten, a Eicheln; 6-9, 10 Banner, 11 Under, 12 Ober, 13 König, Ass = 01 (or 14)
 
 **Lenormand:**
