@@ -6,7 +6,7 @@ import {
   type CardCustomField,
 } from '../../api/cards';
 import { getCardTags } from '../../api/tags';
-import { getDeckGroups, getDeckCustomFields } from '../../api/decks';
+import { getDeck, getDeckGroups, getDeckCustomFields } from '../../api/decks';
 import type { DeckCustomField } from '../../types';
 import { cardPreviewUrl } from '../../api/images';
 import type { Tag, CardGroup } from '../../types';
@@ -61,7 +61,7 @@ interface EditableField {
 interface InitialCardFormState {
   name: string;
   cardOrder: number;
-  copies: number;
+  copies: number | null;
   archetype: string;
   rank: string;
   suit: string;
@@ -74,6 +74,13 @@ interface InitialCardFormState {
 export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, onSaved, onNavigate }: CardEditModalProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  // The deck's copies-per-card, shown when the card follows it.
+  const { data: deck } = useQuery({
+    queryKey: ['deck', deckId],
+    queryFn: () => getDeck(deckId!),
+    enabled: deckId !== null,
+  });
 
   const { data: card, isLoading } = useQuery<CardDetail>({
     queryKey: ['card-detail', cardId],
@@ -103,7 +110,8 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
   // Form state
   const [name, setName] = useState('');
   const [cardOrder, setCardOrder] = useState(0);
-  const [copies, setCopies] = useState(1);
+  // null = follow the deck's copies-per-card
+  const [copies, setCopies] = useState<number | null>(null);
   const [archetype, setArchetype] = useState('');
   const [rank, setRank] = useState('');
   const [suit, setSuit] = useState('');
@@ -127,7 +135,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
     initialStateRef.current = null;
     setName('');
     setCardOrder(0);
-    setCopies(1);
+    setCopies(null);
     setArchetype('');
     setRank('');
     setSuit('');
@@ -149,7 +157,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
       formPopulatedRef.current = true;
       setName(card.name);
       setCardOrder(card.card_order);
-      setCopies(card.copies ?? 1);
+      setCopies(card.copies ?? null);
       setArchetype(card.archetype || '');
       setRank(card.rank || '');
       setSuit(card.suit || '');
@@ -279,7 +287,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
       initialStateRef.current = {
         name: card.name,
         cardOrder: card.card_order,
-        copies: card.copies ?? 1,
+        copies: card.copies ?? null,
         archetype: card.archetype || '',
         rank: card.rank || '',
         suit: card.suit || '',
@@ -382,7 +390,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
     setSaving(true);
     try {
       // Update basic info if changed
-      if (name !== card.name || cardOrder !== card.card_order || copies !== (card.copies ?? 1)) {
+      if (name !== card.name || cardOrder !== card.card_order || copies !== (card.copies ?? null)) {
         await updateCard(card.id, { name, card_order: cardOrder, copies });
       }
 
@@ -535,16 +543,17 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
               <div className="card-edit__field">
                 <label
                   className="card-edit__label"
-                  title="How many physical copies of this card the deck has. A reading can use it this many times without the duplicate-card warning."
+                  title="How many physical copies of this card the deck has. A reading can use it this many times without the duplicate-card warning. Leave blank to use the deck's Copies of each card."
                 >
                   Copies in deck
                 </label>
                 <input
                   type="number"
                   min={1}
-                  value={copies}
-                  onChange={e => setCopies(Math.max(1, parseInt(e.target.value) || 1))}
-                  style={{ width: 80 }}
+                  value={copies ?? ''}
+                  placeholder={`${deck?.card_copies ?? 1} (deck)`}
+                  onChange={e => setCopies(e.target.value ? Math.max(1, parseInt(e.target.value) || 1) : null)}
+                  style={{ width: 100 }}
                 />
               </div>
             </div>

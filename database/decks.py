@@ -217,8 +217,11 @@ class DecksMixin:
                     court_names: dict = None, date_published: str = None, publisher: str = None,
                     credits: str = None, notes: str = None, card_back_image: str = None,
                     booklet_info: str = None, correspondence_system_id=None,
-                    favorite: bool = None):
+                    favorite: bool = None, card_copies: int = None):
         cursor = self.conn.cursor()
+        if card_copies is not None:
+            cursor.execute('UPDATE decks SET card_copies = ? WHERE id = ?',
+                           (max(1, int(card_copies)), deck_id))
         if favorite is not None:
             cursor.execute('UPDATE decks SET favorite = ? WHERE id = ?',
                            (1 if favorite else 0, deck_id))

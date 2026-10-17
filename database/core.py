@@ -265,6 +265,9 @@ class CoreMixin:
         # Migrations: columns added after the original schema. Older
         # databases (restored backups) get them via ALTER TABLE.
         self._ensure_columns(cursor, 'decks', {
+            # Default physical copies of each card (NULL = 1); a card's
+            # own cards.copies overrides it.
+            'card_copies': 'INTEGER',
             'suit_names': 'TEXT',
             'court_names': 'TEXT',
             'date_published': 'TEXT',

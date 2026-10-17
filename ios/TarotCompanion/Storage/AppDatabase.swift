@@ -254,6 +254,13 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v12-deck-card-copies") { db in
+            // The deck's default copies of each card (NULL = 1).
+            try db.alter(table: "decks") { t in
+                t.add(column: "card_copies", .integer)
+            }
+        }
+
         try migrator.migrate(writer)
     }
 

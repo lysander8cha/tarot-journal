@@ -872,7 +872,7 @@ struct CardPickerView: View {
         .task {
             cards = (try? appModel.database.writer.read { db in
                 try Row.fetchAll(
-                    db, sql: "SELECT id, name, archetype, COALESCE(copies, 1) AS copies FROM cards WHERE deck_id = ? ORDER BY card_order, id",
+                    db, sql: "SELECT id, name, archetype, COALESCE(copies, (SELECT card_copies FROM decks WHERE id = cards.deck_id), 1) AS copies FROM cards WHERE deck_id = ? ORDER BY card_order, id",
                     arguments: [deckId]).map { ($0["id"], $0["name"], $0["archetype"], $0["copies"]) }
             }) ?? []
         }

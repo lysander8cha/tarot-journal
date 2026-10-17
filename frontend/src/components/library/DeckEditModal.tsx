@@ -27,6 +27,7 @@ interface InitialDeckFormState {
   name: string;
   datePublished: string;
   publisher: string;
+  cardCopies: number;
   credits: string;
   notes: string;
   bookletInfo: string;
@@ -204,6 +205,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
   const [selectedTypeIds, setSelectedTypeIds] = useState<number[]>([]);
   const [datePublished, setDatePublished] = useState('');
   const [publisher, setPublisher] = useState('');
+  const [cardCopies, setCardCopies] = useState(1);
   const [credits, setCredits] = useState('');
   const [notes, setNotes] = useState('');
   const [bookletInfo, setBookletInfo] = useState('');
@@ -269,6 +271,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
       setName(deck.name);
       setDatePublished(deck.date_published || '');
       setPublisher(deck.publisher || '');
+      setCardCopies(deck.card_copies ?? 1);
       setCredits(deck.credits || '');
       setNotes(deck.notes || '');
       setBookletInfo(deck.booklet_info || '');
@@ -321,6 +324,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
         name: deck.name,
         datePublished: deck.date_published || '',
         publisher: deck.publisher || '',
+        cardCopies: deck.card_copies ?? 1,
         credits: deck.credits || '',
         notes: deck.notes || '',
         bookletInfo: deck.booklet_info || '',
@@ -360,6 +364,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
     if (name !== initial.name) return true;
     if (datePublished !== initial.datePublished) return true;
     if (publisher !== initial.publisher) return true;
+    if (cardCopies !== initial.cardCopies) return true;
     if (credits !== initial.credits) return true;
     if (notes !== initial.notes) return true;
     if (bookletInfo !== initial.bookletInfo) return true;
@@ -380,7 +385,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
     if (JSON.stringify(courtNames) !== JSON.stringify(initial.courtNames)) return true;
 
     return false;
-  }, [name, datePublished, publisher, credits, notes, bookletInfo, selectedTypeIds, selectedTagIds, suitNames, courtNames]);
+  }, [name, datePublished, publisher, cardCopies, credits, notes, bookletInfo, selectedTypeIds, selectedTagIds, suitNames, courtNames]);
 
   if (deckId === null) return null;
 
@@ -501,6 +506,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
         name,
         date_published: datePublished || null,
         publisher: publisher || null,
+        card_copies: cardCopies,
         credits: credits || null,
         notes: notes || null,
         booklet_info: bookletInfo || null,
@@ -524,6 +530,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
 
       queryClient.invalidateQueries({ queryKey: ['deck-detail', deckId] });
       queryClient.invalidateQueries({ queryKey: ['decks'] });
+      queryClient.invalidateQueries({ queryKey: ['deck', deckId] });
       queryClient.invalidateQueries({ queryKey: ['deck-tag-assignments', deckId] });
       queryClient.invalidateQueries({ queryKey: ['deck-types', deckId] });
       queryClient.invalidateQueries({ queryKey: ['cards', deckId] }); // Refresh cards list
@@ -646,6 +653,21 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
                     type="text"
                     value={publisher}
                     onChange={e => setPublisher(e.target.value)}
+                  />
+                </div>
+                <div className="deck-edit__field">
+                  <label
+                    className="deck-edit__label"
+                    title="Physical copies of each card (e.g. 2 for Doppelkopf). Readings can use a card this many times without the duplicate-card warning. A card's own Copies in deck overrides it."
+                  >
+                    Copies of each card
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={cardCopies}
+                    onChange={e => setCardCopies(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ width: 80 }}
                   />
                 </div>
               </div>

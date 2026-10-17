@@ -168,7 +168,7 @@ SNAPSHOT_TABLES = {
     'profiles': 'SELECT id, name, hidden, querent_only FROM profiles',
     # cartomancy_type: the deck's (first) type, so the phone can tell
     # apart archetypes that share a name across types.
-    'decks': ('SELECT id, name, favorite, correspondence_system_id, '
+    'decks': ('SELECT id, name, favorite, correspondence_system_id, card_copies, '
               '(SELECT MIN(t.name) FROM deck_type_assignments a '
               ' JOIN cartomancy_types t ON t.id = a.type_id '
               ' WHERE a.deck_id = decks.id) AS cartomancy_type '

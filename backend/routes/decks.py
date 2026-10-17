@@ -98,6 +98,7 @@ def update_deck(deck_id, data):
         booklet_info=data.get('booklet_info'),
         correspondence_system_id=data.get('correspondence_system_id'),
         favorite=data.get('favorite'),
+        card_copies=data.get('card_copies'),
     )
     return jsonify({'ok': True})
 

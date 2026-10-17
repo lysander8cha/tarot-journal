@@ -255,3 +255,8 @@ def test_card_copies_saved(client, db):
     assert client.get(f'/api/cards/{card_id}').get_json()['copies'] == 2
     client.put(f'/api/cards/{card_id}', json={'copies': 0})  # floor of 1
     assert client.get(f'/api/cards/{card_id}').get_json()['copies'] == 1
+    # Deck default; a card cleared back to null follows it.
+    client.put(f'/api/decks/{deck_id}', json={'card_copies': 2})
+    assert client.get(f'/api/decks/{deck_id}').get_json()['card_copies'] == 2
+    client.put(f'/api/cards/{card_id}', json={'copies': None})
+    assert client.get(f'/api/cards/{card_id}').get_json()['copies'] is None

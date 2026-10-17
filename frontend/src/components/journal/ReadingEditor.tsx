@@ -362,7 +362,10 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
   });
   const copiesById = new Map<number, number>();
   for (const q of readingDeckCards) {
-    for (const card of q.data ?? []) copiesById.set(card.id, card.copies ?? 1);
+    for (const card of q.data ?? []) {
+      const deckCopies = decks.find(d => d.id === card.deck_id)?.card_copies;
+      copiesById.set(card.id, card.copies ?? deckCopies ?? 1);
+    }
   }
   const duplicateNames = (() => {
     const counts = new Map<string, { name: string; n: number; limit: number }>();

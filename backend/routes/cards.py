@@ -87,6 +87,8 @@ def update_card(card_id, data):
         card_order=data.get('card_order'),
         variant_order=data.get('variant_order'),
         copies=data.get('copies'),
+        # A present-but-null copies follows the deck's default again.
+        clear_copies='copies' in data and data.get('copies') is None,
     )
     return jsonify({'ok': True})
 

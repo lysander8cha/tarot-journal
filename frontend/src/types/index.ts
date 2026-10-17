@@ -24,6 +24,8 @@ export interface Deck {
   correspondence_system_id: number | null;
   /** Favorited decks are the subset synced to the phone companion. */
   favorite?: number;
+  /** Default physical copies of each card (null = 1). */
+  card_copies?: number | null;
   created_at: string;
   // Joined fields from get_deck():
   cartomancy_type?: string;
@@ -43,8 +45,9 @@ export interface Card {
    *  Independent of card_order so users can reorder same-name variants
    *  without disturbing deck display order. Null = use insertion order. */
   variant_order: number | null;
-  /** Physical copies in the deck (null = 1); readings may use the card
-   *  this many times before the duplicate warning shows. */
+  /** Physical copies in the deck (null = the deck's card_copies, else
+   *  1); readings may use the card this many times before the
+   *  duplicate warning shows. */
   copies?: number | null;
   archetype: string | null;
   rank: string | null;
