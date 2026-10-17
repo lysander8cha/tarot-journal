@@ -793,9 +793,10 @@ _DE_RANKS = [('Sieben', 'Seven', (7,)), ('Acht', 'Eight', (8,)), ('Neun', 'Nine'
 # Schellen b, Schilten s, Eicheln a) since two German names start with S.
 _CH_SUITS = [('Rosen', 'Roses', 'r'), ('Schellen', 'Bells', 'b'),
              ('Schilten', 'Shields', 's'), ('Eicheln', 'Acorns', 'a')]
-_CH_RANKS = [('Sechs', 'Six', (6,)), ('Sieben', 'Seven', (7,)), ('Acht', 'Eight', (8,)),
-             ('Neun', 'Nine', (9,)), ('Banner', 'Banner', (10,)), ('Under', 'Under', (11,)),
-             ('Ober', 'Ober', (12,)), ('König', 'King', (13,)), ('Ass', 'Ace', (1, 14))]
+# Ass first in each suit, as in the German packs.
+_CH_RANKS = [('Ass', 'Ace', (1, 14)), ('Sechs', 'Six', (6,)), ('Sieben', 'Seven', (7,)),
+             ('Acht', 'Eight', (8,)), ('Neun', 'Nine', (9,)), ('Banner', 'Banner', (10,)),
+             ('Under', 'Under', (11,)), ('Ober', 'Ober', (12,)), ('König', 'King', (13,))]
 
 REGIONAL_PATTERNS = {
     'Spanish Playing Cards (50 cards)': {
