@@ -174,7 +174,7 @@ SNAPSHOT_TABLES = {
               ' WHERE a.deck_id = decks.id) AS cartomancy_type '
               'FROM decks WHERE favorite = 1'),
     'cards': ('SELECT c.id, c.deck_id, c.name, c.archetype, c.rank, '
-              'c.suit, c.card_order, c.notes, c.custom_fields '
+              'c.suit, c.card_order, c.notes, c.custom_fields, c.copies '
               'FROM cards c '
               'JOIN decks d ON d.id = c.deck_id WHERE d.favorite = 1'),
     # The newer per-card field store; the legacy cards.custom_fields

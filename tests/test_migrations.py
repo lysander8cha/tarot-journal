@@ -247,3 +247,11 @@ def test_german_decks_reordered_ace_first(db):
         'SELECT name FROM cards WHERE deck_id = ? ORDER BY card_order', (deck_id,))]
     assert names == ['Herz Ass', 'Herz Sieben', 'Herz König',
                      'Schellen Ass', 'Schellen Zehn', 'Weli']
+
+
+def test_card_copies_saved(client, db):
+    deck_id, card_id = make_deck_with_card(db)
+    assert client.put(f'/api/cards/{card_id}', json={'copies': 2}).status_code == 200
+    assert client.get(f'/api/cards/{card_id}').get_json()['copies'] == 2
+    client.put(f'/api/cards/{card_id}', json={'copies': 0})  # floor of 1
+    assert client.get(f'/api/cards/{card_id}').get_json()['copies'] == 1

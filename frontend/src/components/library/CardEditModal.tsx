@@ -31,6 +31,7 @@ interface CardDetail {
   name: string;
   image_path: string | null;
   card_order: number;
+  copies?: number | null;
   archetype: string | null;
   rank: string | null;
   suit: string | null;
@@ -60,6 +61,7 @@ interface EditableField {
 interface InitialCardFormState {
   name: string;
   cardOrder: number;
+  copies: number;
   archetype: string;
   rank: string;
   suit: string;
@@ -101,6 +103,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
   // Form state
   const [name, setName] = useState('');
   const [cardOrder, setCardOrder] = useState(0);
+  const [copies, setCopies] = useState(1);
   const [archetype, setArchetype] = useState('');
   const [rank, setRank] = useState('');
   const [suit, setSuit] = useState('');
@@ -124,6 +127,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
     initialStateRef.current = null;
     setName('');
     setCardOrder(0);
+    setCopies(1);
     setArchetype('');
     setRank('');
     setSuit('');
@@ -145,6 +149,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
       formPopulatedRef.current = true;
       setName(card.name);
       setCardOrder(card.card_order);
+      setCopies(card.copies ?? 1);
       setArchetype(card.archetype || '');
       setRank(card.rank || '');
       setSuit(card.suit || '');
@@ -274,6 +279,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
       initialStateRef.current = {
         name: card.name,
         cardOrder: card.card_order,
+        copies: card.copies ?? 1,
         archetype: card.archetype || '',
         rank: card.rank || '',
         suit: card.suit || '',
@@ -294,6 +300,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
     // Compare simple fields
     if (name !== initial.name) return true;
     if (cardOrder !== initial.cardOrder) return true;
+    if (copies !== initial.copies) return true;
     if (archetype !== initial.archetype) return true;
     if (rank !== initial.rank) return true;
     if (suit !== initial.suit) return true;
@@ -325,7 +332,7 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
     if (JSON.stringify(currentFieldsForCompare) !== JSON.stringify(initialFieldsForCompare)) return true;
 
     return false;
-  }, [name, cardOrder, archetype, rank, suit, notes, selectedTagIds, selectedGroupIds, customFields]);
+  }, [name, cardOrder, copies, archetype, rank, suit, notes, selectedTagIds, selectedGroupIds, customFields]);
 
   // Navigation state
   const currentIndex = cardId !== null ? cardIds.indexOf(cardId) : -1;
@@ -375,8 +382,8 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
     setSaving(true);
     try {
       // Update basic info if changed
-      if (name !== card.name || cardOrder !== card.card_order) {
-        await updateCard(card.id, { name, card_order: cardOrder });
+      if (name !== card.name || cardOrder !== card.card_order || copies !== (card.copies ?? 1)) {
+        await updateCard(card.id, { name, card_order: cardOrder, copies });
       }
 
       // Build updated legacy custom_fields object from editable fields
@@ -522,6 +529,21 @@ export default function CardEditModal({ cardId, deckId, cardIds = [], onClose, o
                   type="number"
                   value={cardOrder}
                   onChange={e => setCardOrder(parseInt(e.target.value) || 0)}
+                  style={{ width: 80 }}
+                />
+              </div>
+              <div className="card-edit__field">
+                <label
+                  className="card-edit__label"
+                  title="How many physical copies of this card the deck has. A reading can use it this many times without the duplicate-card warning."
+                >
+                  Copies in deck
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={copies}
+                  onChange={e => setCopies(Math.max(1, parseInt(e.target.value) || 1))}
                   style={{ width: 80 }}
                 />
               </div>

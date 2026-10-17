@@ -247,6 +247,13 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v11-card-copies") { db in
+            // Physical copies of a card in its deck (NULL = 1).
+            try db.alter(table: "cards") { t in
+                t.add(column: "copies", .integer)
+            }
+        }
+
         try migrator.migrate(writer)
     }
 

@@ -15,6 +15,8 @@ struct NewEntryView: View {
         var cardId: Int64
         var name: String
         var reversed = false
+        /// Physical copies of this card in the deck.
+        var copies = 1
     }
 
     struct SpreadOption: Identifiable, Hashable {
@@ -55,17 +57,17 @@ struct NewEntryView: View {
         var chosenCards: [PickedCard?] {
             spread != nil ? cards : freeformCards
         }
-        /// Card names placed more than once in this reading — almost
-        /// certainly a mis-tap with a physical deck. Advisory only.
+        /// Card names placed more times than the deck has copies (usually
+        /// one) — almost certainly a mis-tap. Advisory only.
         var duplicateNames: [String] {
-            var counts: [Int64: (name: String, n: Int)] = [:]
+            var counts: [Int64: (name: String, n: Int, limit: Int)] = [:]
             let all = chosenCards.compactMap { $0 } + extraCards.map { $0.card }
             for card in all {
-                var bucket = counts[card.cardId] ?? (card.name, 0)
+                var bucket = counts[card.cardId] ?? (card.name, 0, card.copies)
                 bucket.n += 1
                 counts[card.cardId] = bucket
             }
-            return counts.values.filter { $0.n > 1 }.map { $0.name }
+            return counts.values.filter { $0.n > $0.limit }.map { $0.name }
         }
         var isValid: Bool {
             deckId != nil
@@ -321,7 +323,7 @@ struct NewEntryView: View {
 
             if !reading.duplicateNames.isEmpty {
                 Label(
-                    "\(reading.duplicateNames.joined(separator: ", ")) appears more than once in this reading",
+                    "\(reading.duplicateNames.joined(separator: ", ")) appears more times than the deck has copies",
                     systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(TJ.textAccent)
@@ -806,9 +808,9 @@ struct CardPickerView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
-    @State private var cards: [(id: Int64, name: String, archetype: String?)] = []
+    @State private var cards: [(id: Int64, name: String, archetype: String?, copies: Int)] = []
 
-    var filtered: [(id: Int64, name: String, archetype: String?)] {
+    var filtered: [(id: Int64, name: String, archetype: String?, copies: Int)] {
         guard !searchText.isEmpty else { return cards }
         let q = searchText.lowercased()
         // Deck-specific names AND archetype names both match, like the
@@ -825,7 +827,7 @@ struct CardPickerView: View {
                 List(filtered, id: \.id) { card in
                     HStack(spacing: 10) {
                         Button {
-                            onPick(.init(cardId: card.id, name: card.name))
+                            onPick(.init(cardId: card.id, name: card.name, copies: card.copies))
                             dismiss()
                         } label: {
                             HStack(spacing: 10) {
@@ -847,7 +849,7 @@ struct CardPickerView: View {
                         Spacer()
                         Button {
                             onPick(.init(cardId: card.id, name: card.name,
-                                         reversed: true))
+                                         reversed: true, copies: card.copies))
                             dismiss()
                         } label: {
                             Text("⟲ rev")
@@ -870,8 +872,8 @@ struct CardPickerView: View {
         .task {
             cards = (try? appModel.database.writer.read { db in
                 try Row.fetchAll(
-                    db, sql: "SELECT id, name, archetype FROM cards WHERE deck_id = ? ORDER BY card_order, id",
-                    arguments: [deckId]).map { ($0["id"], $0["name"], $0["archetype"]) }
+                    db, sql: "SELECT id, name, archetype, COALESCE(copies, 1) AS copies FROM cards WHERE deck_id = ? ORDER BY card_order, id",
+                    arguments: [deckId]).map { ($0["id"], $0["name"], $0["archetype"], $0["copies"]) }
             }) ?? []
         }
     }

@@ -27,7 +27,7 @@ export async function deleteCard(cardId: number) {
 
 export async function updateCard(
   cardId: number,
-  data: Partial<Pick<Card, 'name' | 'card_order' | 'variant_order'>>,
+  data: Partial<Pick<Card, 'name' | 'card_order' | 'variant_order' | 'copies'>>,
 ) {
   await api.put(`/api/cards/${cardId}`, data);
 }

@@ -306,6 +306,10 @@ class CoreMixin:
             # (Terra Volatile et al.) without touching card_order, which
             # controls deck display position.
             'variant_order': 'INTEGER',
+            # Physical copies of this card in the deck (NULL = 1): a
+            # reading may use it that many times without the duplicate
+            # warning (Doppelkopf has two of every card).
+            'copies': 'INTEGER',
         })
 
         # Spreads table (saved spread layouts)

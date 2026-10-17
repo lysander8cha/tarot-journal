@@ -43,6 +43,9 @@ export interface Card {
    *  Independent of card_order so users can reorder same-name variants
    *  without disturbing deck display order. Null = use insertion order. */
   variant_order: number | null;
+  /** Physical copies in the deck (null = 1); readings may use the card
+   *  this many times before the duplicate warning shows. */
+  copies?: number | null;
   archetype: string | null;
   rank: string | null;
   suit: string | null;

@@ -186,7 +186,8 @@ class CardsMixin:
         return card_id
 
     def update_card(self, card_id: int, name: str = None, image_path: str = None,
-                    card_order: int = None, variant_order: int = None):
+                    card_order: int = None, variant_order: int = None,
+                    copies: int = None):
         """Update card fields. Safe dynamic SQL: column names are hardcoded, values use ? params."""
         cursor = self.conn.cursor()
         updates = []
@@ -203,6 +204,9 @@ class CardsMixin:
         if variant_order is not None:
             updates.append('variant_order = ?')
             params.append(variant_order)
+        if copies is not None:
+            updates.append('copies = ?')
+            params.append(max(1, int(copies)))
         if updates:
             params.append(card_id)
             cursor.execute(f'UPDATE cards SET {", ".join(updates)} WHERE id = ?', params)

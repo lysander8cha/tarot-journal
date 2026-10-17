@@ -347,29 +347,44 @@ export default function ReadingEditor({ value, onChange, onRemove, index, defaul
   // committed selection advances focus to the next card row.
   const freeFormRefs = useRef<Array<SearchComboboxHandle | null>>([]);
 
-  // Same card placed more than once in this reading — physically
-  // impossible with one deck, so almost certainly a mis-click. Warn,
-  // never block (per-reading; reuse across readings is legitimate).
+  // Card placed more times than the deck physically holds (usually
+  // once; a card's "Copies in deck" can raise that) — almost certainly
+  // a mis-click. Warn, never block (per-reading; reuse across readings
+  // is legitimate). Card lists come from the shared ['cards', deck]
+  // cache the pickers already load.
+  const readingDeckIds = [...new Set(value.cards.map(c => c.deck_id ?? value.deck_id)
+    .filter((id): id is number => id != null))];
+  const readingDeckCards = useQueries({
+    queries: readingDeckIds.map(deckId => ({
+      queryKey: ['cards', deckId],
+      queryFn: () => getCards(deckId),
+    })),
+  });
+  const copiesById = new Map<number, number>();
+  for (const q of readingDeckCards) {
+    for (const card of q.data ?? []) copiesById.set(card.id, card.copies ?? 1);
+  }
   const duplicateNames = (() => {
-    const counts = new Map<string, { name: string; n: number }>();
+    const counts = new Map<string, { name: string; n: number; limit: number }>();
     for (const c of value.cards) {
       if (!c.name) continue;
       const key = c.card_id != null
         ? `id:${c.deck_id ?? ''}:${c.card_id}`
         : `nm:${c.deck_id ?? ''}:${c.name}`;
-      const bucket = counts.get(key) ?? { name: c.name, n: 0 };
+      const limit = c.card_id != null ? copiesById.get(c.card_id) ?? 1 : 1;
+      const bucket = counts.get(key) ?? { name: c.name, n: 0, limit };
       bucket.n += 1;
       counts.set(key, bucket);
     }
-    return [...counts.values()].filter(b => b.n > 1).map(b => b.name);
+    return [...counts.values()].filter(b => b.n > b.limit).map(b => b.name);
   })();
 
   return (
     <div className="reading-editor">
       {duplicateNames.length > 0 && (
         <div className="reading-editor__dup-warning" role="alert">
-          ⚠ {duplicateNames.join(', ')} appears more than once in this
-          reading — double-check the positions.
+          ⚠ {duplicateNames.join(', ')} appears more times in this reading
+          than the deck has copies — double-check the positions.
         </div>
       )}
       <div className="reading-editor__header">
