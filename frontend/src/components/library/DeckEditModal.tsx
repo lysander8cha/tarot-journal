@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { sortSuitKeys } from '../../utils/suitPairing';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getDeck, updateDeck, deleteDeck, getDeckTagAssignments, setDeckTags, getCartomancyTypes,
@@ -709,7 +710,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
                 <h3 className="deck-edit__section-title">Suit Names</h3>
                 {Object.keys(suitNames).length > 0 ? (
                   <div className="deck-edit__row deck-edit__row--wrap">
-                    {Object.entries(suitNames).map(([key, value]) => (
+                    {sortSuitKeys(Object.keys(suitNames)).map(key => [key, suitNames[key]] as const).map(([key, value]) => (
                       <div key={key} className="deck-edit__field deck-edit__field--quarter">
                         <label className="deck-edit__label">{capitalize(key)}</label>
                         <input

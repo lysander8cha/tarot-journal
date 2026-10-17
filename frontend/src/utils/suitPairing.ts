@@ -29,6 +29,21 @@ for (const [label, names] of PAIRS) {
   for (const n of names) LOOKUP.set(n, label);
 }
 
+/** Display order of the suit groups: Wands/Clubs, Cups/Hearts,
+ *  Swords/Spades, Pentacles/Diamonds. */
+const GROUP_ORDER = ['Wands / Clubs', 'Cups / Hearts', 'Swords / Spades', 'Pentacles / Diamonds'];
+
+/** Sort suit keys (wands, hearts, bastos, bells…) into that order, so
+ *  every system's suit fields line up the same way; unknown keys
+ *  keep their order after the known ones. */
+export function sortSuitKeys(keys: string[]): string[] {
+  const rank = (k: string) => {
+    const i = GROUP_ORDER.indexOf(pairedSuitLabel(k));
+    return i === -1 ? GROUP_ORDER.length : i;
+  };
+  return [...keys].sort((a, b) => rank(a) - rank(b));
+}
+
 /** The paired label for a suit, or the suit itself when it has no
  *  pair (Major Arcana, oracle groupings…). */
 export function pairedSuitLabel(suit: string): string {

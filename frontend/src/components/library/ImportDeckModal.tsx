@@ -15,6 +15,7 @@ import {
   DEFAULT_COURT_NAMES,
 } from '../../constants/importPresets';
 import { useToast } from '../../context/ToastContext';
+import { sortSuitKeys } from '../../utils/suitPairing';
 import Modal, { ModalCancelButton } from '../common/Modal';
 import './ImportDeckModal.css';
 
@@ -229,7 +230,7 @@ export default function ImportDeckModal({ onClose, onImported }: ImportDeckModal
   const showCustomCourtFields = courtPreset === 'Custom...';
   // Exactly the suits the chosen preset defines (Denari/Coppe/…, Herz/
   // Schellen/…); none for suitless packs like Kipper or I Ching.
-  const suitKeys = Object.keys(suitNames);
+  const suitKeys = sortSuitKeys(Object.keys(suitNames));
 
   // Track if user has entered any configuration that would be lost
   // Only relevant during 'configure' and 'preview' steps
