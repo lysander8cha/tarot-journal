@@ -825,13 +825,6 @@ REGIONAL_PATTERNS = {
         'ranks': _DE_ASS + [('Sechs', 'Six', (6,))] + _DE_RANKS,
         'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
     },
-    'German Playing Cards (52 cards, 2–Ace)': {
-        'type': GERMAN_SUITED,
-        'name': '{suit} {rank}', 'suits': _DE_SUITS,
-        'ranks': _DE_ASS + [('Zwei', 'Two', (2,)), ('Drei', 'Three', (3,)), ('Vier', 'Four', (4,)),
-                            ('Fünf', 'Five', (5,)), ('Sechs', 'Six', (6,))] + _DE_RANKS,
-        'extras': [('Weli', 'Weli', 'Bells', ('w', 'weli'), 1)],
-    },
     'Swiss Playing Cards (36 cards)': {
         'type': SWISS_SUITED,
         'name': '{suit} {rank}', 'suits': _CH_SUITS, 'ranks': _CH_RANKS, 'extras': [],

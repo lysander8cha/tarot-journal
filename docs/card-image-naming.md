@@ -90,7 +90,6 @@ in suit order, and the native suit word as prefix (`oros10`, `schilten12`).
 | Italian (40 cards) | `d` Denari, `c` Coppe, `s` Spade, `b` Bastoni | 1–7, **8 Fante, 9 Cavallo, 10 Re** | `d08` = Fante di Denari |
 | German (32 cards) | `h` Herz, `b` Schellen, `l` Laub, `a` Eichel (also `s`, `g`, `e`) | 7–10, 11 Unter, 12 Ober, 13 König, Ass `01` or `14`; Weli `w` | `a12` = Eichel Ober |
 | German (36 cards) | same | 6–10, rest as German 32 | `b06` = Schellen Sechs |
-| German (52 cards, 2–Ace) | same | 2–10, rest as German 32 | `b02` = Schellen Zwei |
 | Swiss (36 cards) | `r` Rosen, `b` Schellen, `s` Schilten, `a` Eicheln | 6–9, 10 Banner, 11 Under, 12 Ober, 13 König, Ass `01` or `14` | `s10` = Schilten Banner |
 
 Watch out for: Italian courts are 8–10, not 10–12 as in Spanish packs.
