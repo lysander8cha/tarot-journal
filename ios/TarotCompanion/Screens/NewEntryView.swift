@@ -10,8 +10,8 @@ struct NewEntryView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
 
-    struct PickedCard: Identifiable, Equatable {
-        let id = UUID()
+    struct PickedCard: Identifiable, Equatable, Codable {
+        var id = UUID()
         var cardId: Int64
         var name: String
         var reversed = false
@@ -19,7 +19,7 @@ struct NewEntryView: View {
         var copies = 1
     }
 
-    struct SpreadOption: Identifiable, Hashable {
+    struct SpreadOption: Identifiable, Hashable, Codable {
         let id: Int64
         let name: String
         let positions: [SpreadPosition]
@@ -35,8 +35,8 @@ struct NewEntryView: View {
 
     /// An additional card beyond the spread's positions, optionally
     /// clarifying one of them (the desktop's extra-card model).
-    struct ExtraCard: Identifiable {
-        let id = UUID()
+    struct ExtraCard: Identifiable, Codable {
+        var id = UUID()
         var card: PickedCard
         var clarifies: Int?
     }
@@ -44,8 +44,8 @@ struct NewEntryView: View {
     /// One reading being composed: its deck, optional spread, and
     /// cards (per-position slots, or a freeform list without one),
     /// plus extra/clarifier cards when a spread is set.
-    struct ComposedReading: Identifiable {
-        let id = UUID()
+    struct ComposedReading: Identifiable, Codable {
+        var id = UUID()
         var deckId: Int64?
         var spread: SpreadOption?
         var cards: [PickedCard?] = []
@@ -93,6 +93,23 @@ struct NewEntryView: View {
         }
     }
 
+    /// Everything typed so far. Autosaved on every change so leaving
+    /// the app — or iOS closing it in the background — never loses an
+    /// entry in progress; cleared on Save or a confirmed Cancel.
+    struct Draft: Codable {
+        var title: String
+        var notes: String
+        var querentIds: [Int64]
+        var multiQuerent: Bool
+        var readerId: Int64?
+        var readingDate: Date
+        var locationName: String
+        var readings: [ComposedReading]
+    }
+    static let draftKey = "composerDraft"
+    static var hasDraft: Bool { UserDefaults.standard.data(forKey: draftKey) != nil }
+    static func clearDraft() { UserDefaults.standard.removeObject(forKey: draftKey) }
+
     @State private var title = ""
     @State private var notes = ""
     /// One querent for the whole entry (first element), unless
@@ -115,6 +132,42 @@ struct NewEntryView: View {
     /// index) — position nil means "append freeform".
     @State private var pickingCard: (reading: Int, slot: Int?)?
     @State private var saving = false
+    @State private var draftRestored = false
+    @State private var confirmingDiscard = false
+
+    /// Anything worth keeping beyond the defaults load() fills in.
+    private var hasContent: Bool {
+        !title.isEmpty || !notes.isEmpty || !locationName.isEmpty
+            || readings.contains {
+                $0.deckId != nil || $0.spread != nil || !$0.freeformCards.isEmpty
+                    || $0.cards.contains { $0 != nil } || !$0.extraCards.isEmpty
+            }
+    }
+
+    private var draftData: Data? {
+        guard draftRestored, hasContent else { return nil }
+        return try? JSONEncoder().encode(Draft(
+            title: title, notes: notes, querentIds: querentIds,
+            multiQuerent: multiQuerent, readerId: readerId,
+            readingDate: readingDate, locationName: locationName,
+            readings: readings))
+    }
+
+    private func restoreDraft() {
+        defer { draftRestored = true }
+        guard !draftRestored,
+              let data = UserDefaults.standard.data(forKey: Self.draftKey),
+              let draft = try? JSONDecoder().decode(Draft.self, from: data)
+        else { return }
+        title = draft.title
+        notes = draft.notes
+        querentIds = draft.querentIds
+        multiQuerent = draft.multiQuerent
+        readerId = draft.readerId
+        readingDate = draft.readingDate
+        locationName = draft.locationName
+        readings = draft.readings
+    }
 
     private var canSave: Bool {
         readings.contains { $0.isValid } && !saving
@@ -146,11 +199,34 @@ struct NewEntryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") {
+                        if hasContent { confirmingDiscard = true } else {
+                            Self.clearDraft()
+                            dismiss()
+                        }
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
                         .disabled(!canSave)
+                }
+            }
+            .confirmationDialog("Discard this entry?", isPresented: $confirmingDiscard,
+                                titleVisibility: .visible) {
+                Button("Discard", role: .destructive) {
+                    Self.clearDraft()
+                    dismiss()
+                }
+                Button("Keep Editing", role: .cancel) {}
+            }
+            // A stray swipe would throw the entry away; Cancel asks first.
+            .interactiveDismissDisabled(hasContent)
+            .onChange(of: draftData) { _, data in
+                guard draftRestored else { return }
+                if let data {
+                    UserDefaults.standard.set(data, forKey: Self.draftKey)
+                } else {
+                    Self.clearDraft()
                 }
             }
             .sheet(isPresented: Binding(
@@ -169,7 +245,10 @@ struct NewEntryView: View {
                 optionPicker(for: picker)
             }
         }
-        .task { load() }
+        .task {
+            load()
+            restoreDraft()  // after load(), so the draft's choices win
+        }
     }
 
     private func names(_ ids: [Int64]) -> String? {
@@ -667,6 +746,7 @@ struct NewEntryView: View {
         }
 
         await appModel.sync.submitEntry(payload)
+        Self.clearDraft()
         saving = false
         dismiss()
     }

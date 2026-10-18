@@ -48,7 +48,7 @@ struct Reading: Decodable, Identifiable {
     }
 }
 
-struct SpreadPosition: Decodable {
+struct SpreadPosition: Codable {
     let x: Double
     let y: Double
     let width: Double

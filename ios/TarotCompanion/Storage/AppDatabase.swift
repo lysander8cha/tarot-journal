@@ -270,6 +270,11 @@ struct AppDatabase {
     /// synced data the simulator holds (the next normal launch just
     /// re-syncs it). Never compiled into release builds.
     func seedForComposerUITest() throws {
+        // A leftover draft would auto-open the composer; -keepDraft is
+        // the relaunch half of the draft-restore test.
+        if !ProcessInfo.processInfo.arguments.contains("-keepDraft") {
+            NewEntryView.clearDraft()
+        }
         try writer.write { db in
             try db.execute(sql: """
                 DELETE FROM pending_entries;

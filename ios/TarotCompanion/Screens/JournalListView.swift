@@ -95,6 +95,9 @@ struct JournalListView: View {
             NewEntryView()
         }
         .task {
+            // An entry interrupted mid-composition (app switched away,
+            // or closed by iOS) reopens where it was left.
+            if NewEntryView.hasDraft { composing = true }
             load()
             await appModel.sync.refreshPendingCount()
         }

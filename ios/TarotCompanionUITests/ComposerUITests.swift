@@ -48,6 +48,31 @@ final class ComposerUITests: XCTestCase {
         return navBar
     }
 
+    /// An entry in progress survives the app being closed (as iOS does
+    /// to background apps): relaunching reopens the composer with it.
+    func testDraftSurvivesRelaunch() throws {
+        _ = openComposer()
+        let title = app.textFields["Title (optional)"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        title.tap()
+        title.typeText("ZZ Unfinished")
+
+        app.terminate()
+        app.launchArguments = ["-seedComposerTest", "-keepDraft"]
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["New Entry"].waitForExistence(timeout: 10),
+                      "Composer should reopen with the interrupted draft")
+        XCTAssertEqual(app.textFields["Title (optional)"].value as? String, "ZZ Unfinished")
+
+        // Discarding clears it for good.
+        app.navigationBars["New Entry"].buttons["Cancel"].tap()
+        let discard = app.buttons["Discard"]
+        XCTAssertTrue(discard.waitForExistence(timeout: 5), "Cancel should ask before discarding")
+        discard.tap()
+        XCTAssertTrue(app.navigationBars["Journal"].waitForExistence(timeout: 5))
+    }
+
     func testRecentLocationChipFillsField() throws {
         _ = openComposer()
         // Chips come from the seeded entries, most recent first.
