@@ -21,6 +21,9 @@ export interface PdfExportOptions {
   /** Suit row display in the breakdown: each tradition's names, or
    *  Latin/French equivalents merged ("Cups / Hearts"). */
   suit_view?: 'separate' | 'paired';
+  /** Tarot cards to mark as the querents' birth/name cards: lowercase
+   *  canonical archetype name → role label + frame colors. */
+  card_marks?: Record<string, { label: string; colors: string[] }>;
 }
 
 export interface ArchetypeFieldOption {

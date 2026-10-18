@@ -260,6 +260,54 @@ html, body {
   font-weight: 600;
 }
 
+/* Birth/name card marks: an inset frame (slots clip nothing in
+   print, but the frame stays inside like the app's) and a role pill
+   at the card's foot. Colors come inline from the role palette. */
+.spread__mark {
+  position: absolute;
+  /* WeasyPrint has no `inset` shorthand */
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: 2.5pt solid #d9a54a;
+  border-radius: 3pt;
+}
+
+/* Second role color: a ring just inside the frame (WeasyPrint has
+   no box-shadow). */
+.spread__mark--inner {
+  border-width: 2pt;
+  border-radius: 2pt;
+}
+
+.spread__mark-label {
+  position: absolute;
+  left: 50%;
+  bottom: 3pt;
+  transform: translateX(-50%);
+  max-width: 92%;
+  font-size: 6.5pt;
+  line-height: 1.2;
+  text-align: center;
+  background: rgba(243, 245, 254, 0.94);
+  color: #292b31;
+  border: 0.75pt solid #d9a54a;
+  border-radius: 6pt;
+  padding: 1pt 5pt;
+}
+
+.card-row__mark {
+  margin-top: 2pt;
+  font-size: 7pt;
+  font-weight: 600;
+}
+
+.position-key__mark {
+  font-size: 8pt;
+  font-weight: 600;
+}
+
 /* === Simple card row fallback (no spread.positions) === */
 
 .card-row {

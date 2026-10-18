@@ -565,6 +565,32 @@ def _render_chart_png_data_uri(svg: str) -> str | None:
     return f'data:image/png;base64,{encoded}'
 
 
+_HEX_COLOR = re.compile(r'^#[0-9a-fA-F]{3,8}$')
+
+
+def _apply_card_marks(entry: dict, raw) -> None:
+    """Mark the querents' birth/name cards. The app computes the marks
+    (lowercase canonical Tarot archetype → role label + frame colors,
+    as in the entry viewer); here they're sanitized and pinned onto
+    matching Tarot cards as card['mark'] for the template."""
+    if not isinstance(raw, dict):
+        return
+    marks = {}
+    for key, mark in raw.items():
+        if not isinstance(key, str) or not isinstance(mark, dict):
+            continue
+        colors = [c for c in (mark.get('colors') or [])
+                  if isinstance(c, str) and _HEX_COLOR.match(c)][:4] or ['#d9a54a']
+        marks[key.lower()] = {'label': str(mark.get('label') or '')[:200],
+                              'colors': colors}
+    for rd in entry['readings']:
+        for card in rd.get('cards_used') or []:
+            if card.get('cartomancy_type') == 'Tarot':
+                mark = marks.get((card.get('archetype') or '').lower())
+                if mark:
+                    card['mark'] = mark
+
+
 def _select_readings(entry: dict, ids: list[int] | None) -> dict:
     """If the request specified a readings subset, filter the entry's
     readings list to just those ids. Mutates and returns the entry."""
@@ -886,6 +912,7 @@ def export_pdf(entry_id):
         # The doc says the modal requires at least one reading; this
         # is a backstop for the API path.
         return jsonify({'error': 'At least one reading must be selected'}), 400
+    _apply_card_marks(entry, body.get('card_marks'))
 
     # Correspondence breakdown (phase 2). The request body honours the
     # planning doc's shape: include_correspondences master toggle +

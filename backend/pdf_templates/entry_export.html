@@ -157,6 +157,16 @@
                       {{ pos.key or loop.index }}
                     </div>
                   {% endif %}
+                  {% if card and card.mark %}
+                    {# Birth/name card: inset frame in the role color
+                       (inner ring for a second color) + role label. #}
+                    <div class="spread__mark" style="border-color: {{ card.mark.colors[0] }};">
+                      {% if card.mark.colors|length > 1 %}
+                        <div class="spread__mark spread__mark--inner" style="border-color: {{ card.mark.colors[1] }};"></div>
+                      {% endif %}
+                    </div>
+                    <span class="spread__mark-label" style="border-color: {{ card.mark.colors[0] }};">{{ card.mark.label }}</span>
+                  {% endif %}
                   {# Overlay the short key (1, 2, …) so it stays
                      legible at print size; the full position name
                      lives in the position-key table below. #}
@@ -177,6 +187,7 @@
               <div class="card-row__slot">
                 {% if card.image_uri %}
                   <img class="card-row__img {% if card.reversed %}card-row__img--reversed{% endif %}"
+                       {% if card.mark %}style="outline: 2pt solid {{ card.mark.colors[0] }}; outline-offset: 1pt;"{% endif %}
                        src="{{ card.image_uri }}"
                        alt="{{ card.name|e }}" />
                 {% else %}
@@ -185,6 +196,7 @@
                 <div class="card-row__label">
                   {{ card.name }}{% if card.reversed %} (R){% endif %}
                 </div>
+                {% if card.mark %}<div class="card-row__mark" style="color: {{ card.mark.colors[0] }};">{{ card.mark.label }}</div>{% endif %}
               </div>
             {% endfor %}
           </div>
@@ -195,12 +207,14 @@
             <div class="card-row__slot">
               {% if card.image_uri %}
                 <img class="card-row__img {% if card.reversed %}card-row__img--reversed{% endif %}"
+                     {% if card.mark %}style="outline: 2pt solid {{ card.mark.colors[0] }}; outline-offset: 1pt;"{% endif %}
                      src="{{ card.image_uri }}"
                      alt="{{ card.name|e }}" />
               {% else %}
                 <div class="card-row__placeholder">{{ loop.index }}</div>
               {% endif %}
               <div class="card-row__label">{{ card.name }}</div>
+              {% if card.mark %}<div class="card-row__mark" style="color: {{ card.mark.colors[0] }};">{{ card.mark.label }}</div>{% endif %}
             </div>
           {% endfor %}
         </div>
@@ -227,6 +241,7 @@
                 </td>
                 <td class="position-key__card">
                   {{ card.name }}{% if card.reversed %} <em>(reversed)</em>{% endif %}
+                  {% if card.mark %}<span class="position-key__mark" style="color: {{ card.mark.colors[0] }};">· {{ card.mark.label }}</span>{% endif %}
                 </td>
               </tr>
             {% endfor %}

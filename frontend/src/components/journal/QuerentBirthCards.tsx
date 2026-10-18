@@ -45,6 +45,8 @@ interface QuerentCardGroup {
 export interface QuerentBirthCardData {
   /** lowercase canonical archetype name → labels ("Soul", "Anna: Soul") */
   labelsByArchetype: Map<string, BirthCardTag>;
+  /** The same labels split by system, for exports that mark only one. */
+  labelsBySystem: { birth: Map<string, BirthCardTag>; name: Map<string, BirthCardTag> };
   /** For the panel: per-querent grouped card listings. */
   perQuerent: { name: string; groups: QuerentCardGroup[] }[];
   ready: boolean;
@@ -199,6 +201,20 @@ export function useQuerentBirthCards(
   return useMemo(() => {
     const canonicalById = new Map(archetypes.map(a => [a.id, a.name]));
     const labelsByArchetype = new Map<string, BirthCardTag>();
+    const labelsBySystem = {
+      birth: new Map<string, BirthCardTag>(),
+      name: new Map<string, BirthCardTag>(),
+    };
+    // Merge a label into a map: labels join with " · ", colors dedupe.
+    const tag = (map: Map<string, BirthCardTag>, key: string, label: string, color: string) => {
+      const prior = map.get(key);
+      map.set(key, {
+        label: prior ? `${prior.label} · ${label}` : label,
+        colors: prior && !prior.colors.includes(color)
+          ? [...prior.colors, color]
+          : (prior?.colors ?? [color]),
+      });
+    };
     const perQuerent: { name: string; groups: QuerentCardGroup[] }[] = [];
     const multi = relevant.length > 1;
 
@@ -215,13 +231,8 @@ export function useQuerentBirthCards(
           cards.push({ label, cardName: canonical, cardId: ref.card_id ?? null, color });
           const key = canonical.toLowerCase();
           const tagged = multi ? `${q.name}: ${label}` : label;
-          const prior = labelsByArchetype.get(key);
-          labelsByArchetype.set(key, {
-            label: prior ? `${prior.label} · ${tagged}` : tagged,
-            colors: prior && !prior.colors.includes(color)
-              ? [...prior.colors, color]
-              : (prior?.colors ?? [color]),
-          });
+          tag(labelsByArchetype, key, tagged, color);
+          tag(labelsBySystem[system], key, tagged, color);
         }
         if (cards.length) groups.push({ title, cards, system });
       };
@@ -241,6 +252,7 @@ export function useQuerentBirthCards(
                      wanted: boolean) => !wanted || !!(r && (r.data !== undefined || r.isError));
     return {
       labelsByArchetype,
+      labelsBySystem,
       perQuerent,
       ready: relevant.length > 0 && relevant.every((q, i) =>
         settled(birthResults[i], !!q.birth_date)

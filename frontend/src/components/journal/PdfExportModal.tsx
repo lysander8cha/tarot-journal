@@ -12,6 +12,7 @@ import { CORRESPONDENCE_FIELD_LABELS } from '../../types';
 import type { JournalEntryFull, BreakdownSettings, Spread } from '../../types';
 import { getSpreads } from '../../api/spreads';
 import { loadSuitViewMode, type SuitViewMode } from '../../utils/suitPairing';
+import { useQuerentBirthCards } from './QuerentBirthCards';
 import './PdfExportModal.css';
 
 interface Props {
@@ -99,6 +100,21 @@ export default function PdfExportModal({ entry, open, onClose }: Props) {
 
   // Spread instructions under each reading's layout.
   const [includeSpreadInstructions, setIncludeSpreadInstructions] = useState(false);
+  const [markBirthCards, setMarkBirthCards] = useState(false);
+  const [markNameCards, setMarkNameCards] = useState(false);
+
+  // The querents' Greer birth/name cards, same source as the entry
+  // viewer's "Indicate Birth & Name Cards" (cached, so no refetch).
+  const birthCards = useQuerentBirthCards(
+    entry.querents,
+    entry.reading_datetime ? new Date(entry.reading_datetime).getFullYear() : undefined,
+    open,
+  );
+  const hasTarotReading = entry.readings.some(r =>
+    r.cartomancy_type === 'Tarot'
+    || (r.cards_used || []).some(c => c.cartomancy_type === 'Tarot'));
+  const birthMarksAvailable = hasTarotReading && birthCards.labelsBySystem.birth.size > 0;
+  const nameMarksAvailable = hasTarotReading && birthCards.labelsBySystem.name.size > 0;
   const { data: allSpreads = [] } = useQuery<Spread[]>({
     queryKey: ['spreads'],
     queryFn: getSpreads,
@@ -248,6 +264,23 @@ export default function PdfExportModal({ entry, open, onClose }: Props) {
     });
   };
 
+  /** The chosen systems' labels merged into one archetype → mark map. */
+  const cardMarks = () => {
+    const marks: Record<string, { label: string; colors: string[] }> = {};
+    const add = (map: Map<string, { label: string; colors: string[] }>) => {
+      for (const [key, tag] of map) {
+        const prior = marks[key];
+        marks[key] = prior
+          ? { label: `${prior.label} · ${tag.label}`,
+              colors: [...new Set([...prior.colors, ...tag.colors])] }
+          : { label: tag.label, colors: [...tag.colors] };
+      }
+    };
+    if (markBirthCards && birthMarksAvailable) add(birthCards.labelsBySystem.birth);
+    if (markNameCards && nameMarksAvailable) add(birthCards.labelsBySystem.name);
+    return Object.keys(marks).length ? marks : undefined;
+  };
+
   const handleGenerate = async () => {
     if (noneSelected) return;
     setGenerating(true);
@@ -274,6 +307,7 @@ export default function PdfExportModal({ entry, open, onClose }: Props) {
         include_chart: includeChart && chartAvailable,
         include_spread_instructions:
           includeSpreadInstructions && spreadInstructionsAvailable,
+        card_marks: cardMarks(),
       });
       showToast('PDF downloaded');
       onClose();
@@ -475,6 +509,35 @@ export default function PdfExportModal({ entry, open, onClose }: Props) {
               </p>
             )}
           </section>
+
+          {(birthMarksAvailable || nameMarksAvailable) && (
+            <section className="pdf-export-modal__section">
+              <h3>Birth &amp; name cards</h3>
+              {birthMarksAvailable && (
+                <label className="pdf-export-modal__master">
+                  <input
+                    type="checkbox"
+                    checked={markBirthCards}
+                    onChange={e => setMarkBirthCards(e.target.checked)}
+                  />
+                  <span>Mark the querents' birth cards</span>
+                </label>
+              )}
+              {nameMarksAvailable && (
+                <label className="pdf-export-modal__master">
+                  <input
+                    type="checkbox"
+                    checked={markNameCards}
+                    onChange={e => setMarkNameCards(e.target.checked)}
+                  />
+                  <span>Mark the querents' name cards</span>
+                </label>
+              )}
+              <p className="pdf-export-modal__hint">
+                Marked Tarot cards get a colored frame and their role (Soul, Theme Note…).
+              </p>
+            </section>
+          )}
 
           <section className="pdf-export-modal__section">
             <h3>Astrological event chart</h3>
