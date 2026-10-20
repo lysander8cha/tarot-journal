@@ -89,8 +89,7 @@ When renaming card image files for deck folders, use these naming schemes (they 
 - German (32/36): h Herz, b Schellen, l Laub, a Eichel; 6/7-10, 11 Unter, 12 Ober, 13 König, Ass = 01 (or 14); Weli = w
 - Swiss (36): r Rosen, b Schellen, s Schilten, a Eicheln; 6-9, 10 Banner, 11 Under, 12 Ober, 13 König, Ass = 01 (or 14)
 
-**Tarocchi** (own deck types, Italian names) — trumps by printed number, 00 = Fool; suits b Bastoni, c Coppe, s Spade, d Denari + 01-10, 11 Fante, 12 Cavallo, 13 Donna, 14 Re:
-- Piemontese (78): trumps 01-21 (08 Giustizia, 11 Forza, 20 Angelo, 21 Mondo)
+**Tarocchi** (Italian names) — Piemontese (78) is a Tarot-type preset (Marseille order, 08 Giustizia, 11 Forza), Bolognese and Siciliano are their own deck types. Trumps by printed number, 00 = Fool; suits b Bastoni, c Coppe, s Spade, d Denari + 01-10, 11 Fante, 12 Cavallo, 13 Donna, 14 Re:
 - Bolognese (62): 00 Matto, 01 Begato, m1-m4 Moors, 05-16 as printed, 17 Luna, 18 Sole, 19 Mondo, 20 Angelo; pips Ace + 6-10 only
 - Siciliano (63+1): 00 Fuggitivo, m0 Miseria, 01-20 as printed (04 Costanza, 14 Vascello, 19 Atlante, 20 Giove); pips 5-10, Coins also 4 and the tax-stamp Ace (d01); courts 11 Donna (female knave), 12 Cavallo, 13 Regina, 14 Re
 

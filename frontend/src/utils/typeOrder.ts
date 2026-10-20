@@ -9,7 +9,7 @@ import type { CartomancyType } from '../types';
 
 const PREFERRED_ORDER = [
   'Tarot', 'Petit Lenormand', 'Playing Cards', 'Kipper', 'I Ching',
-  'Playing Cards (Latin-suited)', 'Playing Cards (German-suited)', 'Playing Cards (Swiss-suited)', 'Tarocco Piemontese', 'Tarocco Bolognese', 'Tarocco Siciliano', 'Oracle Belline',
+  'Playing Cards (Latin-suited)', 'Playing Cards (German-suited)', 'Playing Cards (Swiss-suited)', 'Tarocco Bolognese', 'Tarocco Siciliano', 'Oracle Belline',
   'Vera Sibilla Italiana / Sibilla della Zingara',
   'Sibylle des Salons / Sibilla Indovina',
 ];

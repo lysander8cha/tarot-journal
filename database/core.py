@@ -12,7 +12,8 @@ from contextlib import contextmanager
 
 from card_metadata import (
     GERMAN_RANKS, GERMAN_SUITED, GERMAN_SUITS, LATIN_SUITED, SPANISH_TO_LATIN_RANK,
-    SPANISH_TO_LATIN_SUIT, SWISS_SUITED, TAROCCHI, family_archetypes)
+    SPANISH_TO_LATIN_SUIT, SWISS_SUITED, TAROCCHI, TAROCCO_PIEMONTESE,
+    family_archetypes, piemontese_cards)
 from logger_config import get_logger
 
 # Built-in cartomancy types, re-seeded (INSERT OR IGNORE) on every
@@ -1542,15 +1543,15 @@ class CoreMixin:
             # skips existing rows.
             cursor.execute(
                 "SELECT COUNT(*) FROM card_archetypes WHERE cartomancy_type "
-                "IN ('I Ching', 'Kipper', ?, ?, ?, ?, ?, ?, "
+                f"IN ('I Ching', 'Kipper', {', '.join('?' * (3 + len(TAROCCHI)))}, "
                 "    'Oracle Belline', 'Vera Sibilla Italiana / Sibilla della Zingara', "
                 "    'Sibylle des Salons / Sibilla Indovina')",
                 (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED, *TAROCCHI)
             )
             # 64 I Ching + 36 Kipper + 49 Latin + 53 German + 36 Swiss
             # + 53 Belline + 52 Sibilla + 52 Sibylle
-            # + 78 Piemontese + 62 Bolognese + 64 Siciliano = 599
-            if cursor.fetchone()[0] < 599:
+            # + 62 Bolognese + 64 Siciliano = 521
+            if cursor.fetchone()[0] < 521:
                 self._seed_card_archetypes(cursor)
 
         # Seed correspondence systems if table is empty
@@ -1999,6 +2000,13 @@ class CoreMixin:
                 )
             self.set_setting('belline_compound_name_rename_done', 'true')
 
+        # One-time fold-back: Tarocco Piemontese briefly had its own deck
+        # type; it's a standard tarot, so its decks join Tarot and their
+        # cards relink to the Tarot archetypes (Italian card names stay).
+        if self.get_setting('piemontese_type_removal_done') != 'true':
+            self._fold_piemontese_into_tarot(cursor)
+            self.set_setting('piemontese_type_removal_done', 'true')
+
         # One-time reorder: German-suited decks imported before the Ass
         # moved to the front of each suit sorted it after the König.
         if self.get_setting('german_ace_first_order_done') != 'true':
@@ -2065,6 +2073,32 @@ class CoreMixin:
         # Run one-time correspondence field migration (after commit so tables exist)
         from database.correspondence_migration import run_correspondence_migration
         run_correspondence_migration(self)
+
+    def _fold_piemontese_into_tarot(self, cursor):
+        old = cursor.execute('SELECT id FROM cartomancy_types WHERE name = ?',
+                             (TAROCCO_PIEMONTESE,)).fetchone()
+        tarot = cursor.execute("SELECT id FROM cartomancy_types WHERE name = 'Tarot'").fetchone()
+        if not old or not tarot:
+            return
+        to_tarot = {it: en for it, en, _keys in piemontese_cards()}
+        tarot_rs = {r['name']: (r['rank'], r['suit']) for r in cursor.execute(
+            "SELECT name, rank, suit FROM card_archetypes WHERE cartomancy_type = 'Tarot'")}
+        for (deck_id,) in cursor.execute(
+                'SELECT deck_id FROM deck_type_assignments WHERE type_id = ?',
+                (old['id'],)).fetchall():
+            cursor.execute('INSERT OR IGNORE INTO deck_type_assignments (deck_id, type_id) '
+                           'VALUES (?, ?)', (deck_id, tarot['id']))
+            for card in cursor.execute('SELECT id, archetype FROM cards WHERE deck_id = ?',
+                                       (deck_id,)).fetchall():
+                en = to_tarot.get(card['archetype'])
+                if en:
+                    rank, suit = tarot_rs.get(en, (None, None))
+                    cursor.execute('UPDATE cards SET archetype = ?, rank = ?, suit = ? '
+                                   'WHERE id = ?', (en, rank, suit, card['id']))
+        cursor.execute('DELETE FROM deck_type_assignments WHERE type_id = ?', (old['id'],))
+        cursor.execute('DELETE FROM card_archetypes WHERE cartomancy_type = ?',
+                       (TAROCCO_PIEMONTESE,))
+        cursor.execute('DELETE FROM cartomancy_types WHERE id = ?', (old['id'],))
 
     def _order_german_decks_ace_first(self, cursor):
         """Renumber card_order in German-suited decks: suits in family

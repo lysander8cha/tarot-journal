@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from card_metadata import (GERMAN_SUITED, LATIN_SUITED, SWISS_SUITED, TAROCCHI,
-                           family_archetypes, tarocco_cards)
+                           family_archetypes, piemontese_cards, tarocco_cards)
 
 logger = logging.getLogger(__name__)
 
@@ -877,8 +877,18 @@ def _build_tarocco(cartomancy_type: str):
     return mappings, meta
 
 
-# Preset name == the deck type name for the three tarocchi.
+# Preset name == the deck type name for the Bolognese and Siciliano.
 REGIONAL_PACKS.update({t: _build_tarocco(t) for t in TAROCCHI})
+
+# Tarocco Piemontese imports as Tarot: Italian card names, Tarot
+# archetypes, Marseille numbering (VIII Justice, XI Strength).
+PIEMONTESE_PRESET = 'Tarocco Piemontese (78 cards)'
+PIEMONTESE_MAPPINGS = {}
+PIEMONTESE_TO_TAROT = {}
+for _it, _en, _keys in piemontese_cards():
+    PIEMONTESE_TO_TAROT[_it] = _en
+    for _k in (*_keys, _it.lower().replace(' ', '')):
+        PIEMONTESE_MAPPINGS.setdefault(_k, _it)
 
 
 # Oracle Belline (53 cards). Positional 01-53 + ascii-fold name keys.
@@ -1489,6 +1499,17 @@ BUILTIN_PRESETS = {
         }
         for t in TAROCCHI
     },
+    PIEMONTESE_PRESET: {
+        "type": "Tarot",
+        "mappings": PIEMONTESE_MAPPINGS,
+        "description": (
+            "78-card Tarocco Piemontese: Italian card names linked to the Tarot "
+            "archetypes. Trumps 00 (Il Matto) – 21 as printed (08 La Giustizia, "
+            "11 La Forza); suits b Bastoni, c Coppe, s Spade, d Denari + 01-10, "
+            "11 Fante, 12 Cavallo, 13 Donna, 14 Re."),
+        "suit_names": {"wands": "Bastoni", "cups": "Coppe", "swords": "Spade", "pentacles": "Denari"},
+        "card_back_patterns": DEFAULT_CARD_BACK_PATTERNS,
+    },
     "Oracle Belline (53 cards)": {
         "type": "Oracle Belline",
         "mappings": ORACLE_BELLINE,
@@ -1881,6 +1902,9 @@ class ImportPresets:
         preset = self.get_preset(preset_name)
         preset_type = preset.get('type', 'Oracle') if preset else 'Oracle'
 
+        if preset_name == PIEMONTESE_PRESET:
+            return self._get_piemontese_metadata(card_name)
+
         sort_order = self._get_card_sort_order(card_name, custom_suit_names, preset_name, custom_court_names)
 
         if preset_type == 'Tarot':
@@ -1924,6 +1948,11 @@ class ImportPresets:
         """
         preset = self.get_preset(preset_name)
         preset_type = preset.get('type', 'Oracle') if preset else 'Oracle'
+
+        if preset_name == PIEMONTESE_PRESET:
+            cards = piemontese_cards()
+            if 1 <= sort_order <= len(cards):
+                return self._get_piemontese_metadata(cards[sort_order - 1][0])
 
         # Use a placeholder card name - the metadata functions will use sort_order
         placeholder_name = f"Card {sort_order}"
@@ -3091,6 +3120,15 @@ class ImportPresets:
             'suit': None,
             'sort_order': sort_order
         }
+
+    def _get_piemontese_metadata(self, card_name: str) -> dict:
+        """An Italian Piemontese card name, stored like any Tarot card
+        of the Marseille-ordered (Pre-Golden Dawn) preset."""
+        tarot_name = PIEMONTESE_TO_TAROT.get(card_name)
+        if not tarot_name:
+            return {'archetype': None, 'rank': None, 'suit': None, 'sort_order': 999}
+        meta = self.get_card_metadata(tarot_name, 'Tarot (Pre-Golden Dawn Ordering)')
+        return {**meta, 'archetype': tarot_name}
 
     def _get_regional_metadata(self, card_name: str, sort_order: int,
                                preset_name: str = None) -> dict:

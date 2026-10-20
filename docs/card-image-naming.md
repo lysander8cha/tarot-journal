@@ -95,7 +95,9 @@ in suit order, and the native suit word as prefix (`oros10`, `schilten12`).
 Watch out for: Italian courts are 8–10, not 10–12 as in Spanish packs.
 
 ## Tarocchi (Italian game tarots)
-Each is its own deck type with Italian card and archetype names. Trumps
+Italian card names. The Piemontese is a standard tarot, so its preset
+imports as **Tarot** (cards link to The Fool, Justice, Page of Cups…);
+the Bolognese and Siciliano are their own deck types. Trumps
 by the number **printed on the card**, `00` for the Fool; unnumbered
 trumps use the short keys below. Suits: `b` Bastoni, `c` Coppe, `s`
 Spade, `d` Denari + `01`–`10` (01 = the Ace), courts `11` Fante,
@@ -103,7 +105,7 @@ Spade, `d` Denari + `01`–`10` (01 = the Ace), courts `11` Fante,
 
 | Preset | Trumps | Pips | Example |
 |---|---|---|---|
-| Tarocco Piemontese (78) | `00` Il Matto, `01`–`21` (08 La Giustizia, 11 La Forza, 20 L'Angelo, 21 Il Mondo) | Ace–10 | `c11` = Fante di Coppe |
+| Tarocco Piemontese (78 cards) — Tarot type | `00` Il Matto, `01`–`21` (08 La Giustizia, 11 La Forza, 20 L'Angelo, 21 Il Mondo) | Ace–10 | `c11` = Fante di Coppe |
 | Tarocco Bolognese (62) | `00` Matto, `01` Begato, `m1`–`m4` the four Moors, `05`–`16` as printed, `17` Luna, `18` Sole, `19` Mondo, `20` Angelo | Ace and 6–10 | `m2` = Moro 2 |
 | Tarocco Siciliano (63 + tax Ace) | `00` Fuggitivo, `m0` (or `miseria`) Miseria, `01`–`20` as printed (04 Costanza, 14 Vascello, 19 Atlante, 20 Giove) | 5–10; Coins also 4 and the extra Ace `d01` | `c11` = Donna di Coppe |
 

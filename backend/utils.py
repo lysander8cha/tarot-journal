@@ -6,7 +6,7 @@ from functools import wraps
 from flask import request, jsonify
 
 # Preferred display order for cartomancy types
-TYPE_ORDER = ['Tarot', 'Tarocco Piemontese', 'Tarocco Bolognese', 'Tarocco Siciliano', 'Petit Lenormand', 'Oracle', 'Playing Cards',
+TYPE_ORDER = ['Tarot', 'Tarocco Bolognese', 'Tarocco Siciliano', 'Petit Lenormand', 'Oracle', 'Playing Cards',
               'Playing Cards (Latin-suited)', 'Playing Cards (German-suited)',
               'Playing Cards (Swiss-suited)',
               'Kipper', 'I Ching']

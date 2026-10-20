@@ -309,6 +309,42 @@ def family_archetypes(cartomancy_type: str) -> list:
     return []
 
 
+# --- Tarocco Piemontese: a standard 78-card tarot (Marseille order:
+# VIII Justice, XI Strength) with Italian titles and suits — imported as
+# Tarot, Italian card names linked to the Tarot archetypes. It briefly
+# had its own deck type; database/core.py folds that back into Tarot.
+PIEMONTESE_TRUMPS = [
+    ('Il Matto', 'The Fool'), ('Il Bagatto', 'The Magician'),
+    ('La Papessa', 'The High Priestess'), ("L'Imperatrice", 'The Empress'),
+    ("L'Imperatore", 'The Emperor'), ('Il Papa', 'The Hierophant'),
+    ('Gli Amanti', 'The Lovers'), ('Il Carro', 'The Chariot'),
+    ('La Giustizia', 'Justice'), ("L'Eremita", 'The Hermit'),
+    ('La Ruota della Fortuna', 'Wheel of Fortune'), ('La Forza', 'Strength'),
+    ("L'Appeso", 'The Hanged Man'), ('La Morte', 'Death'),
+    ('La Temperanza', 'Temperance'), ('Il Diavolo', 'The Devil'),
+    ('La Torre', 'The Tower'), ('Le Stelle', 'The Star'), ('La Luna', 'The Moon'),
+    ('Il Sole', 'The Sun'), ("L'Angelo", 'Judgement'), ('Il Mondo', 'The World'),
+]
+_PIEMONTESE_SUITS = [('Bastoni', 'Wands', 'b'), ('Coppe', 'Cups', 'c'),
+                     ('Spade', 'Swords', 's'), ('Denari', 'Pentacles', 'd')]
+_TAROT_RANKS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight',
+                'Nine', 'Ten', 'Page', 'Knight', 'Queen', 'King']
+
+
+def piemontese_cards() -> list:
+    """(Italian name, Tarot archetype, filename keys) for all 78 cards:
+    trumps 00-21 by printed number, then b/c/s/d + 01-14."""
+    cards = [(it, en, (f'{i:02d}', str(i))) for i, (it, en) in enumerate(PIEMONTESE_TRUMPS)]
+    cards[0] = (*cards[0][:2], cards[0][2] + ('matto',))
+    ranks = [r for r, *_ in _IT_PIPS + _IT_COURTS]
+    for it_suit, suit, letter in _PIEMONTESE_SUITS:
+        for n, (it_rank, rank) in enumerate(zip(ranks, _TAROT_RANKS), 1):
+            keys = tuple(f'{pre}{k}' for pre in (letter, it_suit.lower())
+                         for k in (f'{n:02d}', str(n)))
+            cards.append((f'{it_rank} di {it_suit}', f'{rank} of {suit}', keys))
+    return cards
+
+
 # --- Tarocchi: Italian-suited game tarots, each its own deck type with
 # Italian-named archetypes (cross-type links to Tarot come later).
 # Trumps: (name, filename keys), lowest first; they get suit 'Major
@@ -334,16 +370,6 @@ def _numbered(names, start):
 
 
 TAROCCHI = {
-    # 78 cards; Marseille order (VIII Justice, XI Strength), Fool unnumbered.
-    TAROCCO_PIEMONTESE: {
-        'trumps': [('Il Matto', ('00', '0', 'matto'))] + _numbered([
-            'Il Bagatto', 'La Papessa', "L'Imperatrice", "L'Imperatore", 'Il Papa',
-            'Gli Amanti', 'Il Carro', 'La Giustizia', "L'Eremita", 'La Ruota della Fortuna',
-            'La Forza', "L'Appeso", 'La Morte', 'La Temperanza', 'Il Diavolo', 'La Torre',
-            'Le Stelle', 'La Luna', 'Il Sole', "L'Angelo", 'Il Mondo'], 1),
-        'suits': _IT_TAROCCO_SUITS,
-        'ranks': _IT_PIPS + _IT_COURTS,
-    },
     # 62 cards: no 2-5 pips; only trumps 5-16 are numbered; four
     # interchangeable Moors (two identical) below Amore.
     TAROCCO_BOLOGNESE: {
@@ -403,7 +429,7 @@ if __name__ == '__main__':
     assert len(family_archetypes(LATIN_SUITED)) == 49
     assert len(family_archetypes(GERMAN_SUITED)) == 53
     assert len(family_archetypes(SWISS_SUITED)) == 36
-    assert len(family_archetypes(TAROCCO_PIEMONTESE)) == 78
+    assert len(piemontese_cards()) == 78 and piemontese_cards()[8][1] == 'Justice'
     assert len(family_archetypes(TAROCCO_BOLOGNESE)) == 62
     assert len(family_archetypes(TAROCCO_SICILIANO)) == 64   # 63 + tax-stamp Ace
     names = [n for n, *_ in family_archetypes(TAROCCO_SICILIANO)]

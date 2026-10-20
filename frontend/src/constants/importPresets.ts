@@ -71,7 +71,7 @@ export const DEFAULT_SUIT_NAMES: Record<string, Record<string, string>> = {
     leaves: "Leaves",
     acorns: "Acorns",
   },
-  ...Object.fromEntries(['Tarocco Piemontese', 'Tarocco Bolognese', 'Tarocco Siciliano'].map(t => [t, {
+  ...Object.fromEntries(['Tarocco Bolognese', 'Tarocco Siciliano'].map(t => [t, {
     batons: "Bastoni",
     cups: "Coppe",
     swords: "Spade",
