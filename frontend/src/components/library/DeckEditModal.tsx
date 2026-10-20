@@ -194,6 +194,9 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
   const GERMAN_SUIT_DEFAULTS: Record<string, string> = {
     hearts: 'Hearts', bells: 'Bells', leaves: 'Leaves', acorns: 'Acorns'
   };
+  const TAROCCO_SUIT_DEFAULTS: Record<string, string> = {
+    batons: 'Bastoni', cups: 'Coppe', swords: 'Spade', coins: 'Denari'
+  };
   const SWISS_SUIT_DEFAULTS: Record<string, string> = {
     roses: 'Roses', bells: 'Bells', shields: 'Shields', acorns: 'Acorns'
   };
@@ -240,7 +243,8 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
   const hasPlayingCards = selectedTypeNames.some(n =>
     n.includes('playing') || n.includes('poker') || n.includes('bridge')
   );
-  const hasSuitedDeck = hasTarot || hasPlayingCards;
+  const hasSuitedDeck = hasTarot || hasPlayingCards
+    || selectedTypeNames.some(n => n.startsWith('tarocco'));
 
   // Primary cartomancy type for the deck override UI — prefer whichever type
   // the deck's currently-selected correspondence system uses, else first
@@ -256,6 +260,7 @@ export default function DeckEditModal({ deckId, onClose, onSaved, onDeleted }: D
     if (selectedTypeNames.some(n => n.includes('latin-suited'))) return LATIN_SUIT_DEFAULTS;
     if (selectedTypeNames.some(n => n.includes('german-suited'))) return GERMAN_SUIT_DEFAULTS;
     if (selectedTypeNames.some(n => n.includes('swiss-suited'))) return SWISS_SUIT_DEFAULTS;
+    if (selectedTypeNames.some(n => n.startsWith('tarocco'))) return TAROCCO_SUIT_DEFAULTS;
     if (hasPlayingCards) return PLAYING_SUIT_DEFAULTS;
     return TAROT_SUIT_DEFAULTS; // fallback
   };

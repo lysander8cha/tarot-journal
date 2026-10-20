@@ -12,7 +12,7 @@ from contextlib import contextmanager
 
 from card_metadata import (
     GERMAN_RANKS, GERMAN_SUITED, GERMAN_SUITS, LATIN_SUITED, SPANISH_TO_LATIN_RANK,
-    SPANISH_TO_LATIN_SUIT, SWISS_SUITED, family_archetypes)
+    SPANISH_TO_LATIN_SUIT, SWISS_SUITED, TAROCCHI, family_archetypes)
 from logger_config import get_logger
 
 # Built-in cartomancy types, re-seeded (INSERT OR IGNORE) on every
@@ -21,7 +21,7 @@ from logger_config import get_logger
 # and deleting types NOT in this list.
 DEFAULT_TYPE_NAMES = [
     'Tarot', 'Petit Lenormand', 'Kipper', 'Playing Cards', 'Oracle', 'I Ching',
-    LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED, 'Oracle Belline',
+    LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED, *TAROCCHI, 'Oracle Belline',
     'Vera Sibilla Italiana / Sibilla della Zingara',
     'Sibylle des Salons / Sibilla Indovina',
 ]
@@ -1542,14 +1542,15 @@ class CoreMixin:
             # skips existing rows.
             cursor.execute(
                 "SELECT COUNT(*) FROM card_archetypes WHERE cartomancy_type "
-                "IN ('I Ching', 'Kipper', ?, ?, ?, "
+                "IN ('I Ching', 'Kipper', ?, ?, ?, ?, ?, ?, "
                 "    'Oracle Belline', 'Vera Sibilla Italiana / Sibilla della Zingara', "
                 "    'Sibylle des Salons / Sibilla Indovina')",
-                (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED)
+                (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED, *TAROCCHI)
             )
             # 64 I Ching + 36 Kipper + 49 Latin + 53 German + 36 Swiss
-            # + 53 Belline + 52 Sibilla + 52 Sibylle = 395
-            if cursor.fetchone()[0] < 395:
+            # + 53 Belline + 52 Sibilla + 52 Sibylle
+            # + 78 Piemontese + 62 Bolognese + 64 Siciliano = 599
+            if cursor.fetchone()[0] < 599:
                 self._seed_card_archetypes(cursor)
 
         # Seed correspondence systems if table is empty
@@ -2231,6 +2232,11 @@ class CoreMixin:
                                   (SWISS_SUITED, 'swiss-playing')):
             for name, rank, suit in family_archetypes(family):
                 archetypes.append((name, family, rank, suit, card_type))
+        # Tarocchi (Italian game tarots), each its own type.
+        for family in TAROCCHI:
+            for name, rank, suit in family_archetypes(family):
+                archetypes.append((name, family, rank, suit,
+                                   'major' if suit == 'Major Arcana' else 'minor'))
 
         # Oracle Belline (53). Position is the card's traditional number,
         # used as the rank string.

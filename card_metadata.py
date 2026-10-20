@@ -304,7 +304,90 @@ def family_archetypes(cartomancy_type: str) -> list:
         return cards + [('Weli', 'Weli', 'Bells')]
     if cartomancy_type == SWISS_SUITED:
         return [(f'{r} of {s}', r, s) for s in SWISS_SUITS for r in SWISS_RANKS]
+    if cartomancy_type in TAROCCHI:
+        return [(name, rank, suit) for name, rank, suit, _keys in tarocco_cards(cartomancy_type)]
     return []
+
+
+# --- Tarocchi: Italian-suited game tarots, each its own deck type with
+# Italian-named archetypes (cross-type links to Tarot come later).
+# Trumps: (name, filename keys), lowest first; they get suit 'Major
+# Arcana' and no rank. Suits/ranks: (Italian, English, printed numbers)
+# — English suit/rank values keep sorting, suit pairing and the court
+# filter working. Files: printed number + Italian suit letter.
+TAROCCO_PIEMONTESE = 'Tarocco Piemontese'
+TAROCCO_BOLOGNESE = 'Tarocco Bolognese'
+TAROCCO_SICILIANO = 'Tarocco Siciliano'
+
+_IT_TAROCCO_SUITS = [('Bastoni', 'Batons', 'b'), ('Coppe', 'Cups', 'c'),
+                     ('Spade', 'Swords', 's'), ('Denari', 'Coins', 'd')]
+_IT_PIPS = [('Asso', 'Ace', (1,)), ('Due', 'Two', (2,)), ('Tre', 'Three', (3,)),
+            ('Quattro', 'Four', (4,)), ('Cinque', 'Five', (5,)), ('Sei', 'Six', (6,)),
+            ('Sette', 'Seven', (7,)), ('Otto', 'Eight', (8,)), ('Nove', 'Nine', (9,)),
+            ('Dieci', 'Ten', (10,))]
+_IT_COURTS = [('Fante', 'Knave', (11,)), ('Cavallo', 'Knight', (12,)),
+              ('Donna', 'Queen', (13,)), ('Re', 'King', (14,))]
+
+
+def _numbered(names, start):
+    return [(n, (f'{i:02d}', str(i))) for i, n in enumerate(names, start)]
+
+
+TAROCCHI = {
+    # 78 cards; Marseille order (VIII Justice, XI Strength), Fool unnumbered.
+    TAROCCO_PIEMONTESE: {
+        'trumps': [('Il Matto', ('00', '0', 'matto'))] + _numbered([
+            'Il Bagatto', 'La Papessa', "L'Imperatrice", "L'Imperatore", 'Il Papa',
+            'Gli Amanti', 'Il Carro', 'La Giustizia', "L'Eremita", 'La Ruota della Fortuna',
+            'La Forza', "L'Appeso", 'La Morte', 'La Temperanza', 'Il Diavolo', 'La Torre',
+            'Le Stelle', 'La Luna', 'Il Sole', "L'Angelo", 'Il Mondo'], 1),
+        'suits': _IT_TAROCCO_SUITS,
+        'ranks': _IT_PIPS + _IT_COURTS,
+    },
+    # 62 cards: no 2-5 pips; only trumps 5-16 are numbered; four
+    # interchangeable Moors (two identical) below Amore.
+    TAROCCO_BOLOGNESE: {
+        'trumps': [('Matto', ('00', '0', 'matto')), ('Begato', ('01', '1', 'begato'))]
+        + [(f'Moro {i}', (f'm{i}', f'moro{i}')) for i in range(1, 5)]
+        + _numbered(['Amore', 'Carro', 'Tempra', 'Giusta', 'Forza', 'Roda', 'Vecchio',
+                     'Traditore', 'Morte', 'Diavolo', 'Saetta', 'Stella'], 5)
+        + [('Luna', ('17', 'luna')), ('Sole', ('18', 'sole')),
+           ('Mondo', ('19', 'mondo')), ('Angelo', ('20', 'angelo'))],
+        'suits': _IT_TAROCCO_SUITS,
+        'ranks': [_IT_PIPS[0]] + _IT_PIPS[5:] + _IT_COURTS,
+    },
+    # 63 cards (+ the tax-stamp Ace of Coins): pips 5-10, Coins also 4;
+    # knaves are female (Donna), queens Regina. Unique trumps Miseria,
+    # Costanza, Vascello, Atlante, Giove; Fool = Fuggitivo.
+    TAROCCO_SICILIANO: {
+        'trumps': [('Fuggitivo', ('00', 'fuggitivo', 'matto')),
+                   ('Miseria', ('m0', 'miseria'))] + _numbered([
+            'Bagotti', 'Imperatrice', 'Imperatore', 'Costanza', 'Temperanza', 'Forza',
+            'Giustizia', 'Amore', 'Carro', 'Ruota', 'Impiccato', 'Tempo', 'Morte',
+            'Vascello', 'Torre', 'Stella', 'Luna', 'Sole', 'Atlante', 'Giove'], 1),
+        'suits': _IT_TAROCCO_SUITS,
+        'ranks': _IT_PIPS[4:] + [('Donna', 'Knave', (11,)), ('Cavallo', 'Knight', (12,)),
+                                 ('Regina', 'Queen', (13,)), ('Re', 'King', (14,))],
+        # Coins add the 4 and the extra tax-stamp Ace.
+        'extra_coins': [_IT_PIPS[0], _IT_PIPS[3]],
+    },
+}
+
+
+def tarocco_cards(cartomancy_type: str) -> list:
+    """(name, english_rank, english_suit, filename keys) for a tarocco
+    pack in sort order: trumps, then each suit's pips and courts."""
+    spec = TAROCCHI[cartomancy_type]
+    cards = [(name, None, 'Major Arcana', keys) for name, keys in spec['trumps']]
+    for it_suit, suit, letter in spec['suits']:
+        ranks = spec['ranks']
+        if suit == 'Coins' and spec.get('extra_coins'):
+            ranks = sorted(spec['extra_coins'] + ranks, key=lambda r: r[2][0])
+        for it_rank, rank, numbers in ranks:
+            keys = [f'{pre}{n:02d}' for pre in (letter, it_suit.lower()) for n in numbers]
+            keys += [f'{pre}{n}' for pre in (letter, it_suit.lower()) for n in numbers]
+            cards.append((f'{it_rank} di {it_suit}', rank, suit, tuple(keys)))
+    return cards
 
 
 # The old "Playing Cards (Spanish)" archetypes ("As de Oros") became
@@ -320,5 +403,10 @@ if __name__ == '__main__':
     assert len(family_archetypes(LATIN_SUITED)) == 49
     assert len(family_archetypes(GERMAN_SUITED)) == 53
     assert len(family_archetypes(SWISS_SUITED)) == 36
+    assert len(family_archetypes(TAROCCO_PIEMONTESE)) == 78
+    assert len(family_archetypes(TAROCCO_BOLOGNESE)) == 62
+    assert len(family_archetypes(TAROCCO_SICILIANO)) == 64   # 63 + tax-stamp Ace
+    names = [n for n, *_ in family_archetypes(TAROCCO_SICILIANO)]
+    assert len(set(names)) == 64 and 'Donna di Coppe' in names and 'Quattro di Denari' in names
     assert SPANISH_TO_LATIN_RANK['Sota'] == 'Knave'
     print('ok')

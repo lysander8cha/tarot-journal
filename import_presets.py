@@ -9,7 +9,8 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from card_metadata import GERMAN_SUITED, LATIN_SUITED, SWISS_SUITED, family_archetypes
+from card_metadata import (GERMAN_SUITED, LATIN_SUITED, SWISS_SUITED, TAROCCHI,
+                           family_archetypes, tarocco_cards)
 
 logger = logging.getLogger(__name__)
 
@@ -863,6 +864,23 @@ def _build_regional(pattern: dict):
 REGIONAL_PACKS = {name: _build_regional(p) for name, p in REGIONAL_PATTERNS.items()}
 
 
+def _build_tarocco(cartomancy_type: str):
+    """(filename mappings, card name -> metadata) for a tarocco pack.
+    Card names are the archetype names; only explicit keys (no running
+    numbers — trump numbers already use 00-21)."""
+    mappings: dict[str, str] = {}
+    meta: dict[str, dict] = {}
+    for pos, (name, rank, suit, keys) in enumerate(tarocco_cards(cartomancy_type), 1):
+        for k in (*keys, name.lower().replace(' ', '')):
+            mappings.setdefault(k, name)
+        meta[name] = {'archetype': name, 'rank': rank, 'suit': suit, 'sort_order': pos}
+    return mappings, meta
+
+
+# Preset name == the deck type name for the three tarocchi.
+REGIONAL_PACKS.update({t: _build_tarocco(t) for t in TAROCCHI})
+
+
 # Oracle Belline (53 cards). Positional 01-53 + ascii-fold name keys.
 def _build_oracle_belline() -> dict:
     import re as _re
@@ -1457,6 +1475,20 @@ BUILTIN_PRESETS = {
         }
         for name, pattern in REGIONAL_PATTERNS.items()
     },
+    **{
+        t: {
+            "type": t,
+            "mappings": REGIONAL_PACKS[t][0],
+            "description": (
+                f"{len(REGIONAL_PACKS[t][1])} cards, Italian names. Trumps by printed number "
+                "(00 = the Fool; unnumbered trumps by name or the short keys in the naming "
+                "guide); suits: b Bastoni, c Coppe, s Spade, d Denari + printed number, "
+                "courts 11-14."),
+            "suit_names": {"batons": "Bastoni", "cups": "Coppe", "swords": "Spade", "coins": "Denari"},
+            "card_back_patterns": DEFAULT_CARD_BACK_PATTERNS,
+        }
+        for t in TAROCCHI
+    },
     "Oracle Belline (53 cards)": {
         "type": "Oracle Belline",
         "mappings": ORACLE_BELLINE,
@@ -1865,7 +1897,7 @@ class ImportPresets:
             return self._get_playing_card_metadata(card_name, sort_order)
         elif preset_type == 'I Ching':
             return self._get_iching_metadata(card_name, sort_order)
-        elif preset_type in (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED):
+        elif preset_type in (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED, *TAROCCHI):
             return self._get_regional_metadata(card_name, sort_order, preset_name)
         elif preset_type == 'Oracle Belline':
             return self._get_belline_metadata(card_name, sort_order)
@@ -1919,7 +1951,7 @@ class ImportPresets:
             return self._get_playing_card_metadata_by_position(sort_order)
         elif preset_type == 'I Ching':
             return self._get_iching_metadata_by_position(sort_order)
-        elif preset_type in (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED):
+        elif preset_type in (LATIN_SUITED, GERMAN_SUITED, SWISS_SUITED, *TAROCCHI):
             return self._get_regional_metadata_by_position(sort_order, preset_name)
         elif preset_type == 'Oracle Belline':
             return self._get_belline_metadata_by_position(sort_order)

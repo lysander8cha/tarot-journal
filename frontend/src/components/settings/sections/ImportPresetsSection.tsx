@@ -20,6 +20,9 @@ const SUIT_KEYS_BY_TYPE: Record<string, string[]> = {
   'Playing Cards (Latin-suited)': ['coins', 'cups', 'swords', 'batons'],
   'Playing Cards (German-suited)': ['hearts', 'bells', 'leaves', 'acorns'],
   'Playing Cards (Swiss-suited)': ['roses', 'bells', 'shields', 'acorns'],
+  'Tarocco Piemontese': ['batons', 'cups', 'swords', 'coins'],
+  'Tarocco Bolognese': ['batons', 'cups', 'swords', 'coins'],
+  'Tarocco Siciliano': ['batons', 'cups', 'swords', 'coins'],
 };
 
 export default function ImportPresetsSection() {

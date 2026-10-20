@@ -93,6 +93,22 @@ in suit order, and the native suit word as prefix (`oros10`, `schilten12`).
 | Swiss (36 cards) | `r` Rosen, `b` Schellen, `s` Schilten, `a` Eicheln | 6–9, 10 Banner, 11 Under, 12 Ober, 13 König, Ass `01` or `14` | `s10` = Schilten Banner |
 
 Watch out for: Italian courts are 8–10, not 10–12 as in Spanish packs.
+
+## Tarocchi (Italian game tarots)
+Each is its own deck type with Italian card and archetype names. Trumps
+by the number **printed on the card**, `00` for the Fool; unnumbered
+trumps use the short keys below. Suits: `b` Bastoni, `c` Coppe, `s`
+Spade, `d` Denari + `01`–`10` (01 = the Ace), courts `11` Fante,
+`12` Cavallo, `13` Donna, `14` Re. No running-number scheme.
+
+| Preset | Trumps | Pips | Example |
+|---|---|---|---|
+| Tarocco Piemontese (78) | `00` Il Matto, `01`–`21` (08 La Giustizia, 11 La Forza, 20 L'Angelo, 21 Il Mondo) | Ace–10 | `c11` = Fante di Coppe |
+| Tarocco Bolognese (62) | `00` Matto, `01` Begato, `m1`–`m4` the four Moors, `05`–`16` as printed, `17` Luna, `18` Sole, `19` Mondo, `20` Angelo | Ace and 6–10 | `m2` = Moro 2 |
+| Tarocco Siciliano (63 + tax Ace) | `00` Fuggitivo, `m0` (or `miseria`) Miseria, `01`–`20` as printed (04 Costanza, 14 Vascello, 19 Atlante, 20 Giove) | 5–10; Coins also 4 and the extra Ace `d01` | `c11` = Donna di Coppe |
+
+Sicilian courts differ: `11` Donna (the female knave), `12` Cavallo,
+`13` Regina, `14` Re.
 A 24-card German pack imports fine with the 32-card preset (missing
 cards are simply absent). German-suited cards already named after the
 English archetype (`Two of Bells`) also link, whatever the preset.

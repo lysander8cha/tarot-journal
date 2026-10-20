@@ -48,3 +48,24 @@ def test_edited_suit_name_renames_cards_keeping_archetype(tmp_path):
     suits = {'coins': 'Ori', 'cups': 'Coppe', 'swords': 'Spade', 'batons': 'Bastoni'}
     row = _preview(tmp_path, 'Italian Playing Cards (40 cards)', ['d01.jpg'], suits)['d01.jpg']
     assert (row['name'], row['archetype']) == ('Asso di Ori', 'Ace of Coins')
+
+
+@pytest.mark.parametrize('preset, filename, name', [
+    ('Tarocco Piemontese', '08.jpg', 'La Giustizia'),
+    ('Tarocco Piemontese', 'c11.jpg', 'Fante di Coppe'),
+    ('Tarocco Bolognese', 'm2.jpg', 'Moro 2'),
+    ('Tarocco Bolognese', '09.jpg', 'Forza'),
+    ('Tarocco Siciliano', '04.jpg', 'Costanza'),
+    ('Tarocco Siciliano', 'c11.jpg', 'Donna di Coppe'),
+    ('Tarocco Siciliano', 'd04.jpg', 'Quattro di Denari'),
+])
+def test_tarocco_presets(tmp_path, preset, filename, name):
+    row = _preview(tmp_path, preset, [filename])[filename]
+    assert row['name'] == row['archetype'] == name
+
+
+def test_tarocco_types_seeded(db):
+    counts = dict(db.conn.execute(
+        "SELECT cartomancy_type, COUNT(*) FROM card_archetypes "
+        "WHERE cartomancy_type LIKE 'Tarocco%' GROUP BY 1").fetchall())
+    assert counts == {'Tarocco Piemontese': 78, 'Tarocco Bolognese': 62, 'Tarocco Siciliano': 64}
