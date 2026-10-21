@@ -1181,8 +1181,10 @@ def _build_grand_etteilla() -> dict:
     """Filename → archetype name. Card names come from the LWB; the
     filename convention follows the standard tarot decks in the app:
 
-    - Majors: `00.jpg`-`21.jpg` (file index = trump number - 1).
-      `00` is Chaos, `21` is The Monarch.
+    - Majors: `01.jpg`-`22.jpg`, the printed trump number (`01` is
+      Chaos, `22` is The Monarch).
+    - The Fool: card 78, The Alchemist ("Folie, ou l'Alchimiste"),
+      answers to `00` as well as `78`.
     - Minors: single-letter suit prefix (w/c/s/p) + 01-14 for Ace
       through King. The `11` slot is the Knave since the Etteilla
       doesn't have a Page.
@@ -1193,11 +1195,10 @@ def _build_grand_etteilla() -> dict:
     import re as _re
     mappings: dict[str, str] = {}
 
-    # Majors: 00 → trump 1 (Chaos), 21 → trump 22 (The Monarch).
+    # Majors by printed number: 01 → Chaos, 22 → The Monarch.
     for trump_num, name in enumerate(ETTEILLA_TRUMPS, start=1):
-        file_idx = trump_num - 1
-        mappings[f'{file_idx:02d}'] = name
-        mappings[str(file_idx)] = name
+        mappings[f'{trump_num:02d}'] = name
+        mappings[str(trump_num)] = name
         mappings[_re.sub(r"[^a-z0-9]", "", name.lower())] = name
         if name.startswith('The '):
             mappings[_re.sub(r"[^a-z0-9]", "", name[4:].lower())] = name
@@ -1218,6 +1219,10 @@ def _build_grand_etteilla() -> dict:
         mappings[_re.sub(r"[^a-z0-9]", "", name.lower())] = name
         if name.startswith('The '):
             mappings[_re.sub(r"[^a-z0-9]", "", name[4:].lower())] = name
+
+    # The Fool: 78 The Alchemist, also filed as 00.
+    for key in ('00', '0', '78'):
+        mappings[key] = 'The Alchemist'
 
     return mappings
 

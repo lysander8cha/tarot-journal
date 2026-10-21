@@ -102,3 +102,12 @@ def test_piemontese_type_folds_into_tarot(db):
     assert types == ['Tarot']
     assert c.execute('SELECT COUNT(*) FROM cartomancy_types WHERE name = ?',
                      (TAROCCO_PIEMONTESE,)).fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('filename, name', [
+    ('01.jpg', 'Chaos'), ('22.jpg', 'The Monarch'),
+    ('00.jpg', 'The Alchemist'), ('78.jpg', 'The Alchemist'),
+])
+def test_grand_etteilla_numbering(tmp_path, filename, name):
+    row = _preview(tmp_path, 'Grand Etteilla Tarot (78 cards)', [filename])[filename]
+    assert row['name'] == name

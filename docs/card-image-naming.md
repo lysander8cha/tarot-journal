@@ -35,8 +35,11 @@ Pick the preset that matches the deck, then rename the files to its scheme.
 **Tarot (Gnostic/Eternal)** — `01`–`78` in the deck's own order
 (01 The Magician … 78 Renaissance). No 00.
 
-**Grand Etteilla Tarot** — `00`–`21` for its first 22 cards
-(00 Chaos, 01 Hiram's Freemasonry…); the rest match by card name only.
+**Grand Etteilla Tarot** — `01`–`22` for its first 22 cards, as printed
+(01 Chaos, 02 Hiram's Freemasonry … 22 The Monarch). The Fool, card 78
+The Alchemist, is `00` or `78` (also `p14`, its King of Coins slot).
+Minors: `w` Sticks, `c` Cups, `s` Swords, `p` Coins + `01`–`14`
+(11 Knave, 12 Knight, 13 Queen, 14 King).
 
 ## Lenormand family
 **Lenormand (36 cards)** — `01` Rider … `36` Cross.
