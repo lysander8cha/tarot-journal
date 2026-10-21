@@ -104,10 +104,17 @@ def test_piemontese_type_folds_into_tarot(db):
                      (TAROCCO_PIEMONTESE,)).fetchone()[0] == 0
 
 
-@pytest.mark.parametrize('filename, name', [
-    ('01.jpg', 'Chaos'), ('22.jpg', 'The Monarch'),
-    ('00.jpg', 'The Alchemist'), ('78.jpg', 'The Alchemist'),
+@pytest.mark.parametrize('filename, name, archetype, sort_order', [
+    # Per the deck's LWB: suits run King … Ace; 78 is the Fool.
+    ('01.jpg', 'Chaos', 'Chaos', 1),
+    ('22.jpg', 'The Monarch', 'King of Wands', 22),
+    ('w14.jpg', 'The Monarch', 'King of Wands', 22),
+    ('36.jpg', 'The Pope', 'King of Cups', 36),
+    ('s11.jpg', 'The Soldier', 'Page of Swords', 53),
+    ('p01.jpg', 'The Golden Sun', 'Ace of Pentacles', 77),
+    ('78.jpg', 'The Alchemist', 'The Fool', 78),
+    ('00.jpg', 'The Alchemist', 'The Fool', 78),
 ])
-def test_grand_etteilla_numbering(tmp_path, filename, name):
+def test_grand_etteilla_per_lwb(tmp_path, filename, name, archetype, sort_order):
     row = _preview(tmp_path, 'Grand Etteilla Tarot (78 cards)', [filename])[filename]
-    assert row['name'] == name
+    assert (row['name'], row['archetype'], row['sort_order']) == (name, archetype, sort_order)

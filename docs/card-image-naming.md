@@ -35,11 +35,15 @@ Pick the preset that matches the deck, then rename the files to its scheme.
 **Tarot (Gnostic/Eternal)** — `01`–`78` in the deck's own order
 (01 The Magician … 78 Renaissance). No 00.
 
-**Grand Etteilla Tarot** — `01`–`22` for its first 22 cards, as printed
-(01 Chaos, 02 Hiram's Freemasonry … 22 The Monarch). The Fool, card 78
-The Alchemist, is `00` or `78` (also `p14`, its King of Coins slot).
-Minors: `w` Sticks, `c` Cups, `s` Swords, `p` Coins + `01`–`14`
-(11 Knave, 12 Knight, 13 Queen, 14 King).
+**Grand Etteilla Tarot** — per the deck's LWB, cards are numbered
+1–78 in Etteilla's order: `01`–`21` trumps (01 Chaos … 21 Rehoboam),
+then each suit King, Queen, Knight, Jack, Ten … Ace — Sticks 22–35
+(22 The Monarch … 35 The One Stick), Cups 36–49 (36 The Pope …), Swords
+50–63 (50 The Emperor …), Coins 64–77 (64 The Egyptian Sudan … 77 The
+Golden Sun) — and `78` The Alchemist, the Fool. Name files either by
+that number, or the traditional way: `w` Sticks, `c` Cups, `s` Swords,
+`p` Coins + `01`–`14` (01 Ace, 11 Jack, 12 Knight, 13 Queen, 14 King)
+and `00` for the Fool. Sort order always follows Etteilla's numbering.
 
 ## Lenormand family
 **Lenormand (36 cards)** — `01` Rider … `36` Cross.

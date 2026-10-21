@@ -1093,141 +1093,77 @@ SIBYLLE_SALONS_NAME_TO_RSP = _build_sibylle_salons_lookup()
 # deck's LWB. Each minor card carries its position-derived rank +
 # suit so existing tarot UI affordances (suit grouping, court vs
 # pip) still work.
+# Grand Etteilla, per the deck's LWB (France Cartes / J.-M. Simon 1977).
+# Cards are numbered 1-78 in Etteilla's own order: 1-21 trumps (1 Chaos
+# and 8 Eve double as the man and woman consultants), then each suit
+# King, Queen, Knight, Jack, Ten … Ace (Sticks 22-35, Cups 36-49,
+# Swords 50-63, Coins 64-77), and 78 The Alchemist, "correctly named
+# The Madman" — the Fool. Names keep the LWB's spellings.
 ETTEILLA_TRUMPS = [
     'Chaos', "Hiram's Freemasonry", 'The Order of the Mopses',
-    'The Swimming Pool', 'The Gospel', 'The Sky', 'The Snake',
-    'Eve', 'Solomon', 'The Angel of the Apocalypse', 'David',
-    'Moses', 'The High Priest', 'The Evil Force', 'Aaron',
-    'The Last Judgement', 'Death', 'Judas', 'The Capitol',
-    'Nebuchadnezzar', 'Rehoboam', 'The Monarch',
+    'The Swimming Pool', 'The Gospel', 'The Sky', 'The Snake', 'Eve',
+    'Solomon', 'The Angel of the Apocalypse', 'David', 'Moses',
+    'The High Priest', 'Evil Force', 'Aaron', 'The Last Judgement',
+    'Death', 'Judas', 'The Capitol', 'Nebuchadnezzar', 'Rehoboam',
 ]
-
-# (pos, name, rank, suit) — kept in lock-step with the seeder in
-# database/core.py. Suits use "Sticks/Cups/Swords/Coins" per the LWB.
-ETTEILLA_MINORS = [
-    (23, 'The Queen',            'Queen',  'Sticks'),
-    (24, 'The Knight on Patrol', 'Knight', 'Sticks'),
-    (25, 'The Messenger',        'Knave',  'Sticks'),
-    (26, 'The Ten Sticks',       'Ten',    'Sticks'),
-    (27, 'The Nine Sticks',      'Nine',   'Sticks'),
-    (28, 'The Eight Sticks',     'Eight',  'Sticks'),
-    (29, 'The Seven Sticks',     'Seven',  'Sticks'),
-    (30, 'The Six Sticks',       'Six',    'Sticks'),
-    (31, 'The Five Sticks',      'Five',   'Sticks'),
-    (32, 'The Four Sticks',      'Four',   'Sticks'),
-    (33, 'The Three Sticks',     'Three',  'Sticks'),
-    (34, 'The Two Sticks',       'Two',    'Sticks'),
-    (35, 'The One Stick',        'Ace',    'Sticks'),
-    (36, 'The Pope',             'King',   'Sticks'),
-    (37, 'The Woman Pope',       'Queen',  'Cups'),
-    (38, 'The Roman Knight',     'Knight', 'Cups'),
-    (39, 'The Chamberlain',      'Knave',  'Cups'),
-    (40, 'The Ten Cups',         'Ten',    'Cups'),
-    (41, 'The Nine Cups',        'Nine',   'Cups'),
-    (42, 'The Eight Cups',       'Eight',  'Cups'),
-    (43, 'The Seven Cups',       'Seven',  'Cups'),
-    (44, 'The Six Cups',         'Six',    'Cups'),
-    (45, 'The Five Cups',        'Five',   'Cups'),
-    (46, 'The Four Cups',        'Four',   'Cups'),
-    (47, 'The Three Cups',       'Three',  'Cups'),
-    (48, 'The Two Cups',         'Two',    'Cups'),
-    (49, 'The One Cup',          'Ace',    'Cups'),
-    (50, 'The Emperor',          'King',   'Cups'),
-    (51, 'The Empress',          'Queen',  'Swords'),
-    (52, 'The Equerry',          'Knight', 'Swords'),
-    (53, 'The Soldier',          'Knave',  'Swords'),
-    (54, 'The Ten Swords',       'Ten',    'Swords'),
-    (55, 'The Nine Swords',      'Nine',   'Swords'),
-    (56, 'The Eight Swords',     'Eight',  'Swords'),
-    (57, 'The Seven Swords',     'Seven',  'Swords'),
-    (58, 'The Six Swords',       'Six',    'Swords'),
-    (59, 'The Five Swords',      'Five',   'Swords'),
-    (60, 'The Four Swords',      'Four',   'Swords'),
-    (61, 'The Three Swords',     'Three',  'Swords'),
-    (62, 'The Two Swords',       'Two',    'Swords'),
-    (63, 'The One Sword',        'Ace',    'Swords'),
-    (64, 'The Egyptian Sultan',  'King',   'Swords'),
-    (65, 'The Queen of Sheba',   'Queen',  'Coins'),
-    (66, 'The Tartar Horseman',  'Knight', 'Coins'),
-    (67, 'The Beggar',           'Knave',  'Coins'),
-    (68, 'The Ten Shields',      'Ten',    'Coins'),
-    (69, 'The Nine Sequins',     'Nine',   'Coins'),
-    (70, 'The Eight Ducats',     'Eight',  'Coins'),
-    (71, 'The Seven Florins',    'Seven',  'Coins'),
-    (72, 'The Six Guineas',      'Six',    'Coins'),
-    (73, 'The Five Ounces',      'Five',   'Coins'),
-    (74, 'The Four Shields',     'Four',   'Coins'),
-    (75, 'The Three Shields',    'Three',  'Coins'),
-    (76, 'The Two Denarius',     'Two',    'Coins'),
-    (77, 'The Golden Sun',       'Ace',    'Coins'),
-    (78, 'The Alchemist',        'King',   'Coins'),
+# Per suit: (LWB suit word, Tarot suit, file letter, [King, Queen,
+# Knight, Jack, Ten … Ace] names in the deck's order).
+ETTEILLA_SUITS = [
+    ('Sticks', 'Wands', 'w', [
+        'The Monarch', 'The Queen', 'The Knight on Patrol', 'The Messenger',
+        'The Ten Sticks', 'The Nine Sticks', 'The Eight Sticks', 'The Seven Sticks',
+        'The Six Sticks', 'The Five Sticks', 'The Four Sticks', 'The Three Sticks',
+        'The Two Sticks', 'The One Stick']),
+    ('Cups', 'Cups', 'c', [
+        'The Pope', 'The Woman Pope', 'The Roman Knight', 'The Chamberlain',
+        'The Ten Cups', 'The Nine Cups', 'The Eight Cups', 'The Seven Cups',
+        'The Six Cups', 'The Five Cups', 'The Four Cups', 'The Three Cups',
+        'The Two Cups', 'The One Cup']),
+    ('Swords', 'Swords', 's', [
+        'The Emperor', 'The Empress', 'The Equerry', 'The Soldier',
+        'The Ten Swords', 'The Nine Swords', 'The Eight Swords', 'The Seven Swords',
+        'The Six Swords', 'The Five Swords', 'The Four Swords', 'The Three Swords',
+        'The Two Swords', 'The One Sword']),
+    ('Coins', 'Pentacles', 'p', [
+        'The Egyptian Sudan', 'The Queen of Sheeba', 'The Tartar Horseman', 'The Beggar',
+        'The Ten Shields', 'The Nine Sequins', 'The Eight Ducats', 'The Seven Florins',
+        'The Six Guineas', 'The Five Ounces', 'The Four Shields', 'The Three Shields',
+        'The Two Denarius', 'The Golden Sun']),
+]
+# Deck order within a suit → (Tarot rank, traditional file number).
+_ETTEILLA_SUIT_ORDER = [
+    ('King', 14), ('Queen', 13), ('Knight', 12), ('Page', 11), ('Ten', 10),
+    ('Nine', 9), ('Eight', 8), ('Seven', 7), ('Six', 6), ('Five', 5),
+    ('Four', 4), ('Three', 3), ('Two', 2), ('Ace', 1),
 ]
 
 
-def _build_etteilla_position_lookup():
-    """(name → (pos, rank, suit)) for both trumps and minors."""
-    out: dict[str, tuple] = {}
-    for i, name in enumerate(ETTEILLA_TRUMPS, start=1):
-        out[name] = (i, str(i), 'Major Arcana')
-    for pos, name, rank, suit in ETTEILLA_MINORS:
-        out[name] = (pos, rank, suit)
+def _build_etteilla_cards() -> list:
+    """(number, name, Tarot archetype or None, file keys) for all 78
+    cards in Etteilla order. Trumps 1-21 have no one-to-one Tarot card
+    and keep their own names; suits and the Fool link to Tarot."""
+    import re as _re
+    cards = []
+    for n, name in enumerate(ETTEILLA_TRUMPS, start=1):
+        cards.append((n, name, None, ()))
+    n = len(cards) + 1
+    for _word, tarot_suit, letter, names in ETTEILLA_SUITS:
+        for name, (rank, file_no) in zip(names, _ETTEILLA_SUIT_ORDER):
+            cards.append((n, name, f'{rank} of {tarot_suit}',
+                          (f'{letter}{file_no:02d}', f'{letter}{file_no}')))
+            n += 1
+    cards.append((78, 'The Alchemist', 'The Fool', ('00', '0')))
+    out = []
+    for n, name, tarot, keys in cards:
+        folded = _re.sub(r"[^a-z0-9]", "", name.lower())
+        extra = (folded, folded[3:] if name.startswith('The ') else folded)
+        out.append((n, name, tarot, (f'{n:02d}', str(n), *keys, *extra)))
     return out
 
 
-ETTEILLA_NAME_TO_PRS = _build_etteilla_position_lookup()
-
-
-def _build_grand_etteilla() -> dict:
-    """Filename → archetype name. Card names come from the LWB; the
-    filename convention follows the standard tarot decks in the app:
-
-    - Majors: `01.jpg`-`22.jpg`, the printed trump number (`01` is
-      Chaos, `22` is The Monarch).
-    - The Fool: card 78, The Alchemist ("Folie, ou l'Alchimiste"),
-      answers to `00` as well as `78`.
-    - Minors: single-letter suit prefix (w/c/s/p) + 01-14 for Ace
-      through King. The `11` slot is the Knave since the Etteilla
-      doesn't have a Page.
-
-    Folded archetype-name keys (e.g. `chaos`, `alchemist`) are also
-    included as a name-based fallback.
-    """
-    import re as _re
-    mappings: dict[str, str] = {}
-
-    # Majors by printed number: 01 → Chaos, 22 → The Monarch.
-    for trump_num, name in enumerate(ETTEILLA_TRUMPS, start=1):
-        mappings[f'{trump_num:02d}'] = name
-        mappings[str(trump_num)] = name
-        mappings[_re.sub(r"[^a-z0-9]", "", name.lower())] = name
-        if name.startswith('The '):
-            mappings[_re.sub(r"[^a-z0-9]", "", name[4:].lower())] = name
-
-    # Minors: look up by (rank_word, suit). w/c/s/p prefix follows
-    # the existing Tarot presets in this file.
-    rank_to_index = {
-        'Ace': 1, 'Two': 2, 'Three': 3, 'Four': 4, 'Five': 5,
-        'Six': 6, 'Seven': 7, 'Eight': 8, 'Nine': 9, 'Ten': 10,
-        'Knave': 11, 'Knight': 12, 'Queen': 13, 'King': 14,
-    }
-    suit_prefix = {'Sticks': 'w', 'Cups': 'c', 'Swords': 's', 'Coins': 'p'}
-    for _pos, name, rank, suit in ETTEILLA_MINORS:
-        idx = rank_to_index[rank]
-        prefix = suit_prefix[suit]
-        mappings[f'{prefix}{idx:02d}'] = name
-        mappings[f'{prefix}{idx}'] = name
-        mappings[_re.sub(r"[^a-z0-9]", "", name.lower())] = name
-        if name.startswith('The '):
-            mappings[_re.sub(r"[^a-z0-9]", "", name[4:].lower())] = name
-
-    # The Fool: 78 The Alchemist, also filed as 00.
-    for key in ('00', '0', '78'):
-        mappings[key] = 'The Alchemist'
-
-    return mappings
-
-
-GRAND_ETTEILLA = _build_grand_etteilla()
+ETTEILLA_CARDS = _build_etteilla_cards()
+ETTEILLA_BY_NAME = {name: (n, tarot) for n, name, tarot, _keys in ETTEILLA_CARDS}
+GRAND_ETTEILLA = {k: name for _n, name, _t, keys in ETTEILLA_CARDS for k in keys}
 
 
 
@@ -1546,7 +1482,7 @@ BUILTIN_PRESETS = {
     "Grand Etteilla Tarot (78 cards)": {
         "type": "Tarot",
         "mappings": GRAND_ETTEILLA,
-        "description": "78-card Grand Etteilla. Card names come from the deck's LWB — trumps use the biblical / esoteric titles (Chaos, Hiram's Freemasonry, …, The Monarch), and each minor suit's King is the deck's named figure (Pope, Emperor, Egyptian Sultan, Alchemist), with coin number cards using distinct currency names. Filenames follow the standard tarot convention: majors 00.jpg-21.jpg, sticks w01.jpg-w14.jpg, cups c01.jpg-c14.jpg, swords s01.jpg-s14.jpg, coins p01.jpg-p14.jpg. The `11` slot in each suit is the Knave since the Etteilla has no Page.",
+        "description": "78-card Grand Etteilla, names and order per the deck's LWB: 1-21 trumps (Chaos … Rehoboam), then each suit King, Queen, Knight, Jack, Ten … Ace (Sticks 22-35, Cups 36-49, Swords 50-63, Coins 64-77), 78 The Alchemist (the Madman / Fool). Files: the Etteilla number 01-78, or the traditional w/c/s/p + 01-14 (11 Jack, 12 Knight, 13 Queen, 14 King) with 00 for the Fool. Suit cards and the Fool link to the Tarot archetypes; sort order follows Etteilla's numbering.",
         "suit_names": {"wands": "Sticks", "cups": "Cups", "swords": "Swords", "pentacles": "Coins"},
         "card_back_patterns": DEFAULT_CARD_BACK_PATTERNS
     },
@@ -3285,39 +3221,22 @@ class ImportPresets:
         return {'archetype': None, 'rank': None, 'suit': None, 'sort_order': position}
 
     def _get_etteilla_metadata(self, card_name: str, sort_order: int) -> dict:
-        """Metadata for a Grand Etteilla card. The LWB position 1-78
-        is the sort order; rank is the trump number (1-22) for trumps
-        and the suit-rank (Queen/Knight/Knave/Ten/.../Ace/King) for
-        minors. Suit is 'Major Arcana' for trumps and Sticks/Cups/
-        Swords/Coins for minors."""
-        prs = ETTEILLA_NAME_TO_PRS.get(card_name)
-        if prs:
-            pos, rank, suit = prs
-            return {
-                'archetype': card_name,
-                'rank': rank,
-                'suit': suit,
-                'sort_order': pos,
-            }
-        return {'archetype': card_name, 'rank': None, 'suit': None, 'sort_order': sort_order}
+        """A Grand Etteilla card, sorted by its Etteilla number (1-78).
+        Suit cards and The Alchemist (the Fool) link to and store like
+        their Tarot cards; trumps 1-21 keep their own names."""
+        found = ETTEILLA_BY_NAME.get(card_name)
+        if not found:
+            return {'archetype': card_name, 'rank': None, 'suit': None, 'sort_order': sort_order}
+        number, tarot = found
+        if tarot:
+            meta = self.get_card_metadata(tarot, 'Tarot (RWS Ordering)')
+            return {**meta, 'archetype': tarot, 'sort_order': number}
+        return {'archetype': card_name, 'rank': str(number), 'suit': 'Major Arcana',
+                'sort_order': number}
 
     def _get_etteilla_metadata_by_position(self, position: int) -> dict:
-        if 1 <= position <= 22:
-            name = ETTEILLA_TRUMPS[position - 1]
-            return {
-                'archetype': name,
-                'rank': str(position),
-                'suit': 'Major Arcana',
-                'sort_order': position,
-            }
-        if 23 <= position <= 78:
-            pos, name, rank, suit = ETTEILLA_MINORS[position - 23]
-            return {
-                'archetype': name,
-                'rank': rank,
-                'suit': suit,
-                'sort_order': pos,
-            }
+        if 1 <= position <= len(ETTEILLA_CARDS):
+            return self._get_etteilla_metadata(ETTEILLA_CARDS[position - 1][1], position)
         return {'archetype': None, 'rank': None, 'suit': None, 'sort_order': position}
 
     def _get_card_sort_order(self, card_name: str, custom_suit_names: dict = None,
